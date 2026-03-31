@@ -6,47 +6,59 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <cstring>
+#include <cerrno>
 
 /*lib to use memset*/
 #include <string.h>
+#include <unistd.h>
+#include <limits.h>
+#include <stdlib.h>
+#include <stdbool.h>
 /**************** */
+#define BACKLOG 10
+
+
 
 namespace socket_connection {
     class socket_
     {
         private :
-        /*important data*/
-        const char *node;
-        const char *service;
-        struct addrinfo hints;
-        struct addrinfo *res;
-        struct addrinfo *p;
-        char ipstr[INET6_ADDRSTRLEN];
-        int addrinfo_;
+            /*important data*/
+            const char *node;
+            const char *service;
+            struct addrinfo hints;
+            struct addrinfo *res;
+            struct addrinfo *p;
+            struct sockaddr_storage their_addr;
+            socklen_t addr_size;
+            char ipstr[INET6_ADDRSTRLEN];
+            int addrinfo_;
+            int already;
+            /*make the obeject unique*/
+            socket_(const socket_ &obj){};
+            socket_ &operator=(const socket_ &obj){return *this;};
+            /************/
+            
+            protected :
+            int socket_fd;
+            int client_socket_fd;
+            char Hostname[HOST_NAME_MAX];
+            void set_hints();
+            void set_addrinfo_();
+            int get_addrinfo_();
+            void setup();
+            int who_are_you();
+            void *get_addrptr(struct sockaddr * sa);
 
-
-
-
-                
-                
-                
-
-        /*make the obeject unique*/
-        socket_(const socket_ &obj){};
-        socket_ &operator=(const socket_ &obj){return *this;};
-        /************/
         public :
-        socket_();
-        ~socket_();
-/* make sure to find a good way to bring this node */
-        void set_hints();
-        struct addrinfo get_hints();
+            socket_();
+            ~socket_();
+            int create_socket();
+            int accept_connection();
 
-        void set_addrinfo_(const char *node, const char *service,
-                const struct addrinfo *hints, struct addrinfo **res);
-        int get_addrinfo_();
 
-        void get_pointer_address();
+
 
     };
 
