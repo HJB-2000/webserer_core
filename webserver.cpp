@@ -20,10 +20,9 @@ socket_connection::socket_::~socket_(){
     // 2) close listening socket
     // 3) close epoll fd
     // 4) free addrinfo memory if still allocated
-    for (std::map<int, Connection>::iterator it = this->clients.begin(); it != this->clients.end(); ++it)
+    for (std::map<int, Connection*>::iterator it = this->clients.begin(); it != this->clients.end(); ++it)
     {
-        if (it->first >= 0)
-            close(it->first);
+        delete it->second;
     }
     this->clients.clear();
 
@@ -221,20 +220,6 @@ int socket_connection::socket_::add_fd_to_epoll(int fd, uint32_t events)
     return 0;
 }
 
-int socket_connection::socket_::mod_fd_in_epoll(int fd, uint32_t events)
-{
-    struct epoll_event ev;
-    memset(&ev, 0, sizeof(ev));
-    ev.events = events;
-    ev.data.fd = fd;
-    if (epoll_ctl(this->epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0)
-    {
-        std::cerr << "\033[031mepoll_ctl MOD failed: " << strerror(errno) << "\033[0m" << std::endl;
-        return -1;
-    }
-    return 0;
-}
-
 int socket_connection::socket_::remove_fd_from_epoll(int fd)
 {
     // ENOENT/EBADF can happen on already-closed fds; treat as safe no-op.
@@ -265,30 +250,42 @@ bool socket_connection::socket_::is_listener_fd(int fd) const
 
 int socket_connection::socket_::rearm_client_events(int fd)
 {
-    std::map<int, Connection>::iterator it = this->clients.find(fd);
+    std::map<int, Connection*>::iterator it = this->clients.find(fd);
     if (it == this->clients.end())
         return -1;
 
-    uint32_t events = EPOLLET | EPOLLRDHUP;
-    if (it->second.state == CS_WRITING)
-        events |= EPOLLOUT;
-    else
-        events |= EPOLLIN;
-
-    return this->mod_fd_in_epoll(fd, events);
+    epoll_event ev = it->second->buildEpollEvent();
+    if (epoll_ctl(this->epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0)
+    {
+        std::cerr << "\033[031mepoll_ctl MOD failed: " << strerror(errno) << "\033[0m" << std::endl;
+        return -1;
+    }
+    return 0;
 }
 
 void socket_connection::socket_::close_client(int fd)
 {
     // Single client close path to keep cleanup behavior consistent.
     this->remove_fd_from_epoll(fd);
-    close(fd);
-    this->clients.erase(fd);
+    std::map<int, Connection*>::iterator it = this->clients.find(fd);
+    if (it != this->clients.end())
+    {
+        delete it->second;
+        this->clients.erase(it);
+    }
 }
 
-int socket_connection::socket_::accept_all_pending(int listener_fd)
+int socket_connection::socket_::accept_all_pending(int listener_fd, const ServerConfig* config)
 {
     // EPOLLET requires draining accept() until EAGAIN/EWOULDBLOCK.
+    const ServerConfig* effective_config = config;
+    if (effective_config == NULL)
+    {
+        // Guard path: config wiring is not connected yet in core-only phase.
+        // Keep a NULL config pointer safely until parser/config integration.
+        effective_config = NULL;
+    }
+
     while (true)
     {
         struct sockaddr_storage their_addr;
@@ -309,18 +306,26 @@ int socket_connection::socket_::accept_all_pending(int listener_fd)
             continue;
         }
 
-        if (this->add_fd_to_epoll(client_socket_fd, EPOLLIN | EPOLLET | EPOLLRDHUP) < 0)
+        // ============================================================
+        // CONNECTION OBJECT CREATION ENTRY POINT
+        // This is the exact location where one accepted client fd becomes
+        // one Connection object managed by the core.
+        //
+        // From this point, recv/send handling goes through this object:
+        // - read path  : read_from_client(fd) -> conn->recv()
+        // - write path : write_to_client(fd)  -> conn->send()
+        //
+        // Parser/response integration will also start from this object.
+        // ============================================================
+        Connection* conn = new Connection(client_socket_fd, effective_config);
+
+        epoll_event ev = conn->buildEpollEvent();
+        if (epoll_ctl(this->epoll_fd, EPOLL_CTL_ADD, client_socket_fd, &ev) < 0)
         {
-            close(client_socket_fd);
+            delete conn;
             continue;
         }
 
-        Connection conn;
-        conn.fd = client_socket_fd;
-        conn.state = CS_READING;
-        conn.write_offset = 0;
-        conn.last_active = std::time(NULL);
-        conn.keep_alive = true;
         this->clients[client_socket_fd] = conn;
 
         char ipstr[INET6_ADDRSTRLEN];
@@ -361,7 +366,7 @@ bool socket_connection::socket_::should_keep_alive(const std::string& request) c
 void socket_connection::socket_::queue_simple_response(
     int fd, const std::string& status, const std::string& body, bool keep_alive)
 {
-    std::map<int, Connection>::iterator it = this->clients.find(fd);
+    std::map<int, Connection*>::iterator it = this->clients.find(fd);
     if (it == this->clients.end())
         return;
 
@@ -373,10 +378,10 @@ void socket_connection::socket_::queue_simple_response(
              << "\r\n"
              << body;
 
-    it->second.write_buffer = response.str();
-    it->second.write_offset = 0;
-    it->second.keep_alive = keep_alive;
-    it->second.state = CS_WRITING;
+    it->second->write_buffer = response.str();
+    it->second->write_offset = 0;
+    it->second->keep_alive = keep_alive;
+    it->second->state = CS_WRITING;
     this->rearm_client_events(fd);
 }
 
@@ -388,23 +393,23 @@ void socket_connection::socket_::process_client_buffer(int fd)
     // 2) Update request parse state (incomplete/complete/error)
     // 3) On complete request, call ResponseHandler builder
     // Current core-only flow below keeps networking testable.
-    std::map<int, Connection>::iterator it = this->clients.find(fd);
+    std::map<int, Connection*>::iterator it = this->clients.find(fd);
     if (it == this->clients.end())
         return;
-    if (!this->request_complete(it->second.read_buffer))
+    if (!this->request_complete(it->second->read_buffer))
         return;
 
-    it->second.state = CS_PROCESSING;
+    it->second->state = CS_PROCESSING;
 
     // TODO(phase-response-handler): ENTRY POINT
     // Replace this temporary response with real response generation:
     // ResponseHandler(request, config, connection) -> write_buffer
-    const bool keep_alive = this->should_keep_alive(it->second.read_buffer);
+    const bool keep_alive = this->should_keep_alive(it->second->read_buffer);
     std::string body = "core ready\n";
     this->queue_simple_response(fd, "200 OK", body, keep_alive);
     it = this->clients.find(fd);
     if (it != this->clients.end())
-        it->second.read_buffer.clear();
+        it->second->read_buffer.clear();
 }
 
 int socket_connection::socket_::read_from_client(int fd)
@@ -412,19 +417,17 @@ int socket_connection::socket_::read_from_client(int fd)
     // EPOLLET requires draining recv() until EAGAIN/EWOULDBLOCK.
     // Parser integration starts when process_client_buffer() is replaced
     // by HttpParser + ResponseHandler plumbing.
-    std::map<int, Connection>::iterator it = this->clients.find(fd);
+    std::map<int, Connection*>::iterator it = this->clients.find(fd);
     if (it == this->clients.end())
         return -1;
 
-    char buffer[READ_BUFFER_SIZE];
+    Connection* conn = it->second;
     while (true)
     {
-        ssize_t bytes_read = recv(fd, buffer, sizeof(buffer), 0);
+        ssize_t bytes_read = conn->recv();
         if (bytes_read > 0)
         {
-            it->second.last_active = std::time(NULL);
-            it->second.read_buffer.append(buffer, static_cast<size_t>(bytes_read));
-            if (it->second.read_buffer.size() > MAX_CLIENT_BUFFER_SIZE)
+            if (conn->read_buffer.size() > MAX_CLIENT_BUFFER_SIZE)
             {
                 this->queue_simple_response(fd, "413 Payload Too Large", "payload too large\n", false);
                 return 0;
@@ -450,23 +453,17 @@ int socket_connection::socket_::read_from_client(int fd)
 
 int socket_connection::socket_::write_to_client(int fd)
 {
-    std::map<int, Connection>::iterator it = this->clients.find(fd);
+    std::map<int, Connection*>::iterator it = this->clients.find(fd);
     if (it == this->clients.end())
         return -1;
 
-    Connection& conn = it->second;
-    while (conn.write_offset < conn.write_buffer.size())
+    Connection* conn = it->second;
+    while (conn->write_offset < conn->write_buffer.size())
     {
-        const char* ptr = conn.write_buffer.c_str() + conn.write_offset;
-        const size_t left = conn.write_buffer.size() - conn.write_offset;
-        ssize_t sent = send(fd, ptr, left, MSG_NOSIGNAL);
+        ssize_t sent = conn->send();
 
         if (sent > 0)
-        {
-            conn.last_active = std::time(NULL);
-            conn.write_offset += static_cast<size_t>(sent);
             continue;
-        }
 
         if (sent < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
             return 0;
@@ -476,16 +473,16 @@ int socket_connection::socket_::write_to_client(int fd)
         return -1;
     }
 
-    if (conn.keep_alive)
+    if (conn->keep_alive)
     {
-        conn.write_buffer.clear();
-        conn.write_offset = 0;
-        conn.state = CS_READING;
+        conn->write_buffer.clear();
+        conn->write_offset = 0;
+        conn->state = CS_READING;
         this->rearm_client_events(fd);
     }
     else
     {
-        conn.state = CS_CLOSING;
+        conn->state = CS_CLOSING;
         this->close_client(fd);
     }
     return 0;
@@ -496,9 +493,9 @@ void socket_connection::socket_::sweep_idle_clients()
     const std::time_t now = std::time(NULL);
     std::vector<int> to_close;
 
-    for (std::map<int, Connection>::iterator it = this->clients.begin(); it != this->clients.end(); ++it)
+    for (std::map<int, Connection*>::iterator it = this->clients.begin(); it != this->clients.end(); ++it)
     {
-        if ((now - it->second.last_active) > CLIENT_IDLE_TIMEOUT_SEC)
+        if ((now - it->second->last_active) > CLIENT_IDLE_TIMEOUT_SEC)
             to_close.push_back(it->first);
     }
 
@@ -529,7 +526,7 @@ int socket_connection::socket_::accept_connection()
 
         if (this->is_listener_fd(fd))
         {
-            if (this->accept_all_pending(fd) < 0)
+            if (this->accept_all_pending(fd, NULL) < 0)
                 return -1;
             continue;
         }

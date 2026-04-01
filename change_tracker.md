@@ -191,3 +191,63 @@
 ### Behavior Impact
 - Core can now accept IPv4 and IPv6 clients concurrently when both listeners are available.
 - Event loop remains single-threaded and non-blocking while handling multiple server fds.
+
+## Tracker Update: Explicit Connection Creation Marker
+
+### `webserver.cpp`
+- Added a highly visible comment block inside `accept_all_pending(...)` at the exact line where:
+	- `Connection* conn = new Connection(client_socket_fd, effective_config);`
+- The marker explicitly documents this as the lifecycle entry point for:
+	- recv handling via `conn->recv()`
+	- send handling via `conn->send()`
+	- future parser/response integration chaining from the same object
+
+## Execution Path (Core)
+
+### Startup Path
+- `main()`
+	- creates `socket_connection::socket_`
+	- calls `create_socket()`
+
+### Listener Setup Path
+- `create_socket()`
+	- `setup()`
+		- `set_hints()`
+		- `set_addrinfo_()`
+	- creates listener socket(s) (IPv4/IPv6 when available)
+	- `set_non_blocking(listener_fd)`
+	- `listen(listener_fd, BACKLOG)`
+	- `add_fd_to_epoll(listener_fd, EPOLLIN | EPOLLET)`
+
+### Event Loop Tick Path
+- `accept_connection()`
+	- `epoll_wait(...)`
+	- for each event:
+		- if listener fd -> `accept_all_pending(listener_fd, config)`
+		- if client fd + `EPOLLIN` -> `read_from_client(fd)`
+		- if client fd + `EPOLLOUT` -> `write_to_client(fd)`
+		- if error/hup -> `close_client(fd)`
+	- `sweep_idle_clients()`
+
+### Connection Creation Path
+- `accept_all_pending(listener_fd, config)`
+	- `accept(...)`
+	- `set_non_blocking(client_fd)`
+	- **Connection object created here**:
+		- `Connection* conn = new Connection(client_fd, effective_config);`
+	- register client with epoll using `conn->buildEpollEvent()`
+	- store in `clients[client_fd] = conn`
+
+### Read/Process/Write Path
+- `read_from_client(fd)`
+	- `conn->recv()` in edge-trigger drain loop
+	- on EAGAIN -> `process_client_buffer(fd)`
+- `process_client_buffer(fd)`
+	- request completeness check
+	- temporary response queueing
+	- **Integration spot**:
+		- replace this body with HttpParser + ResponseHandler wiring
+- `write_to_client(fd)`
+	- `conn->send()` in drain loop
+	- if complete and keep-alive -> back to reading state
+	- else -> `close_client(fd)`

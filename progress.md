@@ -17,6 +17,7 @@
 - [x] Added temporary main-loop staging break for phased rollout.
 - [x] Added dual listener support (IPv4 + IPv6 when available).
 - [x] Registered all listener sockets in epoll dispatch path.
+- [x] Added explicit marker comment at Connection object creation entry point.
 
 ## TODO
 
