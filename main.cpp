@@ -12,9 +12,12 @@ int main(int ac, char *av[])
                 <<std::endl;
         while(true)
         {
-            if (conn_.accept_connection() < 0 || conn_.accept_connection() < 0)
+            if (conn_.accept_connection() < 0)
                 continue;
-            
+
+            // Temporary stop point for core-only phase.
+            // Remove this break when the next server parts are integrated.
+            break;
         }
     }
     /*i added brackets for to serve the purpose of scope so the desctructor get 
