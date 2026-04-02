@@ -237,14 +237,14 @@ public:
         switch (_state)
         {
             case CS_READING:
-                ev.events = EPOLLIN  | EPOLLET;
+                ev.events = EPOLLIN  | EPOLLET | EPOLLRDHUP;
                 break;
             case CS_WRITING:
-                ev.events = EPOLLOUT | EPOLLET;
+                ev.events = EPOLLOUT | EPOLLET | EPOLLRDHUP;
                 break;
             case CS_PROCESSING:
             case CS_CLOSING:
-                ev.events = 0;
+                ev.events = EPOLLET | EPOLLRDHUP;
                 break;
         }
         return ev;

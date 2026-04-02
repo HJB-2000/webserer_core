@@ -33,6 +33,8 @@
 #define EPOLL_WAIT_TIMEOUT_MS 100
 #define CLIENT_IDLE_TIMEOUT_SEC 30
 
+class ServerConfig;
+
 
 
 namespace socket_connection {
@@ -58,27 +60,85 @@ namespace socket_connection {
                 size_t write_offset;
                 std::time_t last_active;
                 bool keep_alive;
+                const ServerConfig* config;
 
                 Connection(): fd(-1), state(CS_READING), write_buffer(), write_offset(0),
-                    last_active(0), keep_alive(true) {}
+                    last_active(0), keep_alive(true), config(NULL) {}
+
+                explicit Connection(int cfd, const ServerConfig* cfg):
+                    fd(cfd), state(CS_READING), read_buffer(), write_buffer(), write_offset(0),
+                    last_active(std::time(NULL)), keep_alive(true), config(cfg) {}
+
+                ~Connection()
+                {
+                    if (fd >= 0)
+                    {
+                        close(fd);
+                        fd = -1;
+                    }
+                }
+
+                ssize_t recv()
+                {
+                    char buffer[READ_BUFFER_SIZE];
+                    ssize_t bytes_read = ::recv(fd, buffer, sizeof(buffer), 0);
+                    if (bytes_read > 0)
+                    {
+                        read_buffer.append(buffer, static_cast<size_t>(bytes_read));
+                        last_active = std::time(NULL);
+                    }
+                    return bytes_read;
+                }
+
+                ssize_t send()
+                {
+                    if (write_offset >= write_buffer.size())
+                        return 0;
+
+                    const char* ptr = write_buffer.c_str() + write_offset;
+                    const size_t left = write_buffer.size() - write_offset;
+                    ssize_t sent = ::send(fd, ptr, left, MSG_NOSIGNAL);
+                    if (sent > 0)
+                    {
+                        write_offset += static_cast<size_t>(sent);
+                        last_active = std::time(NULL);
+                    }
+                    return sent;
+                }
+
+                epoll_event buildEpollEvent()
+                {
+                    epoll_event ev;
+                    memset(&ev, 0, sizeof(ev));
+                    ev.data.fd = fd;
+
+                    if (state == CS_WRITING)
+                        ev.events = EPOLLOUT | EPOLLET | EPOLLRDHUP;
+                    else if (state == CS_READING)
+                        ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
+                    else
+                        ev.events = EPOLLET | EPOLLRDHUP;
+
+                    return ev;
+                }
             };
 
             // Core API: expose the internal connection object created by accept().
             // Returned pointer is borrowed (owned by socket_); do not delete it.
             Connection* get_connection_object(int fd)
             {
-                std::map<int, Connection>::iterator it = this->clients.find(fd);
+                std::map<int, Connection*>::iterator it = this->clients.find(fd);
                 if (it == this->clients.end())
                     return NULL;
-                return &(it->second);
+                return it->second;
             }
 
             const Connection* get_connection_object(int fd) const
             {
-                std::map<int, Connection>::const_iterator it = this->clients.find(fd);
+                std::map<int, Connection*>::const_iterator it = this->clients.find(fd);
                 if (it == this->clients.end())
                     return NULL;
-                return &(it->second);
+                return it->second;
             }
 
             size_t connection_count() const
@@ -96,7 +156,7 @@ namespace socket_connection {
             int getaddrinfo_result;
             int already;
             int epoll_fd;
-            std::map<int, Connection> clients;
+            std::map<int, Connection*> clients;
             std::vector<int> listener_fds;
             /*make the obeject unique*/
             socket_(const socket_ &);
@@ -116,14 +176,13 @@ namespace socket_connection {
 
             // Epoll registration helpers for ADD/MOD/DEL operations.
             int add_fd_to_epoll(int fd, uint32_t events);
-            int mod_fd_in_epoll(int fd, uint32_t events);
             int remove_fd_from_epoll(int fd);
             int rearm_client_events(int fd);
 
             // Edge-trigger helpers:
             // - accept_all_pending(): drain all waiting incoming clients.
             // - read_from_client(): drain all readable bytes until EAGAIN.
-            int accept_all_pending(int listener_fd);
+            int accept_all_pending(int listener_fd, const ServerConfig* config);
             int read_from_client(int fd);
             int write_to_client(int fd);
 
