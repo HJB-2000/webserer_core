@@ -3,11 +3,11 @@
 //
 //  The core epoll dispatch loop.  C++98 compliant.
 //
-//  Integration seams (in EventLoop.cpp — replace stubs when ready):
-//    _stubParse()         → HttpParser::feed()
-//    _stubBuildResponse() → ResponseHandler::handle()
-//    _stubSend400()       → ResponseHandler::sendError(400, ...)
-//    _stub413()           → ResponseHandler::sendError(413, ...)
+//  Integration seams status:
+//    Phase 2 ✓  _parser.feed()       replaces _stubParse()
+//    Phase 3 ✓  _responder.handle()  replaces _stubBuildResponse()
+//               _responder.sendError replaces _stubSend400/_stub413
+//    Phase 4    _stubCgi in ResponseHandler → CgiHandler::execute()
 //
 //  Dependency chain:
 //    Buffer → HttpRequest → ConnectionState → Connection
@@ -25,9 +25,9 @@
 #include "ConnectionManager.hpp"
 #include "Connection.hpp"
 #include "HttpParser.hpp"
+#include "ResponseHandler.hpp"  // Phase 3
 
 class ServerConfig;
-class ResponseHandler;  // Phase 3
 
 
 class EventLoop
@@ -65,12 +65,6 @@ private:
     bool                _isServerFd(int fd) const;
     const ServerConfig* _configForServer(int fd) const;
 
-    // Phase 2 done — _stubParse() removed.
-    // Phase 3 stubs — replaced when ResponseHandler is integrated:
-    void _stubBuildResponse(Connection* conn);
-    void _stubSend400(Connection* conn);
-    void _stub413(Connection* conn);
-
     // ── members ────────────────────────────────────────────
     int                              _epoll_fd;
     ConnectionManager*               _manager;
@@ -82,6 +76,9 @@ private:
     // All parse progress lives in HttpRequest, so no per-connection
     // parser instance is needed.
     HttpParser                       _parser;
+
+    // Phase 3: builds HTTP responses from completed requests.
+    ResponseHandler                  _responder;
 };
 
 #endif // EVENT_LOOP_HPP

@@ -11,7 +11,8 @@ SRCS    = src/main.cpp \
           src/HttpRequest.cpp \
           src/ConnectionManager.cpp \
           src/ConnectionState.cpp \
-          src/ServerConfig.cpp
+          src/ServerConfig.cpp \
+          src/ResponseHandler.cpp
 
 OBJS    = $(SRCS:.cpp=.o)
 

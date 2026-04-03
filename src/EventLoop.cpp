@@ -10,6 +10,7 @@
 #include "Headers/HttpRequest.hpp"
 #include "Headers/EventLoop.hpp"
 #include "Headers/HttpParser.hpp"
+#include "Headers/ResponseHandler.hpp"
 
 #include <cerrno>
 #include <cstring>
@@ -234,10 +235,10 @@ void EventLoop::_handleRead(Connection* conn)
                 conn->request().headers["connection"] = "close";
                 std::cerr << "[EventLoop] parse error " << conn->request().error_code
                           << " on fd " << fd << "\n";
-                // TODO(phase-3): replace with:
-                //   _responder.sendError(conn->request().error_code,
-                //                        *conn->config(), conn->writeBuffer());
-                _stubSend400(conn);
+                // Phase 3: real error response
+                _responder.sendError(conn->request().error_code,
+                                     *conn->config(),
+                                     conn->writeBuffer());
                 conn->setWriting();
                 _manager->rearmEpoll(fd);
                 return;  // wait for EPOLLOUT to drain the error response
@@ -247,11 +248,10 @@ void EventLoop::_handleRead(Connection* conn)
             {
                 conn->setProcessing();
 
-                // ── [STUB] Response builder ──────────────────
-                // TODO(phase-3): replace with:
-                //   _responder.handle(conn->request(), *conn->config(), conn->writeBuffer());
-                _stubBuildResponse(conn);
-                // ─────────────────────────────────────────────
+                // Phase 3: build the full HTTP response
+                _responder.handle(conn->request(),
+                                  *conn->config(),
+                                  conn->writeBuffer());
 
                 conn->setWriting();
                 _manager->rearmEpoll(fd);
@@ -264,8 +264,8 @@ void EventLoop::_handleRead(Connection* conn)
     {
         // readBuffer exceeded client_max_body_size → 413
         conn->request().headers["connection"] = "close";
-        // TODO(phase-3): _responder.sendError(413, *conn->config(), conn->writeBuffer());
-        _stub413(conn);
+        // Phase 3: real 413 response
+        _responder.sendError(413, *conn->config(), conn->writeBuffer());
         conn->setWriting();
         _manager->rearmEpoll(fd);
     }
@@ -332,39 +332,5 @@ const ServerConfig* EventLoop::_configForServer(int fd) const
     return NULL;
 }
 
-// ── stubs ─────────────────────────────────────────────────────
-// Each stub is the exact seam where the real component plugs in.
-// The interface matches what HttpParser / ResponseHandler will provide.
-
-void EventLoop::_stubBuildResponse(Connection* conn)
-{
-    const char* r = "HTTP/1.1 200 OK\r\n"
-                    "Content-Length: 28\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Connection: keep-alive\r\n\r\n"
-                    "core_v1 networking stub OK\r\n";
-    conn->writeBuffer().reset();
-    conn->writeBuffer().append(r, std::strlen(r));
-}
-
-void EventLoop::_stubSend400(Connection* conn)
-{
-    const char* r = "HTTP/1.1 400 Bad Request\r\n"
-                    "Content-Length: 11\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Connection: close\r\n\r\n"
-                    "Bad Request";
-    conn->writeBuffer().reset();
-    conn->writeBuffer().append(r, std::strlen(r));
-}
-
-void EventLoop::_stub413(Connection* conn)
-{
-    const char* r = "HTTP/1.1 413 Payload Too Large\r\n"
-                    "Content-Length: 16\r\n"
-                    "Content-Type: Text/plain\r\n"
-                    "Connection: close\r\n\r\n"
-                    "Payload Too Large";
-    conn->writeBuffer().reset();
-    conn->writeBuffer().append(r, std::strlen(r));
-}
+// Phase 3 integrated — stubs removed.
+// Response building is now handled by _responder (ResponseHandler).

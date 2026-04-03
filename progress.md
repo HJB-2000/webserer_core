@@ -51,25 +51,49 @@
 
 ---
 
-## Phase 3 — ResponseHandler (next)
+## Logging — Log File Handler (DONE)
 
-- [ ] Static file serving with MIME type detection
-- [ ] Directory listing (autoindex)
-- [ ] Custom error pages (falls back to hardcoded HTML)
-- [ ] HTTP redirects (301 / 302)
-- [ ] GET / HEAD / POST / DELETE dispatch
-- [ ] File upload (POST to location->upload_path)
-- [ ] _stubBuildResponse() replaced with _responder.handle(...)
-- [ ] _stubSend400() / _stub413() replaced with _responder.sendError(...)
+- [x] `Headers/Logger.hpp` — header-only, no .cpp needed
+- [x] `TeeStreambuf` intercepts `std::cerr` — mirrors to terminal + log file
+- [x] UTC timestamp `[YYYY-MM-DD HH:MM:SS]` injected at start of every log line
+- [x] File opened in append mode (`std::ios::app`) — restarts accumulate, not overwrite
+- [x] Flush after every `\n` — `tail -f webserv.log` works in real time
+- [x] Session start/end banners written to log for easy session separation
+- [x] `Logger::instance().open("webserv.log")` called at top of `main()`
+- [x] `Logger::instance().close()` called before `return 0`
+- [x] Zero changes to EventLoop, ConnectionManager, ResponseHandler, HttpParser — all existing `std::cerr` calls captured automatically
 
 ---
 
-## Phase 4 — CgiHandler
+## Phase 3 — ResponseHandler (DONE)
 
-- [ ] fork + execve flow with correct env variables
+- [x] Static file serving with MIME type detection (24 types, case-insensitive)
+- [x] Directory listing (autoindex) — HTML table with file sizes, parent dir link
+- [x] Custom error pages (config.error_pages[code] → disk read → built-in HTML fallback)
+- [x] HTTP redirects (301/302) — Location header + HTML body
+- [x] Directory-without-slash → 301 to path + '/'
+- [x] Path traversal guard (/../ → 400)
+- [x] GET / HEAD / POST / DELETE dispatch
+- [x] HEAD request → headers only, no body
+- [x] File upload (POST to location->upload_path) → unique filename → 201 Created
+- [x] DELETE → unlink() → 204 No Content; 403 on permission error
+- [x] Connection header respects request.keepAlive() in all responses
+- [x] HTTP Date header in RFC 7231 GMT format
+- [x] _stubBuildResponse() replaced with _responder.handle(...)
+- [x] _stubSend400() / _stub413() replaced with _responder.sendError(...)
+- [x] CGI seam in _stubCgi() → returns 501 until Phase 4 lands
+- [x] Compiles clean: -std=c++98 -Wall -Wextra -Werror
+
+---
+
+## Phase 4 — CgiHandler (next)
+
+- [ ] CgiHandler class created (Headers/CgiHandler.hpp + src/CgiHandler.cpp)
+- [ ] fork + execve flow with correct env variables (REQUEST_METHOD, QUERY_STRING, CONTENT_TYPE, CONTENT_LENGTH, PATH_INFO, SCRIPT_FILENAME, SERVER_*, HTTP_* …)
 - [ ] stdin pipe (request body) + stdout pipe (CGI output)
-- [ ] CGI output parsed into HTTP response
+- [ ] CGI output parsed into HTTP response (Status header → code, headers + blank line + body)
 - [ ] Timeout: kill(pid, SIGKILL) + waitpid() + 504 response
+- [ ] ResponseHandler::_stubCgi() replaced with CgiHandler::execute() call
 
 ---
 
@@ -86,26 +110,26 @@
 
 When `Headers/ServerConfig.hpp` arrives from teammate, replace every macro / stub:
 
-| # | File | Location | Replace | With |
-|---|------|----------|---------|------|
-| 1 | `main.cpp` | `make_listener(TMP_HOST, TMP_PORT)` | `TMP_HOST`, `TMP_PORT` | `config.host`, `config.port` (loop over configs vector) |
-| 2 | `Connection.cpp` | ctor | `config->client_max_body_size` | already correct — no change needed |
-| 3 | `Headers/ConnectionManager.hpp` | `closeTimedOut()` | `cfg->timeout_seconds` | already correct — no change needed |
-| 4 | `EventLoop.cpp` | `_stubBuildResponse()` | entire stub | `_responder.handle(conn->request(), *conn->config(), conn->writeBuffer())` |
-| 5 | `EventLoop.cpp` | `_stubSend400()` | entire stub | `_responder.sendError(400, *conn->config(), conn->writeBuffer())` |
-| 6 | `EventLoop.cpp` | `_stub413()` | entire stub | `_responder.sendError(413, *conn->config(), conn->writeBuffer())` |
-| 7 | `HttpParser` | body size check | `TMP_CLIENT_MAX_BODY_SIZE` | `conn->config()->client_max_body_size` |
-| 8 | `HttpParser` | URI length check | `TMP_MAX_URI_LENGTH` | keep as macro (HTTP spec limit) |
-| 9 | `HttpParser` | header line check | `TMP_MAX_HEADER_LINE` | keep as macro (HTTP spec limit) |
-| 10 | `HttpParser` | header count check | `TMP_MAX_HEADER_COUNT` | keep as macro (HTTP spec limit) |
-| 11 | `ResponseHandler` | root path | `TMP_ROOT` | `conn->config()->root` (or `location->root` if set) |
-| 12 | `ResponseHandler` | index file | `TMP_INDEX` | `conn->config()->index` (or `location->index` if set) |
-| 13 | `ResponseHandler` | autoindex | `TMP_AUTOINDEX` | `location->autoindex` |
-| 14 | `ResponseHandler` | error pages | `TMP_ERROR_PAGE_*` | `conn->config()->error_pages[code]` |
-| 15 | `ResponseHandler` | method check | `TMP_ALLOW_*` | `location->allowed_methods` |
-| 16 | `ResponseHandler` | redirect | `TMP_REDIRECT_*` | `location->redirect_enabled/code/url` |
-| 17 | `ResponseHandler` | upload | `TMP_UPLOAD_PATH` | `location->upload_path` |
-| 18 | `CgiHandler` | CGI trigger | `TMP_CGI_EXTENSION` | `location->cgi_extension` |
-| 19 | `CgiHandler` | CGI binary | `TMP_CGI_PATH` | `location->cgi_path` |
-| 20 | `CgiHandler` | CGI timeout | `TMP_CGI_TIMEOUT_SECONDS` | keep as macro (not a config field) |
-| 21 | `Headers/ServerConfig.hpp` | entire file | stub | teammate's real file — delete stub |
+| # | File | Status | Notes |
+|---|------|--------|-------|
+| 1 | `main.cpp` | pending | Replace `TMP_HOST`/`TMP_PORT` with loop over `vector<ServerConfig>` |
+| 2 | `Connection.cpp` | ✓ ready | `config->client_max_body_size` already used correctly |
+| 3 | `Headers/ConnectionManager.hpp` | ✓ ready | `cfg->timeout_seconds` already used correctly |
+| 4 | `EventLoop.cpp` | ✓ done (Phase 3) | `_responder.handle(...)` wired in |
+| 5 | `EventLoop.cpp` | ✓ done (Phase 3) | `_responder.sendError(error_code, ...)` wired in |
+| 6 | `EventLoop.cpp` | ✓ done (Phase 3) | `_responder.sendError(413, ...)` wired in |
+| 7 | `HttpParser` | pending | Replace `TMP_CLIENT_MAX_BODY_SIZE` with `conn->config()->client_max_body_size` |
+| 8 | `HttpParser` | keep macro | `TMP_MAX_URI_LENGTH` — HTTP spec limit, not a user config value |
+| 9 | `HttpParser` | keep macro | `TMP_MAX_HEADER_LINE` — HTTP spec limit |
+| 10 | `HttpParser` | keep macro | `TMP_MAX_HEADER_COUNT` — HTTP spec limit |
+| 11 | `ResponseHandler` | ✓ done (Phase 3) | reads `cfg.root` / `loc->root` directly from ServerConfig |
+| 12 | `ResponseHandler` | ✓ done (Phase 3) | reads `cfg.index` / `loc->index` directly |
+| 13 | `ResponseHandler` | ✓ done (Phase 3) | reads `loc->autoindex` directly |
+| 14 | `ResponseHandler` | ✓ done (Phase 3) | reads `cfg.error_pages[code]` directly |
+| 15 | `ResponseHandler` | ✓ done (Phase 3) | reads `loc->allowed_methods` directly |
+| 16 | `ResponseHandler` | ✓ done (Phase 3) | reads `loc->redirect_enabled/code/url` directly |
+| 17 | `ResponseHandler` | ✓ done (Phase 3) | reads `loc->upload_path` directly |
+| 18 | `CgiHandler` | pending (Phase 4) | `location->cgi_extension` |
+| 19 | `CgiHandler` | pending (Phase 4) | `location->cgi_path` |
+| 20 | `CgiHandler` | keep macro | `TMP_CGI_TIMEOUT_SECONDS` — not a per-location config field |
+| 21 | `Headers/ServerConfig.hpp` | pending (teammate) | drop real file in place, delete stub |

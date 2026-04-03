@@ -1,6 +1,6 @@
 # Change Tracker
 
-## Current Repository State (as of Phase 2 completion)
+## Current Repository State (as of Phase 3 + Logger)
 
 ---
 
@@ -28,10 +28,15 @@
 | `Headers/ServerConfig.hpp` | `ConnectionManager.hpp`, `Connection.cpp`, `EventLoop.cpp`, `main.cpp` | Config data container + `matchLocation()` — **STUB**, teammate replaces |
 | `Headers/tmpconf.hpp` | `ServerConfig.hpp`, `main.cpp` | All hardcoded config values in one place — removed when Phase 1 lands |
 
-### Headers NOT YET CREATED (Phase 3+)
+### Phase 3 + Logger headers (NEW — in use)
+| Header | Role |
+|--------|------|
+| `Headers/ResponseHandler.hpp` | Builds HTTP responses into write Buffer — Phase 3 ✓ |
+| `Headers/Logger.hpp` | TeeStreambuf + Logger singleton — tees std::cerr to log file ✓ |
+
+### Headers NOT YET CREATED (Phase 4+)
 | Header | Phase | Role |
 |--------|-------|------|
-| `Headers/ResponseHandler.hpp` | 3 | Builds HTTP responses into write Buffer |
 | `Headers/CgiHandler.hpp` | 4 | Forks CGI processes, parses output |
 | `Headers/ConfigParser.hpp` | 1 (teammate) | Reads `.conf` file → `vector<ServerConfig>` |
 
@@ -70,14 +75,56 @@
 
 ---
 
-## Current Integration Seams in EventLoop.cpp
+### Session 3 — ResponseHandler (Phase 3)
+**New files:**
+- `Headers/ResponseHandler.hpp` — full class declaration with all private helpers
+- `src/ResponseHandler.cpp` — full implementation:
+  - `handle()`: 9-step decision tree (traversal guard → location → method → redirect → fs_path → directory → stat → CGI seam → dispatch)
+  - `_serveStaticFile()`: `open` + `fstat` + `read` loop; HEAD skips body
+  - `_sendDirectoryListing()`: `opendir`/`readdir` loop; HTML table with file sizes and trailing-slash links
+  - `_sendRedirect()`: status line + `Location:` header + short HTML body
+  - `_handlePost()`: saves `req.body` to `upload_path/upload_<ts>_<pid>_<N>`; 201 Created + `Location:` header
+  - `_handleDelete()`: `unlink()`; 204 No Content; 403 on EACCES/EPERM; 500 on other failure
+  - `_loadErrorPage()`: reads custom page from `config.error_pages[code]`; falls back to `_builtinErrorBody()`
+  - `_getMimeType()`: lowercase extension lookup in 24-entry `std::map`; defaults to `application/octet-stream`
+  - `_httpDate()`: `gmtime` + `strftime` → RFC 7231 format
+  - `_stubCgi()`: returns 501; Phase 4 seam — replace with `CgiHandler::execute()`
+- `Makefile` — added `src/ResponseHandler.cpp` to SRCS
 
-These are the three remaining stubs — Phase 3 replaces them:
+**Modified files:**
+- `Headers/EventLoop.hpp` — removed stub declarations (`_stubBuildResponse`, `_stubSend400`, `_stub413`); replaced `class ResponseHandler;` forward decl with `#include "ResponseHandler.hpp"`; added `ResponseHandler _responder` member
+- `src/EventLoop.cpp` — replaced all three stub calls with real `_responder.handle()` / `_responder.sendError()` calls; removed stub implementations; added `#include "Headers/ResponseHandler.hpp"`
+
+**Deleted:**
+- `response_handler/` — nginx reference directory (logic absorbed into ResponseHandler.cpp)
+
+---
+
+### Session 4 — Logger (log file handler)
+**New files:**
+- `Headers/Logger.hpp` — header-only; `TeeStreambuf` + `Logger` singleton
+  - `TeeStreambuf::overflow()` writes each char to terminal AND log file; injects UTC timestamp at start of each log line
+  - `TeeStreambuf::xsputn()` routes bulk writes through overflow() so timestamp injection is never bypassed
+  - `Logger::open(path)` replaces `std::cerr.rdbuf()` with the tee; writes session-start banner
+  - `Logger::close()` restores original rdbuf, writes session-end banner, flushes and closes file
+  - Log format per line: `[YYYY-MM-DD HH:MM:SS] original message`
+  - File opened in append mode — multiple server runs accumulate in one file
+  - Flush after every `\n` — `tail -f webserv.log` works in real time
+
+**Modified files:**
+- `src/main.cpp` — added `#include "Headers/Logger.hpp"`; `Logger::instance().open("webserv.log")` at startup; `Logger::instance().close()` before `return 0`
+
+**No other files changed** — all existing `std::cerr` calls in EventLoop, ConnectionManager, ResponseHandler, HttpParser, etc. are captured automatically without modification.
+
+---
+
+## Current Integration Seams
+
+All Phase 3 stubs are replaced.  Remaining open seam:
 
 ```cpp
-// _stubBuildResponse(conn)  →  _responder.handle(conn->request(), *conn->config(), conn->writeBuffer())
-// _stubSend400(conn)        →  _responder.sendError(400, *conn->config(), conn->writeBuffer())
-// _stub413(conn)            →  _responder.sendError(413, *conn->config(), conn->writeBuffer())
+// In ResponseHandler::_stubCgi() — Phase 4:
+//   Replace body with: CgiHandler cgi(req, cfg, *loc); cgi.execute(wb);
 ```
 
 ---
@@ -85,35 +132,36 @@ These are the three remaining stubs — Phase 3 replaces them:
 ## Compile & Test
 
 ```bash
-make re                                   # clean build
-./webserv                                 # start server (port 8080)
-curl -v http://localhost:8080/            # happy path → 200
-printf "BADREQUEST\r\n\r\n" | nc localhost 8080   # error path → 400
+make re                                          # clean build
+./webserv                                        # start server (port 8080)
+tail -f webserv.log                              # watch logs in real time
+curl -v http://localhost:8080/                   # GET → 200 index or autoindex
+curl -v http://localhost:8080/missing.html       # GET → 404
+curl -X DELETE http://localhost:8080/file.txt    # DELETE → 204 or 404
+curl -X POST --data-binary @f.txt http://localhost:8080/uploads/  # POST → 201
+printf "BADREQUEST\r\n\r\n" | nc localhost 8080  # malformed → 400
 ```
 
 ---
 
-## Next Step — Phase 3: ResponseHandler
+## Next Step — Phase 4: CgiHandler
 
-Create `Headers/ResponseHandler.hpp` and `ResponseHandler.cpp`.
+Create `Headers/CgiHandler.hpp` and `src/CgiHandler.cpp`.
 
 Interface:
 ```cpp
-class ResponseHandler {
+class CgiHandler {
 public:
-    void handle(const HttpRequest& req, const ServerConfig& cfg, Buffer& out);
-    void sendError(int code,            const ServerConfig& cfg, Buffer& out);
+    CgiHandler(const HttpRequest& req, const ServerConfig& cfg, const Location& loc);
+    void execute(Buffer& write_buffer);
+private:
+    void _buildEnv();
+    void _readOutput(int pipe_fd, Buffer& wb);
 };
 ```
 
-Decision tree inside `handle()`:
-1. `matchLocation(req.path)` → get Location
-2. Check method against `location->allowed_methods` → 405
-3. Check `location->redirect_enabled` → 301/302
-4. Resolve `fs_path = root + req.path`
-5. Directory? → try index file → autoindex → 403
-6. `stat(fs_path)` fails → 404
-7. CGI extension matches → CgiHandler (Phase 4)
-8. GET/HEAD → `serveStaticFile`; POST → `handlePost`; DELETE → `handleDelete`
-
-Add `ResponseHandler _responder` as a member of EventLoop.
+Then in `ResponseHandler::_stubCgi()` replace the 501 body with:
+```cpp
+CgiHandler cgi(req, cfg, *loc);
+cgi.execute(wb);
+```

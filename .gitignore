@@ -1,4 +1,5 @@
 a.out
 *.gch
-a.out
-*.gch
+*.o
+webserv
+webserv.log

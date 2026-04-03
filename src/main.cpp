@@ -34,6 +34,7 @@
 #include "Headers/EventLoop.hpp"
 #include "Headers/ServerConfig.hpp"
 #include "Headers/tmpconf.hpp"
+#include "Headers/Logger.hpp"
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -120,6 +121,11 @@ int main(int argc, char* argv[])
     (void)argc;
     (void)argv;
 
+    // ── Logging ───────────────────────────────────────────────
+    // All std::cerr output from this point on is mirrored to
+    // webserv.log with a UTC timestamp prefix on every line.
+    Logger::instance().open("webserv.log");
+
     // ── TODO(phase-1): replace with ConfigParser ─────────────
     // std::vector<ServerConfig> configs = ConfigParser::parse(argv[1]);
     // Current stub: one server on port 8080 with default limits.
@@ -161,5 +167,8 @@ int main(int argc, char* argv[])
     ::close(listen_fd);
 
     std::cerr << "[core] shutdown complete\n";
+
+    // Flush and close the log file before exit.
+    Logger::instance().close();
     return 0;
 }
