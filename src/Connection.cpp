@@ -37,7 +37,7 @@ Connection::Connection(int fd, const ServerConfig* config)
     , _read_buffer(config->client_max_body_size)
     , _write_buffer(config->client_max_body_size)
     , _request()
-    , _state(CS_READING)
+    , _state(CSTATE_READING)
     , _last_active(std::time(NULL))
 {}
 
@@ -106,24 +106,58 @@ ssize_t Connection::send()
 //
 // Full wipe for keep-alive reuse.
 // Clears raw byte buffers, the parsed request, resets state to
-// CS_READING, and stamps last_active so timeout restarts cleanly.
+// CSTATE_READING, and stamps last_active so timeout restarts cleanly.
 // Called by setReading() and (rarely) directly for error recovery.
 void Connection::reset()
 {
     _read_buffer.reset();
     _write_buffer.reset();
     _request.reset();
-    _state       = CS_READING;
+    _state       = CSTATE_READING;
     _touchActive();
 }
+
+// ── isTimedOut ───────────────────────────────────────────────
+bool Connection::isTimedOut(time_t timeout_seconds) const
+{
+    return (std::time(NULL) - _last_active) > timeout_seconds;
+}
+
+// ── accessors ────────────────────────────────────────────────
+int                 Connection::fd()          const { return _fd;           }
+ConnectionState     Connection::state()       const { return _state;        }
+time_t              Connection::lastActive()  const { return _last_active;  }
+const ServerConfig* Connection::config()      const { return _config;       }
+
+Buffer&       Connection::readBuffer()        { return _read_buffer;  }
+const Buffer& Connection::readBuffer()  const { return _read_buffer;  }
+Buffer&       Connection::writeBuffer()       { return _write_buffer; }
+const Buffer& Connection::writeBuffer() const { return _write_buffer; }
+
+HttpRequest&       Connection::request()       { return _request; }
+const HttpRequest& Connection::request() const { return _request; }
+
+// ── state transitions ────────────────────────────────────────
+void Connection::setProcessing() { _state = CSTATE_PROCESSING; }
+void Connection::setWriting()    { _state = CSTATE_WRITING;    }
+void Connection::setClosing()    { _state = CSTATE_CLOSING;    }
+
+void Connection::setReading()
+{
+    reset();
+    _state = CSTATE_READING;
+}
+
+// ── private helpers ──────────────────────────────────────────
+void Connection::_touchActive() { _last_active = std::time(NULL); }
 
 // ── buildEpollEvent ──────────────────────────────────────────
 //
 // Returns an epoll_event ready for epoll_ctl().
 //
 // Interest mask is derived from current state:
-//   CS_READING    → EPOLLIN  | EPOLLET | EPOLLRDHUP
-//   CS_WRITING    → EPOLLOUT | EPOLLET | EPOLLRDHUP
+//   CSTATE_READING    → EPOLLIN  | EPOLLET | EPOLLRDHUP
+//   CSTATE_WRITING    → EPOLLOUT | EPOLLET | EPOLLRDHUP
 //   CS_PROCESSING → EPOLLET  | EPOLLRDHUP  (no I/O interest)
 //   CS_CLOSING    → EPOLLET  | EPOLLRDHUP  (no I/O interest)
 //
@@ -140,10 +174,10 @@ epoll_event Connection::buildEpollEvent()
 
     switch (_state)
     {
-        case CS_READING:
+        case CSTATE_READING:
             ev.events |= EPOLLIN;
             break;
-        case CS_WRITING:
+        case CSTATE_WRITING:
             ev.events |= EPOLLOUT;
             break;
         default:

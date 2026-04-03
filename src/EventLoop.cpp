@@ -7,12 +7,25 @@
 
 // ServerConfig.hpp is provided by Phase 1 (teammate).
 #include "Headers/ServerConfig.hpp"
+#include "Headers/HttpRequest.hpp"
 #include "Headers/EventLoop.hpp"
+#include "Headers/HttpParser.hpp"
 
 #include <cerrno>
 #include <cstring>
 #include <stdexcept>
 #include <iostream>
+
+// ── stop ─────────────────────────────────────────────────────
+void EventLoop::stop() { _running = false; }
+
+// ── setNonBlocking ───────────────────────────────────────────
+int EventLoop::setNonBlocking(int fd)
+{
+    int flags = ::fcntl(fd, F_GETFL, 0);
+    if (flags < 0) return -1;
+    return ::fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+}
 
 // ── Constructor ──────────────────────────────────────────────
 EventLoop::EventLoop()
@@ -183,7 +196,7 @@ void EventLoop::_handleError(Connection* conn)
 //   recv == 0   → peer closed cleanly → closeConnection
 //
 // Edge-trigger: loop recv() until EAGAIN.
-// BufferOverflowException → queue 413 → same write path.
+// BodyLimitException → queue 413 → same write path.
 //
 // ⚠️  conn may be dangling after close. Always return after close.
 void EventLoop::_handleRead(Connection* conn)
@@ -212,23 +225,25 @@ void EventLoop::_handleRead(Connection* conn)
                 return;
             }
 
-            // ── [STUB] Parser ────────────────────────────────
-            // TODO(phase-2): replace with:
-            //   _parser.feed(conn->readBuffer(), conn->request());
-            _stubParse(conn);
+            // ── Phase 2: HttpParser ──────────────────────────
+            _parser.feed(conn->readBuffer(), conn->request());
             // ─────────────────────────────────────────────────
 
-            if (conn->request().parse_state == PS_ERROR)
+            if (conn->request().parse_state == PSTATE_ERROR)
             {
                 conn->request().headers["connection"] = "close";
-                // TODO(phase-3): _responder.sendError(400, *conn->config(), conn->writeBuffer());
+                std::cerr << "[EventLoop] parse error " << conn->request().error_code
+                          << " on fd " << fd << "\n";
+                // TODO(phase-3): replace with:
+                //   _responder.sendError(conn->request().error_code,
+                //                        *conn->config(), conn->writeBuffer());
                 _stubSend400(conn);
                 conn->setWriting();
                 _manager->rearmEpoll(fd);
-                return;  // wait for EPOLLOUT to drain the 400
+                return;  // wait for EPOLLOUT to drain the error response
             }
 
-            if (conn->request().parse_state == PS_COMPLETE)
+            if (conn->request().parse_state == PSTATE_COMPLETE)
             {
                 conn->setProcessing();
 
@@ -245,7 +260,7 @@ void EventLoop::_handleRead(Connection* conn)
             // PS_IDLE / PS_HEADERS / PS_BODY → partial, keep reading
         }
     }
-    catch (const BufferOverflowException&)
+    catch (const BodyLimitException&)
     {
         // readBuffer exceeded client_max_body_size → 413
         conn->request().headers["connection"] = "close";
@@ -321,31 +336,13 @@ const ServerConfig* EventLoop::_configForServer(int fd) const
 // Each stub is the exact seam where the real component plugs in.
 // The interface matches what HttpParser / ResponseHandler will provide.
 
-void EventLoop::_stubParse(Connection* conn)
-{
-    // Print the raw request so the core phase can be tested visually.
-    if (conn->readBuffer().size() > 0)
-    {
-        std::cerr << "\n──── REQUEST fd=" << conn->fd()
-                  << " (" << conn->readBuffer().size() << " bytes) ────\n";
-        std::cerr.write(conn->readBuffer().data(), conn->readBuffer().size());
-        std::cerr << "\n────────────────────────────────────────────\n";
-    }
-
-    conn->request().parse_state = PS_COMPLETE;
-    conn->request().method      = "GET";
-    conn->request().path        = "/";
-    conn->request().version     = "HTTP/1.1";
-    conn->readBuffer().reset();  // consume raw bytes so buffer doesn't grow
-}
-
 void EventLoop::_stubBuildResponse(Connection* conn)
 {
     const char* r = "HTTP/1.1 200 OK\r\n"
-                    "Content-Length: 13\r\n"
+                    "Content-Length: 28\r\n"
                     "Content-Type: text/plain\r\n"
                     "Connection: keep-alive\r\n\r\n"
-                    "Hello, World!";
+                    "core_v1 networking stub OK\r\n";
     conn->writeBuffer().reset();
     conn->writeBuffer().append(r, std::strlen(r));
 }

@@ -24,9 +24,9 @@
 
 #include "ConnectionManager.hpp"
 #include "Connection.hpp"
+#include "HttpParser.hpp"
 
 class ServerConfig;
-class HttpParser;       // Phase 2
 class ResponseHandler;  // Phase 3
 
 
@@ -44,15 +44,8 @@ public:
     void addServerSocket(int server_fd, const ServerConfig* config);
     void run();
 
-    // ── trivial inlines ────────────────────────────────────
-    void stop() { _running = false; }
-
-    static int setNonBlocking(int fd)
-    {
-        int flags = ::fcntl(fd, F_GETFL, 0);
-        if (flags < 0) return -1;
-        return ::fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-    }
+    void stop();
+    static int setNonBlocking(int fd);
 
     ConnectionManager& manager() { return *_manager; }
 
@@ -72,8 +65,8 @@ private:
     bool                _isServerFd(int fd) const;
     const ServerConfig* _configForServer(int fd) const;
 
-    // Stubs — replaced one-for-one when phases are integrated
-    void _stubParse(Connection* conn);
+    // Phase 2 done — _stubParse() removed.
+    // Phase 3 stubs — replaced when ResponseHandler is integrated:
     void _stubBuildResponse(Connection* conn);
     void _stubSend400(Connection* conn);
     void _stub413(Connection* conn);
@@ -84,6 +77,11 @@ private:
     bool                             _running;
     std::vector<int>                 _server_fds;
     std::vector<const ServerConfig*> _server_configs;
+
+    // Phase 2: one stateless parser serves all connections.
+    // All parse progress lives in HttpRequest, so no per-connection
+    // parser instance is needed.
+    HttpParser                       _parser;
 };
 
 #endif // EVENT_LOOP_HPP

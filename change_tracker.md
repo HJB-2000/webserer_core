@@ -1,253 +1,119 @@
 # Change Tracker
 
-## Scope
-- Updated files:
-	- `webserver.hpp`
-	- `webserver.cpp`
-- Unchanged by this step:
-	- all skeleton phase files outside these two files
+## Current Repository State (as of Phase 2 completion)
 
-## Goals Of This Polish Step
-- Move the core socket loop to non-blocking mode.
-- Add epoll-based event handling for multiple concurrent connections.
-- Fix existing logic issues in socket creation and accept flow.
-- Keep the public class interface compatible (`create_socket()` and `accept_connection()`).
+---
 
-## `webserver.hpp` Changes
-- Added headers needed for non-blocking and epoll:
-	- `<sys/epoll.h>`
-	- `<vector>`
-	- `<fcntl.h>`
-- Added constants:
-	- `MAX_EVENTS`
-	- `READ_BUFFER_SIZE`
-- Updated private data members:
-	- Removed unused connection address fields from class-level storage.
-	- Added `epoll_fd`.
-	- Added `std::vector<int> clients` to track active client fds.
-- Replaced old helper declarations with core non-blocking helpers:
-	- `set_non_blocking(int fd)`
-	- `add_fd_to_epoll(int fd, uint32_t events)`
-	- `remove_fd_from_epoll(int fd)`
-	- `accept_all_pending()`
-	- `read_from_client(int fd)`
-	- `close_client(int fd)`
-	- `is_client_fd(int fd) const`
+## File Inventory
 
-## `webserver.cpp` Changes
+### Source files
+| File | Status | Role |
+|------|--------|------|
+| `main.cpp` | Active | Entry point — creates server socket, starts EventLoop |
+| `Connection.cpp` | Active | Connection methods (recv, send, state transitions) |
+| `EventLoop.cpp` | Active | epoll dispatch loop — all event handling |
+| `HttpParser.cpp` | Active | HTTP/1.x request parser — all four phases |
+| `Makefile` | Active | Build: `make` / `make re` / `make clean` / `make fclean` |
 
-### Constructor / Destructor
-- Constructor now initializes:
-	- `epoll_fd = -1`
-	- `socket_fd = -1`
-	- `client_socket_fd = -1`
-- Destructor now safely cleans all resources:
-	- closes all tracked client fds
-	- closes listening fd
-	- closes epoll fd
-	- frees `addrinfo` if still allocated
+### Headers — ALL IN USE
+| Header | Used by | Role |
+|--------|---------|------|
+| `Headers/buffer.hpp` | `Connection.hpp`, `HttpParser.hpp` | Dynamic byte buffer; throws `BodyLimitException` on overflow |
+| `Headers/HttpRequest.hpp` | `Connection.hpp`, `HttpParser.hpp` | Parsed request data bag + `ParseState` enum |
+| `Headers/ConnectionState.hpp` | `Connection.hpp` | `CS_READING / CS_PROCESSING / CS_WRITING / CS_CLOSING` enum |
+| `Headers/Connection.hpp` | `ConnectionManager.hpp`, `EventLoop.hpp` | One live TCP connection — owns both buffers and HttpRequest |
+| `Headers/ConnectionManager.hpp` | `EventLoop.hpp` | Owns the connections map; enforces lifecycle + epoll ADD/MOD/DEL |
+| `Headers/EventLoop.hpp` | `main.cpp` | epoll dispatch loop declarations |
+| `Headers/HttpParser.hpp` | `EventLoop.hpp`, `HttpParser.cpp` | Stateless parser interface — `void feed(Buffer&, HttpRequest&)` |
+| `Headers/ServerConfig.hpp` | `ConnectionManager.hpp`, `Connection.cpp`, `EventLoop.cpp`, `main.cpp` | Config data container + `matchLocation()` — **STUB**, teammate replaces |
+| `Headers/tmpconf.hpp` | `ServerConfig.hpp`, `main.cpp` | All hardcoded config values in one place — removed when Phase 1 lands |
 
-### Socket Creation Path (`create_socket`)
-- Fixed wrong addrinfo usage:
-	- now uses iterator node `p` instead of always using `res`.
-- Improved failure handling:
-	- removed hard `exit(1)` behavior
-	- closes fd and continues/fails with return code
-- Listener is set to non-blocking.
-- Creates epoll instance and registers listener fd with:
-	- `EPOLLIN | EPOLLET`
+### Headers NOT YET CREATED (Phase 3+)
+| Header | Phase | Role |
+|--------|-------|------|
+| `Headers/ResponseHandler.hpp` | 3 | Builds HTTP responses into write Buffer |
+| `Headers/CgiHandler.hpp` | 4 | Forks CGI processes, parses output |
+| `Headers/ConfigParser.hpp` | 1 (teammate) | Reads `.conf` file → `vector<ServerConfig>` |
 
-### Setup / Address Enumeration (`setup`)
-- Fixed loop increment bug (`this->p = this->p->ai_next`).
-- Uses local `ipstr` buffer per iteration for clean address prints.
+---
 
-### New Helper Implementations
-- `set_non_blocking`: uses `fcntl(F_GETFL/F_SETFL)`.
-- `add_fd_to_epoll`: wraps `epoll_ctl(ADD)`.
-- `remove_fd_from_epoll`: wraps `epoll_ctl(DEL)` with safe handling for `ENOENT/EBADF`.
-- `is_client_fd`: validates whether fd belongs to tracked clients.
-- `close_client`: removes fd from epoll, closes it, erases from vector.
-- `accept_all_pending`: drains accepts in edge-trigger mode until `EAGAIN`.
-- `read_from_client`: drains `recv` in non-blocking mode until `EAGAIN` or close/error.
+## What Changed — Session by Session
 
-### Event Loop Entry (`accept_connection`)
-- Now runs one epoll polling cycle using `epoll_wait`.
-- Dispatch behavior:
-	- listener fd events -> accept all pending clients
-	- client error/hangup events -> close client
-	- client readable events -> drain reads
+### Session 1 — Core skeleton (Phase 0)
+- Created full epoll non-blocking I/O skeleton
+- `buffer.hpp`, `HttpRequest.hpp`, `ConnectionState.hpp`, `Connection.hpp`,
+  `ConnectionManager.hpp`, `EventLoop.hpp`, `ServerConfig.hpp` (stub), `tmpconf.hpp`
+- `Connection.cpp`, `EventLoop.cpp`, `main.cpp`
+- All stubs in EventLoop: `_stubParse`, `_stubBuildResponse`, `_stubSend400`, `_stub413`
 
-## Behavior Impact
-- The server core is now non-blocking and epoll-driven.
-- It can track and serve multiple simultaneous client connections.
-- Edge-trigger correctness is improved by draining accept/read loops.
+### Session 2 — HttpParser (Phase 2)
+**New files:**
+- `Headers/HttpParser.hpp` — stateless parser class with four private phase methods
+- `HttpParser.cpp` — full implementation:
+  - `_parseRequestLine()`: nginx-style state machine; 414 on URI > 8192; 505 on bad version
+  - `_parseHeaders()`: incremental line-by-line; 431 on line > 8192 or > 100 headers; 400 on missing Host (HTTP/1.1)
+  - `_parseBody()`: Content-Length path; resumes across recv() calls
+  - `_parseChunked()`: three-state resumable loop; 400 on bad hex size
+- `Makefile` — added `HttpParser.cpp` to SRCS
 
-## Known Status
-- This step focuses on connection core only (no HTTP parse/response yet).
-- Main loop still calls `accept_connection()` repeatedly, which is compatible with this updated core design.
+**Modified files:**
+- `Headers/HttpRequest.hpp` — added `error_code`, `_chunk_size`, `_chunk_trailing`, `_chunk_done`; updated constructor and `reset()`
+- `Headers/EventLoop.hpp` — replaced `class HttpParser;` forward decl with `#include "HttpParser.hpp"`; added `HttpParser _parser` member; removed `_stubParse` declaration
+- `EventLoop.cpp` — replaced `_stubParse(conn)` with `_parser.feed(conn->readBuffer(), conn->request())`; added `error_code` logging; removed `_stubParse()` implementation; added `#include "Headers/HttpParser.hpp"`
 
-## Core Step Update: Write Path + State Machine
+**Deleted (repository cleanup):**
+- `a.out`, `Connection.o`, `EventLoop.o` — stale build artifacts
+- `server` — old binary
+- `Headers/webserver.hpp` — superseded old class
+- `Headers/tmp_base_data_structured.hpp` — design notes in a header
+- `http_parser/` — reference directory (logic absorbed into HttpParser.cpp)
 
-### `webserver.hpp` Updates
-- Added internal core state machine enum inside `socket_`:
-	- `CS_READING`
-	- `CS_PROCESSING`
-	- `CS_WRITING`
-	- `CS_CLOSING`
-- Added internal `Connection` struct for per-client lifecycle:
-	- `fd`
-	- `state`
-	- `read_buffer`
-	- `write_buffer`
-	- `write_offset`
-	- `last_active`
-	- `keep_alive`
-- Replaced client tracking container:
-	- from `std::vector<int>` to `std::map<int, Connection>`
-- Added core loop constants:
-	- `EPOLL_WAIT_TIMEOUT_MS`
-	- `CLIENT_IDLE_TIMEOUT_SEC`
-- Added new core helper declarations:
-	- `mod_fd_in_epoll`
-	- `rearm_client_events`
-	- `write_to_client`
-	- `process_client_buffer`
-	- `queue_simple_response`
-	- `request_complete`
-	- `should_keep_alive`
-	- `sweep_idle_clients`
+---
 
-### `webserver.cpp` Updates
-- Added epoll `MOD` support to switch client interest dynamically.
-- Added event rearm logic to avoid permanent EPOLLOUT notifications:
-	- `CS_WRITING` -> `EPOLLOUT`
-	- otherwise -> `EPOLLIN`
-- Implemented minimal request-complete check (`\r\n\r\n`).
-- Implemented keep-alive decision from request headers/version.
-- Added minimal response generation:
-	- status line
-	- content length
-	- content type
-	- connection header
-	- body
-- Implemented write path with output buffer and offset handling:
-	- partial sends handled
-	- EAGAIN handled
-	- close-on-error handled
-- Implemented state transitions:
-	- read complete -> processing -> writing -> reading or closing
-- Implemented idle timeout sweep and close policy.
-- Strengthened error handling for:
-	- `EPOLLERR`
-	- `EPOLLHUP`
-	- `EPOLLRDHUP`
-	- recv/send failures
-- Added payload-size guard (1 MB) with `413 Payload Too Large` response.
+## Current Integration Seams in EventLoop.cpp
 
-### Core Behavior Result
-- Core now performs full non-blocking read + process + write cycles.
-- Connections only subscribe to EPOLLOUT when response data exists.
-- Idle clients are removed to protect server resources.
+These are the three remaining stubs — Phase 3 replaces them:
 
-## Tracker Update: Integration Entry Markers + Loop Control
+```cpp
+// _stubBuildResponse(conn)  →  _responder.handle(conn->request(), *conn->config(), conn->writeBuffer())
+// _stubSend400(conn)        →  _responder.sendError(400, *conn->config(), conn->writeBuffer())
+// _stub413(conn)            →  _responder.sendError(413, *conn->config(), conn->writeBuffer())
+```
 
-### `webserver.hpp`
-- Added explicit integration comments on future handoff points:
-	- `process_client_buffer(int fd)` marked as HttpParser entry point.
-	- `queue_simple_response(...)` marked as ResponseHandler replacement point.
-- Clarified helper role comments for temporary core-only request checks.
+---
 
-### `webserver.cpp`
-- Added TODO markers at exact future hook locations:
-	- start of `process_client_buffer(int fd)` for parser pipeline wiring.
-	- response build area for ResponseHandler integration.
-	- read path comment to indicate where parser/response plumbing begins.
-- No behavior changes from these documentation markers.
+## Compile & Test
 
-### `main.cpp`
-- Kept the event-loop shape and added a temporary break after one successful tick.
-- This is an intentional staging control point until next phases are integrated.
+```bash
+make re                                   # clean build
+./webserv                                 # start server (port 8080)
+curl -v http://localhost:8080/            # happy path → 200
+printf "BADREQUEST\r\n\r\n" | nc localhost 8080   # error path → 400
+```
 
-## Core Update: Dual Listener Sockets (IPv4 + IPv6)
+---
 
-### `webserver.hpp`
-- Added listener container:
-	- `std::vector<int> listener_fds`
-- Added listener classification helper:
-	- `is_listener_fd(int fd) const`
-- Core class now models one-or-more listening sockets instead of a single listener assumption.
+## Next Step — Phase 3: ResponseHandler
 
-### `webserver.cpp`
-- Updated `create_socket()` to attempt both families and keep up to:
-	- one IPv4 listener
-	- one IPv6 listener
-- Added IPv6 socket option setup with `IPV6_V6ONLY` for predictable dual-listener behavior.
-- Moved `listen()` and epoll `ADD` handling to run for each successfully created listener.
-- Updated event dispatch in `accept_connection()`:
-	- listener detection now checks against registered listener set
-	- accept path works for whichever listener fd fired
-- Updated destructor cleanup to close all listener fds.
+Create `Headers/ResponseHandler.hpp` and `ResponseHandler.cpp`.
 
-### Behavior Impact
-- Core can now accept IPv4 and IPv6 clients concurrently when both listeners are available.
-- Event loop remains single-threaded and non-blocking while handling multiple server fds.
+Interface:
+```cpp
+class ResponseHandler {
+public:
+    void handle(const HttpRequest& req, const ServerConfig& cfg, Buffer& out);
+    void sendError(int code,            const ServerConfig& cfg, Buffer& out);
+};
+```
 
-## Tracker Update: Explicit Connection Creation Marker
+Decision tree inside `handle()`:
+1. `matchLocation(req.path)` → get Location
+2. Check method against `location->allowed_methods` → 405
+3. Check `location->redirect_enabled` → 301/302
+4. Resolve `fs_path = root + req.path`
+5. Directory? → try index file → autoindex → 403
+6. `stat(fs_path)` fails → 404
+7. CGI extension matches → CgiHandler (Phase 4)
+8. GET/HEAD → `serveStaticFile`; POST → `handlePost`; DELETE → `handleDelete`
 
-### `webserver.cpp`
-- Added a highly visible comment block inside `accept_all_pending(...)` at the exact line where:
-	- `Connection* conn = new Connection(client_socket_fd, effective_config);`
-- The marker explicitly documents this as the lifecycle entry point for:
-	- recv handling via `conn->recv()`
-	- send handling via `conn->send()`
-	- future parser/response integration chaining from the same object
-
-## Execution Path (Core)
-
-### Startup Path
-- `main()`
-	- creates `socket_connection::socket_`
-	- calls `create_socket()`
-
-### Listener Setup Path
-- `create_socket()`
-	- `setup()`
-		- `set_hints()`
-		- `set_addrinfo_()`
-	- creates listener socket(s) (IPv4/IPv6 when available)
-	- `set_non_blocking(listener_fd)`
-	- `listen(listener_fd, BACKLOG)`
-	- `add_fd_to_epoll(listener_fd, EPOLLIN | EPOLLET)`
-
-### Event Loop Tick Path
-- `accept_connection()`
-	- `epoll_wait(...)`
-	- for each event:
-		- if listener fd -> `accept_all_pending(listener_fd, config)`
-		- if client fd + `EPOLLIN` -> `read_from_client(fd)`
-		- if client fd + `EPOLLOUT` -> `write_to_client(fd)`
-		- if error/hup -> `close_client(fd)`
-	- `sweep_idle_clients()`
-
-### Connection Creation Path
-- `accept_all_pending(listener_fd, config)`
-	- `accept(...)`
-	- `set_non_blocking(client_fd)`
-	- **Connection object created here**:
-		- `Connection* conn = new Connection(client_fd, effective_config);`
-	- register client with epoll using `conn->buildEpollEvent()`
-	- store in `clients[client_fd] = conn`
-
-### Read/Process/Write Path
-- `read_from_client(fd)`
-	- `conn->recv()` in edge-trigger drain loop
-	- on EAGAIN -> `process_client_buffer(fd)`
-- `process_client_buffer(fd)`
-	- request completeness check
-	- temporary response queueing
-	- **Integration spot**:
-		- replace this body with HttpParser + ResponseHandler wiring
-- `write_to_client(fd)`
-	- `conn->send()` in drain loop
-	- if complete and keep-alive -> back to reading state
-	- else -> `close_client(fd)`
+Add `ResponseHandler _responder` as a member of EventLoop.

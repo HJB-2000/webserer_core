@@ -3,6 +3,8 @@
 //  Represents one live client connection.
 //  C++98 compliant.
 //
+//  Implementation: src/Connection.cpp
+//
 //  Ownership model:
 //  ─────────────────────────────────────
 //  std::map<int, Connection*> _connections  owns every Connection
@@ -13,13 +15,10 @@
 //      2. NEVER   dereference epoll's data.ptr after closeConnection()
 //      3. Always  go through the map to reach a Connection
 //
-//  Non-trivial method implementations live in Connection.cpp.
-//  Trivial accessors and one-liner state transitions are inline here.
-//
 //  Dependency chain:
 //    Buffer.hpp
 //    HttpRequest.hpp       → parse_state, keepAlive()
-//    ConnectionState.hpp   → CS_READING / PROCESSING / WRITING / CLOSING
+//    ConnectionState.hpp   → CSTATE_READING / PROCESSING / WRITING / CLOSING
 //        └── Connection.hpp   ← we are here
 // ============================================================
 #ifndef CONNECTION_HPP
@@ -35,10 +34,9 @@
 #include "HttpRequest.hpp"
 #include "ConnectionState.hpp"
 
-// ── Forward declarations ────────────────────────────────────
 class ServerConfig;     // provided by teammate (Phase 1)
-class HttpParser;       // Phase 2 — plugs into readBuffer() + request()
-class ResponseHandler;  // Phase 3 — plugs into request() + writeBuffer()
+class HttpParser;       // Phase 2
+class ResponseHandler;  // Phase 3
 
 
 // ────────────────────────────────────────────────────────────
@@ -53,95 +51,41 @@ class Connection
 public:
 
     // ── ctor / dtor ───────────────────────────────────────
-    // Implemented in Connection.cpp.
-    // ctor initialises both Buffers with config->client_max_body_size.
     Connection(int fd, const ServerConfig* config);
     ~Connection();
 
     // ── I/O ───────────────────────────────────────────────
-    // Both implemented in Connection.cpp.
-
-    /**
-     * Read available bytes into readBuffer().
-     * Uses a 16 KB stack buffer as the intermediary so Buffer
-     * controls its own growth.
-     *
-     * @return  n > 0  bytes read and appended to readBuffer()
-     *          0      peer closed the connection cleanly
-     *         -1      EAGAIN/EWOULDBLOCK (edge-trigger: drained)
-     *                 or real recv() error (errno set)
-     *
-     * May throw BufferOverflowException → caller maps to 413.
-     */
     ssize_t recv();
-
-    /**
-     * Send as many bytes from writeBuffer() as the kernel accepts.
-     * Consumes sent bytes from writeBuffer() via Buffer::consume().
-     *
-     * @return  n >= 0  bytes sent
-     *         -1       EAGAIN/EWOULDBLOCK or real send() error
-     */
     ssize_t send();
 
     // ── keep-alive reset ──────────────────────────────────
-    /**
-     * Wipe read/write buffers and HttpRequest for the next request
-     * on a keep-alive connection.  Stamps last_active and sets
-     * state → CS_READING.
-     * Implemented in Connection.cpp.
-     */
     void reset();
 
     // ── epoll integration ─────────────────────────────────
-    /**
-     * Build an epoll_event for epoll_ctl().
-     * Sets data.ptr = this (ConnectionManager's map still owns us).
-     * Implemented in Connection.cpp.
-     */
     epoll_event buildEpollEvent();
 
     // ── timeout ───────────────────────────────────────────
-    /** True when the connection has been idle > timeout_seconds. */
-    bool isTimedOut(time_t timeout_seconds) const
-    {
-        return (std::time(NULL) - _last_active) > timeout_seconds;
-    }
+    bool isTimedOut(time_t timeout_seconds) const;
 
-    // ── accessors (all inline — trivial) ──────────────────
-    int                  fd()          const { return _fd;           }
-    ConnectionState      state()       const { return _state;        }
-    time_t               lastActive()  const { return _last_active;  }
-    const ServerConfig*  config()      const { return _config;       }
+    // ── accessors ─────────────────────────────────────────
+    int                  fd()          const;
+    ConnectionState      state()       const;
+    time_t               lastActive()  const;
+    const ServerConfig*  config()      const;
 
-    Buffer&       readBuffer()        { return _read_buffer;  }
-    const Buffer& readBuffer()  const { return _read_buffer;  }
-    Buffer&       writeBuffer()       { return _write_buffer; }
-    const Buffer& writeBuffer() const { return _write_buffer; }
+    Buffer&       readBuffer();
+    const Buffer& readBuffer()  const;
+    Buffer&       writeBuffer();
+    const Buffer& writeBuffer() const;
 
-    HttpRequest&       request()       { return _request; }
-    const HttpRequest& request() const { return _request; }
+    HttpRequest&       request();
+    const HttpRequest& request() const;
 
-    // ── state transitions (all inline — one-liners) ───────
-    /** READING → PROCESSING : full request arrived. */
-    void setProcessing() { _state = CS_PROCESSING; }
-
-    /** PROCESSING → WRITING : response is in writeBuffer(). Caller re-arms epoll. */
-    void setWriting()    { _state = CS_WRITING; }
-
-    /** Any → CLOSING : error / HUP / timeout / clean shutdown. */
-    void setClosing()    { _state = CS_CLOSING; }
-
-    /**
-     * WRITING → READING : keep-alive, writeBuffer is empty.
-     * Calls reset() which wipes buffers, request, stamps time,
-     * and sets state → CS_READING.
-     */
-    void setReading()
-    {
-        reset();
-        _state = CS_READING;  // explicit — reset() also sets this, belt-and-suspenders
-    }
+    // ── state transitions ─────────────────────────────────
+    void setProcessing();   ///< READING → PROCESSING
+    void setWriting();      ///< PROCESSING → WRITING
+    void setClosing();      ///< Any → CLOSING
+    void setReading();      ///< WRITING → READING (calls reset())
 
 private:
 
@@ -150,16 +94,16 @@ private:
     Connection& operator=(const Connection&);
 
     // ── helpers ───────────────────────────────────────────
-    void _touchActive() { _last_active = std::time(NULL); }
+    void _touchActive();
 
     // ── members ───────────────────────────────────────────
-    int                 _fd;            ///< file descriptor — closed only in ~Connection()
-    const ServerConfig* _config;        ///< borrowed pointer — never owned or deleted
-    Buffer              _read_buffer;   ///< inbound raw bytes
-    Buffer              _write_buffer;  ///< outbound response bytes
-    HttpRequest         _request;       ///< Parser fills this; Processing reads it
-    ConnectionState     _state;         ///< drives epoll interest and dispatch
-    time_t              _last_active;   ///< updated by every successful I/O
+    int                 _fd;
+    const ServerConfig* _config;
+    Buffer              _read_buffer;
+    Buffer              _write_buffer;
+    HttpRequest         _request;
+    ConnectionState     _state;
+    time_t              _last_active;
 };
 
 #endif // CONNECTION_HPP
