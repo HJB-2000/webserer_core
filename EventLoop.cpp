@@ -1,0 +1,373 @@
+// ============================================================
+//  EventLoop.cpp — implementations
+//
+//  All non-trivial EventLoop methods live here.
+//  The header (EventLoop.hpp) is declarations only.
+// ============================================================
+
+// ServerConfig.hpp is provided by Phase 1 (teammate).
+#include "Headers/ServerConfig.hpp"
+#include "Headers/EventLoop.hpp"
+
+#include <cerrno>
+#include <cstring>
+#include <stdexcept>
+#include <iostream>
+
+// ── Constructor ──────────────────────────────────────────────
+EventLoop::EventLoop()
+    : _epoll_fd(-1)
+    , _manager(NULL)
+    , _running(false)
+{
+    _epoll_fd = ::epoll_create(1);
+    if (_epoll_fd < 0)
+        throw std::runtime_error(
+            std::string("[EventLoop] epoll_create failed: ")
+            + std::strerror(errno));
+
+    _manager = new ConnectionManager(_epoll_fd);
+}
+
+// ── Destructor ───────────────────────────────────────────────
+EventLoop::~EventLoop()
+{
+    delete _manager;
+    if (_epoll_fd >= 0)
+        ::close(_epoll_fd);
+}
+
+// ── addServerSocket ──────────────────────────────────────────
+//
+// Register a bound, listening, non-blocking fd with epoll.
+// Server sockets use data.fd (not data.ptr) — they have no Connection*.
+// ⚠️  Caller must set the fd non-blocking before calling this.
+void EventLoop::addServerSocket(int server_fd, const ServerConfig* config)
+{
+    _server_fds.push_back(server_fd);
+    _server_configs.push_back(config);
+
+    epoll_event ev;
+    ev.events  = EPOLLIN | EPOLLET;
+    ev.data.fd = server_fd;
+
+    if (::epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, server_fd, &ev) < 0)
+        throw std::runtime_error(
+            std::string("[EventLoop] epoll_ctl ADD server fd failed: ")
+            + std::strerror(errno));
+
+    std::cerr << "[EventLoop] listening on fd " << server_fd << "\n";
+}
+
+// ── run ──────────────────────────────────────────────────────
+//
+// Blocking event loop.  Each iteration:
+//   1. epoll_wait → fills event batch
+//   2. dispatch   → one handler per event
+//   3. sweep      → close idle connections (per-connection timeout)
+void EventLoop::run()
+{
+    _running = true;
+    epoll_event events[MAX_EVENTS];
+
+    std::cerr << "[EventLoop] starting\n";
+
+    while (_running)
+    {
+        int n = ::epoll_wait(_epoll_fd, events, MAX_EVENTS, EPOLL_TIMEOUT_MS);
+        if (n < 0)
+        {
+            if (errno == EINTR) continue;   // signal interrupted — loop again
+            std::cerr << "[EventLoop] epoll_wait error: "
+                      << std::strerror(errno) << "\n";
+            break;
+        }
+
+        for (int i = 0; i < n; ++i)
+            _dispatch(events[i]);
+
+        // Per-connection timeout: uses each conn's config->timeout_seconds.
+        _manager->closeTimedOut();
+    }
+
+    std::cerr << "[EventLoop] stopped\n";
+}
+
+// ── _dispatch ────────────────────────────────────────────────
+//
+// Route a single epoll_event to the correct handler.
+//
+// Server fds → registered with data.fd  → _handleAccept
+// Client fds → registered with data.ptr → _handleRead / _handleWrite
+//
+// ⚠️  Never use conn after any call that may closeConnection().
+//     Each handler returns immediately after a close.
+void EventLoop::_dispatch(const epoll_event& ev)
+{
+    // ── server fd ─────────────────────────────────────────
+    if (_isServerFd(ev.data.fd))
+    {
+        _handleAccept(ev.data.fd);
+        return;
+    }
+
+    // ── client fd ─────────────────────────────────────────
+    // Recover the Connection* that buildEpollEvent() stored in data.ptr.
+    Connection* conn = static_cast<Connection*>(ev.data.ptr);
+
+    // Safety check: the connection may have been closed earlier in the
+    // same epoll_wait batch (two events for the same fd in one tick).
+    if (!conn || !_manager->get(conn->fd()))
+    {
+        std::cerr << "[EventLoop] stale event — connection already gone\n";
+        return;
+    }
+
+    if (ev.events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
+    {
+        _handleError(conn);
+        return;  // conn is dangling
+    }
+
+    if (ev.events & EPOLLIN)
+    {
+        _handleRead(conn);
+        return;  // conn may be dangling
+    }
+
+    if (ev.events & EPOLLOUT)
+    {
+        _handleWrite(conn);
+        return;  // conn may be dangling
+    }
+}
+
+// ── _handleAccept ────────────────────────────────────────────
+//
+// Drain all pending clients on a server fd.
+// ConnectionManager::addConnection() does the full creation sequence:
+//   accept → setNonBlocking → new Connection → map insert → epoll ADD
+void EventLoop::_handleAccept(int server_fd)
+{
+    const ServerConfig* config = _configForServer(server_fd);
+
+    while (true)
+    {
+        int client_fd = _manager->addConnection(server_fd, config);
+        if (client_fd < 0)
+            break;  // EAGAIN — edge-trigger drained
+    }
+}
+
+// ── _handleError ─────────────────────────────────────────────
+//
+// EPOLLERR or EPOLLHUP on a client fd — close immediately.
+// ⚠️  conn is dangling after return.
+void EventLoop::_handleError(Connection* conn)
+{
+    const int fd = conn->fd();
+    std::cerr << "[EventLoop] error/hup on fd " << fd << "\n";
+    _manager->closeConnection(fd);
+}
+
+// ── _handleRead ──────────────────────────────────────────────
+//
+// EPOLLIN on a client fd.
+//
+// Flow:
+//   recv() → append to readBuffer()
+//   stub parse → fills HttpRequest
+//   PS_ERROR    → queue 400 → setWriting → rearmEpoll → (send → close)
+//   PS_COMPLETE → queue response → setWriting → rearmEpoll EPOLLOUT
+//   partial     → keep reading
+//   recv == 0   → peer closed cleanly → closeConnection
+//
+// Edge-trigger: loop recv() until EAGAIN.
+// BufferOverflowException → queue 413 → same write path.
+//
+// ⚠️  conn may be dangling after close. Always return after close.
+void EventLoop::_handleRead(Connection* conn)
+{
+    const int fd = conn->fd();
+
+    try
+    {
+        while (true)
+        {
+            ssize_t n = conn->recv();
+
+            if (n == 0)
+            {
+                _manager->closeConnection(fd);
+                return;
+            }
+
+            if (n < 0)
+            {
+                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    break;  // edge-trigger drained
+                std::cerr << "[EventLoop] recv error on fd " << fd
+                          << ": " << std::strerror(errno) << "\n";
+                _manager->closeConnection(fd);
+                return;
+            }
+
+            // ── [STUB] Parser ────────────────────────────────
+            // TODO(phase-2): replace with:
+            //   _parser.feed(conn->readBuffer(), conn->request());
+            _stubParse(conn);
+            // ─────────────────────────────────────────────────
+
+            if (conn->request().parse_state == PS_ERROR)
+            {
+                conn->request().headers["connection"] = "close";
+                // TODO(phase-3): _responder.sendError(400, *conn->config(), conn->writeBuffer());
+                _stubSend400(conn);
+                conn->setWriting();
+                _manager->rearmEpoll(fd);
+                return;  // wait for EPOLLOUT to drain the 400
+            }
+
+            if (conn->request().parse_state == PS_COMPLETE)
+            {
+                conn->setProcessing();
+
+                // ── [STUB] Response builder ──────────────────
+                // TODO(phase-3): replace with:
+                //   _responder.handle(conn->request(), *conn->config(), conn->writeBuffer());
+                _stubBuildResponse(conn);
+                // ─────────────────────────────────────────────
+
+                conn->setWriting();
+                _manager->rearmEpoll(fd);
+                return;  // wait for EPOLLOUT — stop reading
+            }
+            // PS_IDLE / PS_HEADERS / PS_BODY → partial, keep reading
+        }
+    }
+    catch (const BufferOverflowException&)
+    {
+        // readBuffer exceeded client_max_body_size → 413
+        conn->request().headers["connection"] = "close";
+        // TODO(phase-3): _responder.sendError(413, *conn->config(), conn->writeBuffer());
+        _stub413(conn);
+        conn->setWriting();
+        _manager->rearmEpoll(fd);
+    }
+}
+
+// ── _handleWrite ─────────────────────────────────────────────
+//
+// EPOLLOUT on a client fd.
+//
+// Drain writeBuffer until EAGAIN or empty.
+// When empty:
+//   keepAlive() → setReading() → rearmEpoll EPOLLIN
+//   !keepAlive() → closeConnection()
+//
+// keepAlive() is read BEFORE setReading() which resets the request.
+// ⚠️  conn may be dangling after close.
+void EventLoop::_handleWrite(Connection* conn)
+{
+    const int fd = conn->fd();
+
+    while (!conn->writeBuffer().empty())
+    {
+        ssize_t n = conn->send();
+        if (n < 0)
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                break;  // kernel buffer full — wait for next EPOLLOUT
+            std::cerr << "[EventLoop] send error on fd " << fd
+                      << ": " << std::strerror(errno) << "\n";
+            _manager->closeConnection(fd);
+            return;
+        }
+    }
+
+    if (conn->writeBuffer().empty())
+    {
+        if (conn->request().keepAlive())
+        {
+            conn->setReading();        // resets buffers + request + stamps time
+            _manager->rearmEpoll(fd);  // re-arm EPOLLIN
+        }
+        else
+        {
+            _manager->closeConnection(fd);
+            // ⚠️ conn dangling
+        }
+    }
+    // else: buffer not empty — EPOLLOUT will fire again
+}
+
+// ── helpers ──────────────────────────────────────────────────
+
+bool EventLoop::_isServerFd(int fd) const
+{
+    for (size_t i = 0; i < _server_fds.size(); ++i)
+        if (_server_fds[i] == fd) return true;
+    return false;
+}
+
+const ServerConfig* EventLoop::_configForServer(int fd) const
+{
+    for (size_t i = 0; i < _server_fds.size(); ++i)
+        if (_server_fds[i] == fd) return _server_configs[i];
+    return NULL;
+}
+
+// ── stubs ─────────────────────────────────────────────────────
+// Each stub is the exact seam where the real component plugs in.
+// The interface matches what HttpParser / ResponseHandler will provide.
+
+void EventLoop::_stubParse(Connection* conn)
+{
+    // Print the raw request so the core phase can be tested visually.
+    if (conn->readBuffer().size() > 0)
+    {
+        std::cerr << "\n──── REQUEST fd=" << conn->fd()
+                  << " (" << conn->readBuffer().size() << " bytes) ────\n";
+        std::cerr.write(conn->readBuffer().data(), conn->readBuffer().size());
+        std::cerr << "\n────────────────────────────────────────────\n";
+    }
+
+    conn->request().parse_state = PS_COMPLETE;
+    conn->request().method      = "GET";
+    conn->request().path        = "/";
+    conn->request().version     = "HTTP/1.1";
+    conn->readBuffer().reset();  // consume raw bytes so buffer doesn't grow
+}
+
+void EventLoop::_stubBuildResponse(Connection* conn)
+{
+    const char* r = "HTTP/1.1 200 OK\r\n"
+                    "Content-Length: 13\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Connection: keep-alive\r\n\r\n"
+                    "Hello, World!";
+    conn->writeBuffer().reset();
+    conn->writeBuffer().append(r, std::strlen(r));
+}
+
+void EventLoop::_stubSend400(Connection* conn)
+{
+    const char* r = "HTTP/1.1 400 Bad Request\r\n"
+                    "Content-Length: 11\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Connection: close\r\n\r\n"
+                    "Bad Request";
+    conn->writeBuffer().reset();
+    conn->writeBuffer().append(r, std::strlen(r));
+}
+
+void EventLoop::_stub413(Connection* conn)
+{
+    const char* r = "HTTP/1.1 413 Payload Too Large\r\n"
+                    "Content-Length: 16\r\n"
+                    "Content-Type: Text/plain\r\n"
+                    "Connection: close\r\n\r\n"
+                    "Payload Too Large";
+    conn->writeBuffer().reset();
+    conn->writeBuffer().append(r, std::strlen(r));
+}
