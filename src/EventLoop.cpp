@@ -5,8 +5,7 @@
 //  The header (EventLoop.hpp) is declarations only.
 // ============================================================
 
-// ServerConfig.hpp is provided by Phase 1 (teammate).
-#include "Headers/ServerConfig.hpp"
+#include "serverConfig.hpp"
 #include "Headers/HttpRequest.hpp"
 #include "Headers/EventLoop.hpp"
 #include "Headers/HttpParser.hpp"
@@ -137,10 +136,22 @@ void EventLoop::_dispatch(const epoll_event& ev)
         return;
     }
 
-    if (ev.events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
+    if (ev.events & (EPOLLERR | EPOLLHUP))
     {
         _handleError(conn);
         return;  // conn is dangling
+    }
+
+    if (ev.events & EPOLLRDHUP)
+    {
+        // Peer shut down their write side (FIN received).
+        // If we still have data to send, let _handleWrite drain it first,
+        // then close. Otherwise close now.
+        if (conn->writeBuffer().empty())
+            _manager->closeConnection(conn->fd());
+        else
+            conn->setPeerHalfClosed();
+        return;
     }
 
     if (ev.events & EPOLLIN)
@@ -302,7 +313,7 @@ void EventLoop::_handleWrite(Connection* conn)
 
     if (conn->writeBuffer().empty())
     {
-        if (conn->request().keepAlive())
+        if (!conn->peerHalfClosed() && conn->request().keepAlive())
         {
             conn->setReading();        // resets buffers + request + stamps time
             _manager->rearmEpoll(fd);  // re-arm EPOLLIN

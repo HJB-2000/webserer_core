@@ -9,17 +9,7 @@
 //  declared) because the constructor accesses config members.
 // ============================================================
 
-// ServerConfig.hpp is provided by Phase 1 (teammate).
-// It must define at minimum (per Plan.md):
-//   size_t                     client_max_body_size
-//   int                        timeout_seconds
-//   std::string                host, root, index
-//   int                        port
-//   std::vector<std::string>   server_names
-//   std::map<int,std::string>  error_pages
-//   std::vector<Location>      locations
-//   const Location* matchLocation(const std::string& path) const
-#include "Headers/ServerConfig.hpp"
+#include "serverConfig.hpp"
 #include "Headers/Connection.hpp"
 
 #include <cstring>   // memset (for epoll_event)
@@ -34,11 +24,12 @@
 Connection::Connection(int fd, const ServerConfig* config)
     : _fd(fd)
     , _config(config)
-    , _read_buffer(config->client_max_body_size)
-    , _write_buffer(config->client_max_body_size)
+    , _read_buffer(config->getMaxBody())
+    , _write_buffer(config->getMaxBody())
     , _request()
     , _state(CSTATE_READING)
     , _last_active(std::time(NULL))
+    , _peer_half_closed(false)
 {}
 
 // ── Destructor ───────────────────────────────────────────────
@@ -113,7 +104,8 @@ void Connection::reset()
     _read_buffer.reset();
     _write_buffer.reset();
     _request.reset();
-    _state       = CSTATE_READING;
+    _state             = CSTATE_READING;
+    _peer_half_closed  = false;
     _touchActive();
 }
 
@@ -147,6 +139,10 @@ void Connection::setReading()
     reset();
     _state = CSTATE_READING;
 }
+
+// ── peer half-close ──────────────────────────────────────────
+void Connection::setPeerHalfClosed() { _peer_half_closed = true; }
+bool Connection::peerHalfClosed() const { return _peer_half_closed; }
 
 // ── private helpers ──────────────────────────────────────────
 void Connection::_touchActive() { _last_active = std::time(NULL); }

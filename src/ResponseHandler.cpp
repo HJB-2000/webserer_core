@@ -7,6 +7,28 @@
 
 #include "Headers/ResponseHandler.hpp"
 
+// ── htmlEscape ───────────────────────────────────────────────
+//
+// Escapes the five characters that are special in HTML/XML.
+// Applied to any user-controlled string inserted into HTML output
+// (req.path in autoindex, Location URL in redirect body).
+static std::string htmlEscape(const std::string& s)
+{
+    std::string out;
+    out.reserve(s.size());
+    for (size_t i = 0; i < s.size(); ++i) {
+        switch (s[i]) {
+            case '&':  out += "&amp;";  break;
+            case '<':  out += "&lt;";   break;
+            case '>':  out += "&gt;";   break;
+            case '"':  out += "&quot;"; break;
+            case '\'': out += "&#39;";  break;
+            default:   out += s[i];     break;
+        }
+    }
+    return out;
+}
+
 #include <sys/stat.h>    // stat, fstat, S_ISREG, S_ISDIR
 #include <sys/types.h>   // size_t, pid_t
 #include <dirent.h>      // opendir, readdir, closedir
@@ -88,17 +110,17 @@ void ResponseHandler::handle(
     const Location* loc = cfg.matchLocation(req.path);
 
     // ── 2. Method allowed ─────────────────────────────────────
-    if (loc && !loc->allowed_methods.empty()
-        && !_methodAllowed(req.method, loc->allowed_methods))
+    if (loc && !loc->getMethods().empty()
+        && !_methodAllowed(req.method, loc->getMethods()))
     {
         _sendErrorInternal(405, req, cfg, wb);
         return;
     }
 
     // ── 3. Redirect ───────────────────────────────────────────
-    if (loc && loc->redirect_enabled)
+    if (loc && loc->getRedirectEnabled())
     {
-        _sendRedirect(loc->redirect_code, loc->redirect_url, req, wb);
+        _sendRedirect(loc->getReturnRedirection_code(), loc->getReturnRedirection_path(), req, wb);
         return;
     }
 
@@ -111,7 +133,7 @@ void ResponseHandler::handle(
         // POST upload to directory
         if (req.method == "POST")
         {
-            if (loc && !loc->upload_path.empty())
+            if (loc && !loc->getUploadStore().empty())
                 _handlePost(req, *loc, cfg, wb);
             else
                 _sendErrorInternal(405, req, cfg, wb);
@@ -126,9 +148,9 @@ void ResponseHandler::handle(
         }
 
         // Try index file
-        std::string idx = (loc && !loc->index.empty()) ? loc->index : cfg.index;
-        if (idx.empty())
-            idx = "index.html";
+        std::vector<std::string> idx_vec = (loc && !loc->getIndex_s().empty())
+                                           ? loc->getIndex_s() : cfg.getIndex_s();
+        std::string idx = idx_vec.empty() ? "index.html" : idx_vec[0];
 
         std::string idx_path = fs_path + idx;
         struct stat st;
@@ -140,7 +162,7 @@ void ResponseHandler::handle(
         }
 
         // Autoindex
-        bool autoindex = loc ? loc->autoindex : false;
+        bool autoindex = loc ? loc->getAutoindex() : false;
         if (autoindex)
         {
             if (::stat(fs_path.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
@@ -171,9 +193,9 @@ void ResponseHandler::handle(
     }
 
     // ── 7. CGI check (Phase 4 seam) ───────────────────────────
-    if (loc && !loc->cgi_extension.empty())
+    if (loc && !loc->getCGI_extension().empty())
     {
-        const std::string& ext = loc->cgi_extension;
+        const std::string ext = loc->getCGI_extension();
         if (req.path.size() >= ext.size()
             && req.path.compare(req.path.size() - ext.size(), ext.size(), ext) == 0)
         {
@@ -189,7 +211,7 @@ void ResponseHandler::handle(
     }
     else if (req.method == "POST")
     {
-        if (loc && !loc->upload_path.empty())
+        if (loc && !loc->getUploadStore().empty())
             _handlePost(req, *loc, cfg, wb);
         else
             _sendErrorInternal(405, req, cfg, wb);
@@ -302,7 +324,7 @@ void ResponseHandler::_sendDirectoryListing(
     std::ostringstream html;
     html << "<!DOCTYPE html>\n<html>\n"
          << "<head><meta charset=\"UTF-8\">"
-         << "<title>Index of " << req.path << "</title>\n"
+         << "<title>Index of " << htmlEscape(req.path) << "</title>\n"
          << "<style>body{font-family:monospace;padding:1em}"
          << "table{border-collapse:collapse;width:100%}"
          << "th,td{text-align:left;padding:4px 12px}"
@@ -310,7 +332,7 @@ void ResponseHandler::_sendDirectoryListing(
          << "a{text-decoration:none}a:hover{text-decoration:underline}"
          << "</style></head>\n"
          << "<body>\n"
-         << "<h1>Index of " << req.path << "</h1>\n"
+         << "<h1>Index of " << htmlEscape(req.path) << "</h1>\n"
          << "<hr>\n"
          << "<table>\n"
          << "<tr><th>Name</th><th>Size</th></tr>\n";
@@ -343,7 +365,7 @@ void ResponseHandler::_sendDirectoryListing(
         if (is_dir) { href += "/"; display += "/"; }
 
         html << "<tr>"
-             << "<td><a href=\"" << href << "\">" << display << "</a></td>"
+             << "<td><a href=\"" << htmlEscape(href) << "\">" << htmlEscape(display) << "</a></td>"
              << "<td>";
         if (is_dir)
             html << "-";
@@ -378,7 +400,7 @@ void ResponseHandler::_sendRedirect(
     body_oss << "<!DOCTYPE html><html><head><title>"
              << code << " " << _reasonPhrase(code)
              << "</title></head><body><p>Redirecting to "
-             << "<a href=\"" << url << "\">" << url << "</a>"
+             << "<a href=\"" << htmlEscape(url) << "\">" << htmlEscape(url) << "</a>"
              << "</p></body></html>";
     std::string body = body_oss.str();
 
@@ -405,14 +427,14 @@ void ResponseHandler::_handlePost(
     const ServerConfig& cfg,
     Buffer&             wb)
 {
-    if (loc.upload_path.empty())
+    if (loc.getUploadStore().empty())
     {
         _sendErrorInternal(405, req, cfg, wb);
         return;
     }
 
     // Ensure upload directory path ends with '/'
-    std::string upload_dir = loc.upload_path;
+    std::string upload_dir = loc.getUploadStore();
     if (upload_dir.empty() || upload_dir[upload_dir.size() - 1] != '/')
         upload_dir += '/';
 
@@ -456,7 +478,10 @@ void ResponseHandler::_handlePost(
 
     // 201 Created
     // Location points to the uploaded resource
-    std::string location_url  = req.path + filename;
+    std::string location_url = req.path;
+    if (location_url.empty() || location_url[location_url.size() - 1] != '/')
+        location_url += '/';
+    location_url += filename;
     std::string resp_body =
         "<!DOCTYPE html><html><body>"
         "<p>File uploaded successfully.</p>"
@@ -544,8 +569,9 @@ std::string ResponseHandler::_loadErrorPage(
     int                 code,
     const ServerConfig& cfg) const
 {
-    std::map<int,std::string>::const_iterator it = cfg.error_pages.find(code);
-    if (it != cfg.error_pages.end() && !it->second.empty())
+    std::map<int,std::string> ep = cfg.getErrorPageMap();
+    std::map<int,std::string>::const_iterator it = ep.find(code);
+    if (it != ep.end() && !it->second.empty())
     {
         int fd = ::open(it->second.c_str(), O_RDONLY);
         if (fd >= 0)
@@ -626,9 +652,9 @@ std::string ResponseHandler::_resolveFsPath(
     const Location*     loc,
     const ServerConfig& cfg) const
 {
-    std::string root = cfg.root;
-    if (loc && !loc->root.empty())
-        root = loc->root;
+    std::string root = cfg.getRoot();
+    if (loc && !loc->getRoot().empty())
+        root = loc->getRoot();
 
     // Normalize: remove trailing slash(es) from root
     while (!root.empty() && root[root.size() - 1] == '/')

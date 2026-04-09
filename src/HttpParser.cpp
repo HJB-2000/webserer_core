@@ -86,6 +86,42 @@ inline bool is_host_char(char ch)
         || ch == ',' || ch == ';' || ch == '=' || ch == '%';
 }
 
+// ── pctDecode ────────────────────────────────────────────────
+//
+// Decodes percent-encoded characters in a URI path component.
+// RFC 3986 §2.1: %XX where XX is a hex pair.
+//
+// Safety: %2F (encoded '/') is intentionally NOT decoded —
+// decoding it would allow clients to escape the server root
+// by disguising path separators (path traversal).
+std::string pctDecode(const std::string& s)
+{
+    std::string out;
+    out.reserve(s.size());
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (s[i] == '%'
+            && i + 2 < s.size()
+            && std::isxdigit(static_cast<unsigned char>(s[i + 1]))
+            && std::isxdigit(static_cast<unsigned char>(s[i + 2])))
+        {
+            unsigned char hi = static_cast<unsigned char>(s[i + 1]);
+            unsigned char lo = static_cast<unsigned char>(s[i + 2]);
+            int hv = std::isdigit(hi) ? hi - '0' : std::tolower(hi) - 'a' + 10;
+            int lv = std::isdigit(lo) ? lo - '0' : std::tolower(lo) - 'a' + 10;
+            int val = hv * 16 + lv;
+            if (val == '/') {          // keep %2F encoded — never decode
+                out += s[i];
+            } else {
+                out += static_cast<char>(val);
+                i += 2;
+            }
+        }
+        else
+            out += s[i];
+    }
+    return out;
+}
+
 // ── string helpers ───────────────────────────────────────────
 
 std::string str_tolower(const std::string& s)
@@ -434,14 +470,15 @@ void HttpParser::_parseRequestLine(Buffer& buf, HttpRequest& req)
     req.version += '.';
     req.version += static_cast<char>('0' + http_minor);
 
-    // Split URI into path and query string
+    // Split URI into path and query string, then percent-decode the path.
+    // Query string is left encoded — CGI/app decodes its own parameters.
     std::string raw_uri(uri_start, uri_len);
     size_t qmark = raw_uri.find('?');
     if (qmark != std::string::npos) {
-        req.path         = raw_uri.substr(0, qmark);
+        req.path         = pctDecode(raw_uri.substr(0, qmark));
         req.query_string = raw_uri.substr(qmark + 1);
     } else {
-        req.path         = raw_uri;
+        req.path         = pctDecode(raw_uri);
         req.query_string.clear();
     }
     if (req.path.empty()) req.path = "/";

@@ -1,0 +1,11 @@
+/* webserv test — static CSS file */
+body {
+    font-family: monospace;
+    background: #0d1117;
+    color: #e6edf3;
+    margin: 0;
+    padding: 20px;
+}
+
+h1 { color: #58a6ff; }
+a  { color: #58a6ff; }

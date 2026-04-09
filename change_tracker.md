@@ -1,6 +1,6 @@
 # Change Tracker
 
-## Current Repository State (as of Phase 3 + Logger)
+## Current Repository State (as of Phase 1 integration)
 
 ---
 
@@ -25,8 +25,8 @@
 | `Headers/ConnectionManager.hpp` | `EventLoop.hpp` | Owns the connections map; enforces lifecycle + epoll ADD/MOD/DEL |
 | `Headers/EventLoop.hpp` | `main.cpp` | epoll dispatch loop declarations |
 | `Headers/HttpParser.hpp` | `EventLoop.hpp`, `HttpParser.cpp` | Stateless parser interface — `void feed(Buffer&, HttpRequest&)` |
-| `Headers/ServerConfig.hpp` | `ConnectionManager.hpp`, `Connection.cpp`, `EventLoop.cpp`, `main.cpp` | Config data container + `matchLocation()` — **STUB**, teammate replaces |
-| `Headers/tmpconf.hpp` | `ServerConfig.hpp`, `main.cpp` | All hardcoded config values in one place — removed when Phase 1 lands |
+| `Headers/ServerConfig.hpp` | `ConnectionManager.hpp`, `Connection.cpp`, `EventLoop.cpp`, `main.cpp` | Integration bridge — `#include "serverConfig.hpp"` + `typedef Server ServerConfig` |
+| `Headers/tmpconf.hpp` | `main.cpp` | Hardcoded fallback values — stays until main.cpp wiring is complete |
 
 ### Phase 3 + Logger headers (NEW — in use)
 | Header | Role |
@@ -34,15 +34,50 @@
 | `Headers/ResponseHandler.hpp` | Builds HTTP responses into write Buffer — Phase 3 ✓ |
 | `Headers/Logger.hpp` | TeeStreambuf + Logger singleton — tees std::cerr to log file ✓ |
 
-### Headers NOT YET CREATED (Phase 4+)
+### Teammate config-parser sources (Phase 1 — NOW IN BUILD)
+| File | Role |
+|------|------|
+| `conf/parsing.cpp` | Comment stripping, whitespace normalization, token splitting |
+| `conf/LexerConfig.cpp` | Token classification → `Lexer` objects with type + value |
+| `conf/eventsConfig.cpp` | `eventsConfig` class (worker_connections, event_model) |
+| `conf/serverConfig.cpp` | `Server` class + `matchLocation()` + `matchServer()` |
+| `conf/locationConfig.cpp` | `Location` class with full getter interface |
+| `conf/httpConfig.cpp` | `httpConfig` class — http-block-level directives + parse helpers |
+| `conf/parserConf.cpp` | Top-level parser driver + `report_parse_error()` + `parse_cl_mx_bd_sz()` |
+| `conf/server_parser.cpp` | Server-block directive parsing + `check_for_allowed_methods()` |
+| `conf/location_parser.cpp` | Location-block directive parsing |
+| `conf/printer.cpp` | `ParserConf::printer_of_conf_parser()` — debug dump |
+
+### Headers NOT YET CREATED (Phase 4)
 | Header | Phase | Role |
 |--------|-------|------|
 | `Headers/CgiHandler.hpp` | 4 | Forks CGI processes, parses output |
-| `Headers/ConfigParser.hpp` | 1 (teammate) | Reads `.conf` file → `vector<ServerConfig>` |
 
 ---
 
 ## What Changed — Session by Session
+
+### Session 5 — Phase 1 integration (conf/ merged into build)
+**Deleted:**
+- `src/ServerConfig.cpp` — stub removed; teammate's `conf/serverConfig.cpp` takes over
+
+**Modified files:**
+- `Headers/ServerConfig.hpp` — replaced stub class definitions with bridge: `#include "serverConfig.hpp"` + `typedef Server ServerConfig`
+- `Headers/EventLoop.hpp` — `class ServerConfig;` → `class Server; typedef Server ServerConfig;`
+- `Headers/Connection.hpp` — same forward-declaration fix
+- `src/Connection.cpp` — `config->client_max_body_size` → `config->getMaxBody()`
+- `src/ConnectionManager.cpp` — `cfg->timeout_seconds` → `cfg->get_timeout_seconds()`
+- `src/ResponseHandler.cpp` — all 12 direct field accesses replaced with getter calls:
+  - `cfg.root` → `cfg.getRoot()`, `cfg.getIndex_s()[0]`, `cfg.getErrorPageMap()`
+  - `loc->allowed_methods` → `loc->getMethods()`
+  - `loc->redirect_enabled/code/url` → `loc->getRedirectEnabled()` / `getReturnRedirection_code()` / `getReturnRedirection_path()`
+  - `loc->upload_path` → `loc->getUploadStore()`
+  - `loc->autoindex` → `loc->getAutoindex()`
+  - `loc->cgi_extension` → `loc->getCGI_extension()`
+  - `loc->root` → `loc->getRoot()`
+- `Makefile` — added `-I conf`; added 10 `conf/*.cpp` sources; removed `src/ServerConfig.cpp`
+
+**Result:** `make re` — 19 object files, zero warnings, zero errors.
 
 ### Session 1 — Core skeleton (Phase 0)
 - Created full epoll non-blocking I/O skeleton
@@ -120,11 +155,16 @@
 
 ## Current Integration Seams
 
-All Phase 3 stubs are replaced.  Remaining open seam:
-
 ```cpp
-// In ResponseHandler::_stubCgi() — Phase 4:
+// Phase 4 — ResponseHandler::_stubCgi():
 //   Replace body with: CgiHandler cgi(req, cfg, *loc); cgi.execute(wb);
+
+// Phase 5 — main.cpp (after teammate fixes error.md bugs):
+//   Replace TMP_HOST/TMP_PORT stub with:
+//     ParserConf parser;
+//     // ... tokenize argv[1] → call parser
+//     const vector<Server>& servers = parser.get_http().get_all_servers();
+//     for each server → make_listener(s.getHost(), s.getPort()) → loop.addServerSocket(fd, &s)
 ```
 
 ---
@@ -144,24 +184,9 @@ printf "BADREQUEST\r\n\r\n" | nc localhost 8080  # malformed → 400
 
 ---
 
-## Next Step — Phase 4: CgiHandler
+## Next Steps
 
-Create `Headers/CgiHandler.hpp` and `src/CgiHandler.cpp`.
+**Unblock (teammate):** Fix bugs listed in `error.md` — then wire main.cpp.
 
-Interface:
-```cpp
-class CgiHandler {
-public:
-    CgiHandler(const HttpRequest& req, const ServerConfig& cfg, const Location& loc);
-    void execute(Buffer& write_buffer);
-private:
-    void _buildEnv();
-    void _readOutput(int pipe_fd, Buffer& wb);
-};
-```
-
-Then in `ResponseHandler::_stubCgi()` replace the 501 body with:
-```cpp
-CgiHandler cgi(req, cfg, *loc);
-cgi.execute(wb);
-```
+**Phase 4 (you):** Create `Headers/CgiHandler.hpp` + `src/CgiHandler.cpp`.
+Replace `ResponseHandler::_stubCgi()` body with `CgiHandler cgi(req, cfg, *loc); cgi.execute(wb);`

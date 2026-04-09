@@ -1,0 +1,22 @@
+# id|config_path|expected_exit|expect_regex|bug_area|notes
+V01|conf/confs/regression/valid_minimal.conf|0|Parsed Config|core parser / directive storage|Minimal valid config should parse
+V02|conf/confs/regression/valid_multi_server_locations.conf|0|Parsed Config|multi-server parsing|Two servers and multiple locations should parse
+V03|conf/confs/regression/valid_inheritance_redirect.conf|0|Parsed Config|location inheritance + return|Inherited root/index + valid redirect should parse
+
+E01|conf/confs/regression/invalid_duplicate_events_block.conf|1|Duplicate block: events|top-level block deduplication|Second events block must fail
+E02|conf/confs/regression/invalid_two_http_blocks.conf|1|Duplicate block: http|top-level block deduplication|Second http block must fail
+E03|conf/confs/regression/invalid_missing_timeout.conf|1|Missing required directive: timeout|server required directives|Missing timeout must fail
+E04|conf/confs/regression/invalid_cgi_pair_missing_path.conf|1|Invalid CGI configuration|location CGI validation|cgi_ext without cgi_path must fail
+E05|conf/confs/regression/invalid_upload_without_post.conf|1|upload_path requires POST|location upload/method validation|upload_path without POST must fail
+E06|conf/confs/regression/invalid_return_non_3xx.conf|1|Invalid return code|location redirect validation|return code must be 3xx
+E07|conf/confs/regression/invalid_duplicate_allowed_methods.conf|1|Duplicate directive in location|location duplicate-directive detection|duplicate allowed_methods currently forbidden
+
+V04|conf/confs/regression/valid_many_locations_stress.conf|0|Parsed Config|location vector growth / longest-prefix stability|Many locations should parse without crash
+
+E08|conf/confs/regression/invalid_empty_location_path.conf|1|Expected path after location|location context syntax parser|Location without path must fail safely
+E09|conf/confs/regression/invalid_server_without_brace.conf|1|Expected '\{' after server|server context parser|Missing server opening brace must fail safely
+E10|conf/confs/regression/invalid_location_unclosed.conf|1|Parse error|location brace matching|Unclosed location must fail without UB
+E11|conf/confs/regression/invalid_listen_non_numeric_port.conf|1|not valid port|listen parser validation|Non-numeric port should fail
+E12|conf/confs/regression/invalid_timeout_negative.conf|1|Invalid value of timeout|numeric validator / timeout parser|Negative timeout should fail
+E13|conf/confs/regression/invalid_error_page_code_alpha.conf|1|Invalid error code|error_page parser validation|Alphabetic error code should fail
+E14|conf/confs/regression/invalid_many_values_missing_semicolon.conf|1|Expected semicolone after the value|token/consumeValues semicolon enforcement|Missing semicolon should fail early

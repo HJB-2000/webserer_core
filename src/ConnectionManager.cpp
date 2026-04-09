@@ -1,7 +1,7 @@
 // ============================================================
 //  ConnectionManager.cpp — ConnectionManager implementations
 // ============================================================
-#include "Headers/ServerConfig.hpp"
+#include "serverConfig.hpp"
 #include "Headers/ConnectionManager.hpp"
 
 #include <sys/epoll.h>
@@ -10,16 +10,37 @@
 #include <fcntl.h>
 #include <cerrno>
 #include <cstring>
+#include <cstdlib>
 #include <stdexcept>
 #include <iostream>
 #include <vector>
 #include <ctime>
 
+// ── readSomaxconn ────────────────────────────────────────────
+//
+// Reads the kernel's accept-queue hard cap from procfs.
+// Uses only allowed syscalls: open, read, close.
+static int readSomaxconn()
+{
+    int fd = ::open("/proc/sys/net/core/somaxconn", O_RDONLY);
+    if (fd < 0)
+        return SOMAXCONN;
+    char buf[16];
+    std::memset(buf, 0, sizeof(buf));
+    ::read(fd, buf, sizeof(buf) - 1);
+    ::close(fd);
+    int val = std::atoi(buf);
+    return (val > 0) ? val : SOMAXCONN;
+}
+
 // ── ctor / dtor ──────────────────────────────────────────────
 
 ConnectionManager::ConnectionManager(int epoll_fd)
     : _epoll_fd(epoll_fd)
-{}
+    , _max_connections(readSomaxconn())
+{
+    std::cerr << "[ConnectionManager] max connections: " << _max_connections << "\n";
+}
 
 ConnectionManager::~ConnectionManager()
 {
@@ -38,6 +59,9 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
 {
     struct sockaddr_storage client_addr;
     socklen_t addr_len = sizeof(client_addr);
+
+    if (static_cast<int>(_connections.size()) >= _max_connections)
+        return -1;  // at capacity — let kernel queue new SYNs
 
     int client_fd = ::accept(server_fd,
                              reinterpret_cast<struct sockaddr*>(&client_addr),
@@ -148,7 +172,7 @@ void ConnectionManager::closeTimedOut(time_t default_timeout_seconds)
         const ServerConfig* cfg  = conn->config();
 
         time_t limit = (cfg != NULL)
-            ? static_cast<time_t>(cfg->timeout_seconds)
+            ? static_cast<time_t>(cfg->get_timeout_seconds())
             : default_timeout_seconds;
 
         if (conn->isTimedOut(limit))

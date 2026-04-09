@@ -2,6 +2,7 @@
 //  HttpRequest.cpp — HttpRequest implementations
 // ============================================================
 #include "Headers/HttpRequest.hpp"
+#include <cctype>
 
 HttpRequest::HttpRequest()
     : parse_state(PSTATE_IDLE)
@@ -44,7 +45,9 @@ bool HttpRequest::expectsBody() const
 
 bool HttpRequest::keepAlive() const
 {
-    const std::string conn = header("connection");
+    std::string conn = header("connection");
+    for (size_t i = 0; i < conn.size(); ++i)
+        conn[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(conn[i])));
     if (version == "HTTP/1.1")
         return (conn != "close");
     return (conn == "keep-alive");

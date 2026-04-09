@@ -27,7 +27,7 @@
 
 #include "buffer.hpp"
 #include "HttpRequest.hpp"
-#include "ServerConfig.hpp"
+#include "serverConfig.hpp"
 
 class ResponseHandler
 {

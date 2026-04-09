@@ -34,7 +34,7 @@
 #include "HttpRequest.hpp"
 #include "ConnectionState.hpp"
 
-class ServerConfig;     // provided by teammate (Phase 1)
+#include "serverConfig.hpp"  // Server + typedef ServerConfig (Phase 1)
 class HttpParser;       // Phase 2
 class ResponseHandler;  // Phase 3
 
@@ -87,6 +87,13 @@ public:
     void setClosing();      ///< Any → CLOSING
     void setReading();      ///< WRITING → READING (calls reset())
 
+    // ── peer half-close tracking ──────────────────────────
+    // Set when EPOLLRDHUP fires while the write buffer is still
+    // non-empty. EventLoop::_handleWrite() closes the connection
+    // once the buffer fully drains.
+    void setPeerHalfClosed();
+    bool peerHalfClosed() const;
+
 private:
 
     // ── non-copyable ──────────────────────────────────────
@@ -104,6 +111,7 @@ private:
     HttpRequest         _request;
     ConnectionState     _state;
     time_t              _last_active;
+    bool                _peer_half_closed;
 };
 
 #endif // CONNECTION_HPP

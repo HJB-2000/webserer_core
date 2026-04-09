@@ -1,9 +1,11 @@
 NAME    = webserv
 
-CXX     = c++
-CXXFLAGS = -std=c++98 -Wall -Wextra -Werror
+CXX      = c++
+CXXFLAGS = -std=c++98 -Wall -Wextra -Werror -I. -I conf
 
+# ── your sources ──────────────────────────────────────────────
 SRCS    = src/main.cpp \
+          src/API_conf.cpp \
           src/Connection.cpp \
           src/EventLoop.cpp \
           src/HttpParser.cpp \
@@ -11,8 +13,17 @@ SRCS    = src/main.cpp \
           src/HttpRequest.cpp \
           src/ConnectionManager.cpp \
           src/ConnectionState.cpp \
-          src/ServerConfig.cpp \
           src/ResponseHandler.cpp
+
+# ── teammate config-parser sources (Phase 1) ──────────────────
+SRCS   += conf/parsing.cpp \
+          conf/LexerConfig.cpp \
+          conf/serverConfig.cpp \
+          conf/locationConfig.cpp \
+          conf/httpConfig.cpp \
+          conf/parserConf.cpp \
+          conf/server_parser.cpp \
+          conf/location_parser.cpp
 
 OBJS    = $(SRCS:.cpp=.o)
 
@@ -24,7 +35,7 @@ $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -I. -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(OBJS)

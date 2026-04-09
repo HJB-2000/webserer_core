@@ -27,7 +27,8 @@
 #include "HttpParser.hpp"
 #include "ResponseHandler.hpp"  // Phase 3
 
-class ServerConfig;
+// Server + typedef ServerConfig provided by teammate's header.
+// Included by Connection.hpp (already in the chain above).
 
 
 class EventLoop

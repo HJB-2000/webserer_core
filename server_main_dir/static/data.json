@@ -1,0 +1,6 @@
+{
+    "server": "webserv",
+    "phase": 3,
+    "status": "testing",
+    "features": ["static", "autoindex", "upload", "redirect", "error_pages"]
+}

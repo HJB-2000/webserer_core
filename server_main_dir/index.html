@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>webserv — Test Suite</title>
+    <style>
+        body { font-family: monospace; max-width: 700px; margin: 40px auto; background: #0d1117; color: #e6edf3; }
+        h1   { color: #58a6ff; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+        h2   { color: #79c0ff; margin-top: 32px; }
+        a    { color: #58a6ff; }
+        ul   { line-height: 2; }
+        .ok  { color: #3fb950; }
+        .tag { color: #f78166; font-size: 0.85em; }
+    </style>
+</head>
+<body>
+    <h1>webserv — Test Suite Index</h1>
+    <p class="ok">Server is UP</p>
+
+    <h2>Static Files <span class="tag">GET/HEAD</span></h2>
+    <ul>
+        <li><a href="/index.html">GET /index.html</a> — this page (200)</li>
+        <li><a href="/static/style.css">GET /static/style.css</a> — CSS MIME type</li>
+        <li><a href="/static/data.json">GET /static/data.json</a> — JSON MIME type</li>
+        <li><a href="/static/sample.txt">GET /static/sample.txt</a> — plain text</li>
+    </ul>
+
+    <h2>Error Pages <span class="tag">custom HTML</span></h2>
+    <ul>
+        <li><a href="/does_not_exist">GET /does_not_exist</a> — custom 404 page</li>
+    </ul>
+
+    <h2>Autoindex <span class="tag">directory listing</span></h2>
+    <ul>
+        <li><a href="/autoindex_test">GET /autoindex_test</a> — listing (autoindex on)</li>
+        <li><a href="/autoindex_test/">GET /autoindex_test/</a> — trailing slash variant</li>
+    </ul>
+
+    <h2>Redirect <span class="tag">301</span></h2>
+    <ul>
+        <li><a href="/old-page">GET /old-page</a> — 301 → /index.html</li>
+    </ul>
+
+    <h2>Upload <span class="tag">POST / DELETE</span></h2>
+    <ul>
+        <li><a href="/uploads">GET /uploads</a> — list uploaded files</li>
+        <li>POST /uploads — upload a file (use curl or the form below)</li>
+    </ul>
+
+    <!-- simple upload form for browser testing -->
+    <form action="/uploads" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <button type="submit">Upload</button>
+    </form>
+
+    <h2>CGI — Phase 4 stub <span class="tag">GET/POST</span></h2>
+    <ul>
+        <li><a href="/cgi-bin/hello.py">GET /cgi-bin/hello.py</a> — Python CGI hello world</li>
+        <li><a href="/cgi-bin/env.py">GET /cgi-bin/env.py</a> — dump CGI environment variables</li>
+    </ul>
+</body>
+</html>

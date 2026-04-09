@@ -26,14 +26,17 @@
 
 ---
 
-## Phase 1 — ServerConfig + ConfigParser (teammate)
+## Phase 1 — ServerConfig + ConfigParser (teammate — INTEGRATED)
 
-- [ ] Real ServerConfig.hpp delivered (replaces Headers/ServerConfig.hpp stub)
-- [ ] Config file parsed from argv[1] in main.cpp
-- [ ] Multiple server blocks supported
-- [ ] Virtual host matching via Host header (matchServer())
-- [ ] Location matching via longest-prefix (matchLocation()) — stub exists in ServerConfig.hpp
-- [ ] main.cpp: replace TMP_HOST / TMP_PORT loop with per-config socket binding
+- [x] conf/ directory compiled into the project (10 source files, -I conf flag)
+- [x] Headers/ServerConfig.hpp replaced with bridge: includes serverConfig.hpp + typedef Server ServerConfig
+- [x] src/ServerConfig.cpp stub deleted — teammate's conf/serverConfig.cpp supplies the implementation
+- [x] Forward declarations updated in EventLoop.hpp and Connection.hpp
+- [x] Location matching via longest-prefix (matchLocation()) — live from conf/serverConfig.cpp
+- [x] Virtual host matching (matchServer()) — live from conf/serverConfig.cpp
+- [x] Full config parser pipeline: file → lexer → tokens → ParserConf → httpConfig → Server/Location
+- [ ] main.cpp: wire ConfigParser — replace TMP_HOST/TMP_PORT stub with loop over parsed servers
+- [ ] Teammate bug fixes needed before wiring main.cpp (see error.md)
 
 ---
 
@@ -108,28 +111,19 @@
 
 ## ServerConfig integration checklist
 
-When `Headers/ServerConfig.hpp` arrives from teammate, replace every macro / stub:
-
 | # | File | Status | Notes |
 |---|------|--------|-------|
-| 1 | `main.cpp` | pending | Replace `TMP_HOST`/`TMP_PORT` with loop over `vector<ServerConfig>` |
-| 2 | `Connection.cpp` | ✓ ready | `config->client_max_body_size` already used correctly |
-| 3 | `Headers/ConnectionManager.hpp` | ✓ ready | `cfg->timeout_seconds` already used correctly |
-| 4 | `EventLoop.cpp` | ✓ done (Phase 3) | `_responder.handle(...)` wired in |
-| 5 | `EventLoop.cpp` | ✓ done (Phase 3) | `_responder.sendError(error_code, ...)` wired in |
-| 6 | `EventLoop.cpp` | ✓ done (Phase 3) | `_responder.sendError(413, ...)` wired in |
-| 7 | `HttpParser` | pending | Replace `TMP_CLIENT_MAX_BODY_SIZE` with `conn->config()->client_max_body_size` |
-| 8 | `HttpParser` | keep macro | `TMP_MAX_URI_LENGTH` — HTTP spec limit, not a user config value |
+| 1 | `main.cpp` | pending | Replace `TMP_HOST`/`TMP_PORT` with loop over parsed servers |
+| 2 | `Connection.cpp` | ✓ done | `config->getMaxBody()` via getter |
+| 3 | `ConnectionManager.cpp` | ✓ done | `cfg->get_timeout_seconds()` via getter |
+| 4 | `EventLoop.cpp` | ✓ done | `_responder.handle(...)` wired in |
+| 5 | `EventLoop.cpp` | ✓ done | `_responder.sendError(error_code, ...)` wired in |
+| 6 | `EventLoop.cpp` | ✓ done | `_responder.sendError(413, ...)` wired in |
+| 7 | `HttpParser` | pending | Replace `TMP_CLIENT_MAX_BODY_SIZE` with `conn->config()->getMaxBody()` |
+| 8 | `HttpParser` | keep macro | `TMP_MAX_URI_LENGTH` — HTTP spec limit |
 | 9 | `HttpParser` | keep macro | `TMP_MAX_HEADER_LINE` — HTTP spec limit |
 | 10 | `HttpParser` | keep macro | `TMP_MAX_HEADER_COUNT` — HTTP spec limit |
-| 11 | `ResponseHandler` | ✓ done (Phase 3) | reads `cfg.root` / `loc->root` directly from ServerConfig |
-| 12 | `ResponseHandler` | ✓ done (Phase 3) | reads `cfg.index` / `loc->index` directly |
-| 13 | `ResponseHandler` | ✓ done (Phase 3) | reads `loc->autoindex` directly |
-| 14 | `ResponseHandler` | ✓ done (Phase 3) | reads `cfg.error_pages[code]` directly |
-| 15 | `ResponseHandler` | ✓ done (Phase 3) | reads `loc->allowed_methods` directly |
-| 16 | `ResponseHandler` | ✓ done (Phase 3) | reads `loc->redirect_enabled/code/url` directly |
-| 17 | `ResponseHandler` | ✓ done (Phase 3) | reads `loc->upload_path` directly |
-| 18 | `CgiHandler` | pending (Phase 4) | `location->cgi_extension` |
-| 19 | `CgiHandler` | pending (Phase 4) | `location->cgi_path` |
-| 20 | `CgiHandler` | keep macro | `TMP_CGI_TIMEOUT_SECONDS` — not a per-location config field |
-| 21 | `Headers/ServerConfig.hpp` | pending (teammate) | drop real file in place, delete stub |
+| 11 | `ResponseHandler` | ✓ done | all ServerConfig / Location access via getters |
+| 12 | `CgiHandler` | pending (Phase 4) | `loc->getCGI_extension()` / `loc->getCGI_path()` |
+| 13 | `CgiHandler` | keep macro | `TMP_CGI_TIMEOUT_SECONDS` — not a per-location field |
+| 14 | `Headers/ServerConfig.hpp` | ✓ done | bridge header — includes teammate's real file + typedef |

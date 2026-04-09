@@ -22,7 +22,7 @@
 #include <ctime>
 #include <cstddef>
 
-#include "ServerConfig.hpp"
+#include "serverConfig.hpp"
 #include "Connection.hpp"
 
 
@@ -75,6 +75,7 @@ private:
 
     // ── members ────────────────────────────────────────────
     int                        _epoll_fd;
+    int                        _max_connections;
     std::map<int, Connection*> _connections;
 };
 
