@@ -253,6 +253,24 @@ void ResponseHandler::sendError(
     _appendStr(wb, oss.str());
 }
 
+bool ResponseHandler::resolveCgiRequest(
+    const HttpRequest&  req,
+    const ServerConfig& cfg,
+    CgiRequestInfo&     out
+) const
+{
+    const Location* loc = cfg.matchLocation(req.path);
+    if (!loc || loc->getCGI_extension().empty()){ return false; }
+    const std::string ext = loc->getCGI_extension();
+    if (req.path.size() < ext.size()){ return false; }
+    if (req.path.compare(req.path.size() - ext.size(),
+                            ext.size(), ext) != 0) {
+                                return false;
+                            }
+    out.location = loc;
+    out.script_path = _resolveFsPath(req, loc, cfg);
+    return true;
+}
 
 // ============================================================
 //  _serveStaticFile

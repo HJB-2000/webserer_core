@@ -89,8 +89,9 @@ Server& Server::operator=(const Server& obj)
         this->_port = obj._port;
         this->_timeout_seconds = obj._timeout_seconds;
         this->_root = obj._root;
-        this->_server_names = obj._server_names;
         this->_client_max_body_size = obj._client_max_body_size;
+        this->_index_Files = obj._index_Files;
+        this->_server_names = obj._server_names;
         this->_error_page = obj._error_page;
         this->_locations = obj._locations;
     }

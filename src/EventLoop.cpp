@@ -64,14 +64,222 @@ void EventLoop::addServerSocket(int server_fd, const ServerConfig* config)
     ev.events  = EPOLLIN | EPOLLET;
     ev.data.fd = server_fd;
 
-    if (::epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, server_fd, &ev) < 0)
-        throw std::runtime_error(
-            std::string("[EventLoop] epoll_ctl ADD server fd failed: ")
-            + std::strerror(errno));
-
+    _registerEventFd(server_fd, EV_SERVER, EPOLLIN | EPOLLET);
     std::cerr << "[EventLoop] listening on fd " << server_fd << "\n";
 }
 
+// ── addCGI ──────────────────────────────────────────
+
+void EventLoop::_registerEventFd(int fd, EventKind kind, uint32_t events)
+{
+    EventRef* ref = new EventRef(kind, fd);
+    _event_refs[fd] = ref;
+
+    epoll_event ev;
+    std::memset(&ev, 0, sizeof(ev));
+    ev.events = events;
+    ev.data.ptr = ref;
+
+    if (::epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, fd, &ev) < 0)
+        throw std::runtime_error(std::string("epoll_ctl ADD failed: ")
+            + std::strerror(errno));
+}
+
+void EventLoop::_unregisterEventFd(int fd)
+{
+    ::epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+    std::map<int, EventRef*>::iterator it = _event_refs.find(fd);
+    if (it != _event_refs.end())
+    {
+        delete it->second;
+        _event_refs.erase(it);
+    }
+}
+void EventLoop::_addCgiFd(int result_fd, int client_fd)
+{
+    _registerEventFd(result_fd, EV_CGI, EPOLLIN | EPOLLET | EPOLLHUP | EPOLLERR);
+    std::cerr << "[EventLoop] CGI fd " << result_fd
+              << " registered for client fd " << client_fd << "\n";
+}
+
+void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
+{
+    int fds[2];
+    if (::pipe(fds) < 0)
+    {
+        _responder.sendError(500, *conn->config(), conn->writeBuffer());
+        conn->setWriting();
+        _manager->rearmEpoll(conn->fd());
+        return;
+    }
+
+    int result_read_fd = fds[0];
+    int result_write_fd = fds[1];
+
+    if (EventLoop::setNonBlocking(result_read_fd) < 0)
+    {
+        ::close(result_read_fd);
+        ::close(result_write_fd);
+        _responder.sendError(500, *conn->config(), conn->writeBuffer());
+        conn->setWriting();
+        _manager->rearmEpoll(conn->fd());
+        return;
+    }
+
+    CgiJob* job = new CgiJob(conn->fd(), result_read_fd, conn->writeBuffer().maxSize());
+    _cgi_jobs[result_read_fd] = job;
+    _addCgiFd(result_read_fd, conn->fd());
+
+    conn->setCgiRunning();
+    _manager->rearmEpoll(conn->fd());
+
+    bool ok = startCgi(conn->request(), *conn->config(), *info.location,
+                       info.script_path, result_write_fd);
+
+    ::close(result_write_fd);
+
+    if (!ok)
+    {
+        _closeCgiJob(result_read_fd);
+        _responder.sendError(500, *conn->config(), conn->writeBuffer());
+        conn->setWriting();
+        _manager->rearmEpoll(conn->fd());
+    }
+}
+
+void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
+{
+    std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
+    if (it == _cgi_jobs.end())
+        return;
+
+    CgiJob* job = it->second;
+
+    if (events & (EPOLLERR | EPOLLHUP))
+    {
+        // still try to drain; HUP often means writer closed after writing
+    }
+
+    char buf[8192];
+    while (true)
+    {
+        ssize_t n = ::read(result_fd, buf, sizeof(buf));
+        if (n > 0)
+        {
+            job->result_buffer.append(buf, static_cast<size_t>(n));
+            continue;
+        }
+        if (n == 0)
+        {
+            _finishCgiJob(result_fd);
+            return;
+        }
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return;
+
+        _failCgiJob(result_fd, 502);
+        return;
+    }
+}
+
+void EventLoop::_finishCgiJob(int result_fd)
+{
+    CgiJob* job = _cgi_jobs[result_fd];
+    Connection* conn = _manager->get(job->client_fd);
+
+    if (conn)
+    {
+        _responder.handleCgiOutput(conn->request(),
+                                   *conn->config(),
+                                   job->result_buffer,
+                                   conn->writeBuffer());
+        conn->setWriting();
+        _manager->rearmEpoll(conn->fd());
+    }
+
+    _closeCgiJob(result_fd);
+}
+void EventLoop::_failCgiJob(int result_fd, int status_code)
+{
+    CgiJob* job = _cgi_jobs[result_fd];
+    Connection* conn = _manager->get(job->client_fd);
+
+    if (conn)
+    {
+        _responder.sendError(status_code, *conn->config(), conn->writeBuffer());
+        conn->setWriting();
+        _manager->rearmEpoll(conn->fd());
+    }
+
+    _closeCgiJob(result_fd);
+}
+
+void EventLoop::_closeCgiJob(int result_fd)
+{
+    std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
+    if (it == _cgi_jobs.end())
+        return;
+
+    _unregisterEventFd(result_fd);
+    ::close(result_fd);
+    delete it->second;
+    _cgi_jobs.erase(it);
+}
+
+void EventLoop::_closeCgiJobsForClient(int client_fd)
+{
+    std::vector<int> to_close;
+    for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
+         it != _cgi_jobs.end(); ++it)
+    {
+        if (it->second->client_fd == client_fd)
+            to_close.push_back(it->first);
+    }
+
+    for (size_t i = 0; i < to_close.size(); ++i)
+        _closeCgiJob(to_close[i]);
+}
+
+void EventLoop::_closeTimedOutCgiJobs()
+{
+    const time_t now = std::time(NULL);
+    std::vector<int> timed_out;
+
+    for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
+         it != _cgi_jobs.end(); ++it)
+    {
+        if (now - it->second->start_time > 10)
+            timed_out.push_back(it->first);
+    }
+
+    for (size_t i = 0; i < timed_out.size(); ++i)
+        _failCgiJob(timed_out[i], 504);
+}
+
+void EventLoop::_dispatch(const epoll_event& ev)
+{
+    EventRef* ref = static_cast<EventRef*>(ev.data.ptr);
+    if (!ref)
+        return;
+
+    if (ref->kind == EV_SERVER)
+    {
+        _handleAccept(ref->fd);
+        return;
+    }
+
+    if (ref->kind == EV_CGI)
+    {
+        _handleCgiEvent(ref->fd, ev.events);
+        return;
+    }
+
+    if (ref->kind == EV_CLIENT)
+    {
+        _handleClientEvent(ref->fd, ev.events);
+        return;
+    }
+}
 // ── run ──────────────────────────────────────────────────────
 //
 // Blocking event loop.  Each iteration:
@@ -101,6 +309,7 @@ void EventLoop::run()
 
         // Per-connection timeout: uses each conn's config->timeout_seconds.
         _manager->closeTimedOut();
+        _closeTimedOutCgiJobs();
     }
 
     std::cerr << "[EventLoop] stopped\n";
@@ -254,20 +463,27 @@ void EventLoop::_handleRead(Connection* conn)
                 _manager->rearmEpoll(fd);
                 return;  // wait for EPOLLOUT to drain the error response
             }
-
+/*this is where i am gonna add cgi call */
             if (conn->request().parse_state == PSTATE_COMPLETE)
             {
                 conn->setProcessing();
 
-                // Phase 3: build the full HTTP response
+                CgiRequestInfo cgi;
+                if (_responder.resolveCgiRequest(conn->request(), *conn->config(), cgi))
+                {
+                    _startCgi(conn, cgi);
+                    return;
+                }
+
                 _responder.handle(conn->request(),
-                                  *conn->config(),
-                                  conn->writeBuffer());
+                                *conn->config(),
+                                conn->writeBuffer());
 
                 conn->setWriting();
                 _manager->rearmEpoll(fd);
-                return;  // wait for EPOLLOUT — stop reading
+                return;
             }
+
             // PS_IDLE / PS_HEADERS / PS_BODY → partial, keep reading
         }
     }

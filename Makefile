@@ -1,7 +1,7 @@
 NAME    = webserv
 
 CXX      = c++
-CXXFLAGS = -std=c++98 -Wall -Wextra -Werror -I. -I conf
+CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -Werror -I. -I conf
 
 # ── your sources ──────────────────────────────────────────────
 SRCS    = src/main.cpp \

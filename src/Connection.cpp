@@ -133,12 +133,13 @@ const HttpRequest& Connection::request() const { return _request; }
 void Connection::setProcessing() { _state = CSTATE_PROCESSING; }
 void Connection::setWriting()    { _state = CSTATE_WRITING;    }
 void Connection::setClosing()    { _state = CSTATE_CLOSING;    }
-
+void Connection::setCgiRunning() {_state = CSTATE_CGI_RUNNING;}
 void Connection::setReading()
 {
     reset();
     _state = CSTATE_READING;
 }
+
 
 // ── peer half-close ──────────────────────────────────────────
 void Connection::setPeerHalfClosed() { _peer_half_closed = true; }
@@ -177,7 +178,7 @@ epoll_event Connection::buildEpollEvent()
             ev.events |= EPOLLOUT;
             break;
         default:
-            break;  // CS_PROCESSING / CS_CLOSING: no I/O interest
+            break;  // CS_PROCESSING / CS_CLOSING / CS_CGI_RUNNING: no I/O interest
     }
     return ev;
 }

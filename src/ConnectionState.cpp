@@ -7,10 +7,11 @@ const char* connStateStr(ConnectionState s)
 {
     switch (s)
     {
-        case CSTATE_READING:    return "READING";
-        case CSTATE_PROCESSING: return "PROCESSING";
-        case CSTATE_WRITING:    return "WRITING";
-        case CSTATE_CLOSING:    return "CLOSING";
-        default:                return "UNKNOWN";
+        case CSTATE_READING:        return "READING";
+        case CSTATE_PROCESSING:     return "PROCESSING";
+        case CSTATE_WRITING:        return "WRITING";
+        case CSTATE_CLOSING:        return "CLOSING";
+        case CSTATE_CGI_RUNNING:    return "CGI_RUNNING";
+        default:                    return "UNKNOWN";
     }
 }
