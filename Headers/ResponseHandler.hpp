@@ -28,6 +28,7 @@
 #include "buffer.hpp"
 #include "HttpRequest.hpp"
 #include "serverConfig.hpp"
+#include "CgiRequestInfo.hpp"
 
 class ResponseHandler
 {
@@ -52,6 +53,19 @@ public:
         int                 status_code,
         const ServerConfig& config,
         Buffer&             write_buffer
+    );
+
+    bool resolveCgiRequest(
+        const HttpRequest&  req,
+        const ServerConfig& cfg,
+        CgiRequestInfo&     out
+    ) const;
+    
+    void handleCgiOutput(
+    const HttpRequest&  req,
+    const ServerConfig& cfg,
+    const Buffer&       cgi_output,
+    Buffer&             wb
     );
 
 private:

@@ -72,20 +72,21 @@ public:
     ConnectionState      state()       const;
     time_t               lastActive()  const;
     const ServerConfig*  config()      const;
-
+    
     Buffer&       readBuffer();
     const Buffer& readBuffer()  const;
     Buffer&       writeBuffer();
     const Buffer& writeBuffer() const;
-
+    
     HttpRequest&       request();
     const HttpRequest& request() const;
-
+    
     // ── state transitions ─────────────────────────────────
     void setProcessing();   ///< READING → PROCESSING
     void setWriting();      ///< PROCESSING → WRITING
     void setClosing();      ///< Any → CLOSING
     void setReading();      ///< WRITING → READING (calls reset())
+    void setCgiRunning();
 
     // ── peer half-close tracking ──────────────────────────
     // Set when EPOLLRDHUP fires while the write buffer is still

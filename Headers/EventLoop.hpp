@@ -21,11 +21,15 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <vector>
+#include <map>
 
 #include "ConnectionManager.hpp"
 #include "Connection.hpp"
 #include "HttpParser.hpp"
 #include "ResponseHandler.hpp"  // Phase 3
+#include "CgiJob.hpp"
+#include "CgiRequestInfo.hpp"
+#include "EventRef.hpp"
 
 // Server + typedef ServerConfig provided by teammate's header.
 // Included by Connection.hpp (already in the chain above).
@@ -43,6 +47,7 @@ public:
     ~EventLoop();
 
     void addServerSocket(int server_fd, const ServerConfig* config);
+    void _addCgiFd(int result_fd, int client_fd);
     void run();
 
     void stop();
@@ -72,6 +77,8 @@ private:
     bool                             _running;
     std::vector<int>                 _server_fds;
     std::vector<const ServerConfig*> _server_configs;
+    std::map<int, CgiJob*>   _cgi_jobs;
+    std::map<int, EventRef*> _event_refs;
 
     // Phase 2: one stateless parser serves all connections.
     // All parse progress lives in HttpRequest, so no per-connection
@@ -80,6 +87,20 @@ private:
 
     // Phase 3: builds HTTP responses from completed requests.
     ResponseHandler                  _responder;
+
+    //CGI
+    void _handleClientEvent(int client_fd, uint32_t events);
+    void _handleCgiEvent(int result_fd, uint32_t events);
+
+    void _startCgi(Connection* conn, const CgiRequestInfo& info);
+    void _addCgiFd(int result_fd, int client_fd);
+    void _closeCgiJob(int result_fd);
+    void _closeCgiJobsForClient(int client_fd);
+    void _closeTimedOutCgiJobs();
+
+    void _registerEventFd(int fd, EventKind kind, uint32_t events);
+    void _modifyEventFd(int fd, EventKind kind, uint32_t events);
+    void _unregisterEventFd(int fd);
 };
 
 #endif // EVENT_LOOP_HPP

@@ -57,6 +57,7 @@ enum ConnectionState
 {
     CSTATE_READING    = 0,  ///< receiving request data        (EPOLLIN)
     CSTATE_PROCESSING,      ///< building the response         (no epoll)
+    CSTATE_CGI_RUNNING,
     CSTATE_WRITING,         ///< draining write buffer         (EPOLLOUT)
     CSTATE_CLOSING          ///< connection is done, tear down (no epoll)
 };
