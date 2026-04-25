@@ -473,6 +473,14 @@ void HttpParser::_parseRequestLine(Buffer& buf, HttpRequest& req)
     // Split URI into path and query string, then percent-decode the path.
     // Query string is left encoded — CGI/app decodes its own parameters.
     std::string raw_uri(uri_start, uri_len);
+    if (raw_uri.compare(0, 7, "http://") == 0 || raw_uri.compare(0, 8, "https://") == 0) {
+        size_t scheme = raw_uri.find("://");
+        size_t path_start = raw_uri.find('/', scheme + 3);
+        if (path_start == std::string::npos)
+            raw_uri = "/";
+        else
+            raw_uri = raw_uri.substr(path_start);
+    }
     size_t qmark = raw_uri.find('?');
     if (qmark != std::string::npos) {
         req.path         = pctDecode(raw_uri.substr(0, qmark));

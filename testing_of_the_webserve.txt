@@ -1,0 +1,1860 @@
+Testing localhost:5000
+--------------------------------------------------------------------------------
+test_url_get_ok: [96mTest whether the URL of the assignment 1 directory returns HTTP/1.1 200 OK on GET[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+* HTTP version is `HTTP/1.1`
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET http://localhost:5000/a1-test/2/index.html HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_url_head_ok: [96mTest whether the URL of the assignment 1 directory returns 200 on HEAD[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> HEAD http://localhost:5000/a1-test/2/index.html HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_path_head_ok: [96mTest whether the relative path of the assignment 1 directory returns 200 on HEAD[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a1-test/2/index.html HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_path_options_ok: [96mTest whether the relative path of the assignment 1 directory returns 200 on OPTIONS[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> OPTIONS /a1-test/2/index.html HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_get_missing: [96mTest whether a non-existing path returns 404 on GET[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+* HTTP version is `HTTP/1.1`
+* Status is `404`
+* `Date` header is present
+* `Date` header is in the preferred RCF7231 format
+[92m[PASSED][0m
+
+> GET /1/1.1/go%20hokies.html HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_get_duplicate_path_prefix: [96mTest tight path prefix checking[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+* HTTP version is `HTTP/1.1`
+[91m[FAILED] ASSERTION: Status expected `404`, returned `403`[0m
+
+> GET /a1-test/a1-test/ HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 403 Forbidden
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_unsupported_version: [96mTest whether a request with unsupported version returns 505[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+* Status is `505`
+* `Date` header is present
+* `Date` header is in the preferred RCF7231 format
+[92m[PASSED][0m
+
+> GET / HTTP/1.11
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 505 HTTP Version Not Supported
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 168
+< Connection: close
+< 
+* [Payload redacted (168 bytes)]
+
+--------------------------------------------------------------------------------
+test_invalid_request: [96mTest whether an invalid request returns 400[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+* Status is `400`
+* `Date` header is present
+* `Date` header is in the preferred RCF7231 format
+[92m[PASSED][0m
+
+> qwerty
+> 
+
+< HTTP/1.1 400 Bad Request
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 138
+< Connection: close
+< 
+* [Payload redacted (138 bytes)]
+
+--------------------------------------------------------------------------------
+test_missing_host_header: [96mTest whether missing Host header in a request returns 400[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+* Status is `400`
+* `Date` header is present
+* `Date` header is in the preferred RCF7231 format
+[92m[PASSED][0m
+
+> GET / HTTP/1.1
+> Connection: close
+> 
+
+< HTTP/1.1 400 Bad Request
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 138
+< Connection: close
+< 
+* [Payload redacted (138 bytes)]
+
+--------------------------------------------------------------------------------
+test_post_not_implemented: [96mTest whether the assignment 1 returns 501 on POST[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `501`, returned `405`[0m
+
+> POST /a1-test/ HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_trace_echoback: [96mTest whether the server echoes back the request on TRACE[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> TRACE /a1-test/1/1.4/ HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 1 Tester/1777135346
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_get_escaped_file_name: [96mTest whether the escaped file name is respected[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET http://localhost:5000/a1-test/1/1.4/test%3A.html HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_get_escape_escaping_character: [96mTest whether the escaped escaping caracter in a file name is respected[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET http://localhost:5000/a1-test/1/1.4/escape%25this.html HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_get_jpeg_image: [96mTest whether a JPEG image returns 200 with proper Content-Length on GET[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET http://localhost:5000/a1-test/2/0.jpeg HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_get_case_sensitive_file_extension: [96mTest whether file extensions are treated case-sensitive[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+* HTTP version is `HTTP/1.1`
+* Status is `404`
+[92m[PASSED][0m
+
+> GET http://localhost:5000/a1-test/2/0.JPEG HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_get_empty_text_file: [96mTest whether an empty file returns zero bytes with 200 on GET[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET http://localhost:5000/a1-test/4/thisfileisempty.txt HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_get_empty_unknown_file_directory: [96mTest whether an unknown empty file or directory returns zero bytes and a valid Content-Type with 200 on GET[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET http://localhost:5000/a1-test/4/directory3isempty HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_get_filename_with_many_dots: [96mTest whether file names with multiple dots return 200 on GET[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET http://localhost:5000/a1-test/1/1.2/arXiv.org.Idenitfy.repsonse.xml HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_get_magic_cookie_of_a_binary_file: [96mTest whether a GIF file contains identifying magic cookie[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET http://localhost:5000/a1-test/2/6.gif HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_access_log_as_virtual_uri: [96mTest whether the access log is available as a Virtual URI in the Common Log Format[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET /.well-known/access.log HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_get_directory_listing: [96mTest whether a2-test directory root returns directory listing[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `403`[0m
+
+> GET http://localhost:5000/a2-test/ HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 403 Forbidden
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_redirect_to_trailing_slash_for_directory_url: [96mTest whether redirects URL to trailing slashes when missing for existing directories[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `301`, returned `404`[0m
+
+> GET http://localhost:5000/a2-test/2 HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_redirect_to_trailing_slash_for_directory_path: [96mTest whether redirects path to trailing slashes when missing for existing directories[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `301`, returned `404`[0m
+
+> GET /a2-test/1 HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_get_default_index_file: [96mTest whether default index.html is returned instead of directory listing[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `403`[0m
+
+> GET http://localhost:5000/a2-test/2/ HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 403 Forbidden
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_redirect_as_per_regexp_trailing_wildcard_capture: [96mTest whether redirects as per the regular expression with wildcard trailing capture group[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `302`, returned `405`[0m
+
+> HEAD /a2-test/1/1.3/assignment1.ppt HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_redirect_as_per_regexp_trailing_specific_file: [96mTest whether redirects as per the regular expression with a specific trailing file name[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `302`, returned `405`[0m
+
+> HEAD /a2-test/coolcar.html HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_dont_redirect_target_file: [96mTest whether the target of the configured redirect returns 200 OK[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a2-test/galaxie.html HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_conditional_head_fresh: [96mTest whether conditional HEAD of a fresh file returns 304 Not Modified[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `304`, returned `405`[0m
+
+> HEAD /a2-test/2/fairlane.html HTTP/1.1
+> Host: localhost:5000
+> If-Modified-Since: Sat, 20 Oct 2018 02:33:21 GMT
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_conditional_head_stale: [96mTest whether conditional HEAD of a stale file returns 200 OK[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a2-test/2/fairlane.html HTTP/1.1
+> Host: localhost:5000
+> If-Modified-Since: Sat, 20 Oct 2018 02:33:20 GMT
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_conditional_head_invalid_datetime: [96mTest whether conditional HEAD with invalid datetime returns 200 OK[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a2-test/2/fairlane.html HTTP/1.1
+> Host: localhost:5000
+> If-Modified-Since: who-doesn't-want-a-fairlane?
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_conditional_head_unsupported_datetime_format: [96mTest whether conditional HEAD with unsupported datetime format returns 200 OK[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a2-test/2/fairlane.html HTTP/1.1
+> Host: localhost:5000
+> If-Modified-Since: 2018-10-20 02:33:21.304307000 -0000
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_include_etag: [96mTest whether the HEAD response contains an ETag[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a2-test/2/fairlane.html HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_valid_etag_ok: [96mTest whether a valid ETag returns 200 OK[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a2-test/2/fairlane.html HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_etag_if_match_failure: [96mTest whether a random ETag returns 412 Precondition Failed[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `412`, returned `404`[0m
+
+> GET /a2-test/2/fairlane.html HTTP/1.1
+> Host: localhost:5000
+> If-Match: "203948kjaldsf002"
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_implicit_keep_alive_until_timeout: [96mTest whether the socket connection is kept alive by default and closed after the set timeout[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a2-test/2/index.html HTTP/1.1
+> Host: localhost:5000
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: keep-alive
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_explicit_keep_alive_until_timeout: [96mTest whether the socket connection is kept alive when explicitly requested and closed after the set timeout[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a2-test/2/index.html HTTP/1.1
+> Host: localhost:5000
+> Connection: keep-alive
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:26 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: keep-alive
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_trace_unnecessary_conditionals: [96mTest whether many unnecessary conditionals are not processed[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> TRACE /a2-test/2/index.html HTTP/1.1
+> Host: localhost:5000
+> If-Match: "not-a-real-etag"
+> If-None-Match: "also-not-a-real-etag"
+> If-Modified-Since: Fri, 19 Oct 2018 22:33:21 GMT
+> If-Unmodified-Since: Fri, 19 Oct 2018 22:33:21 GMT
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:27 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_pipeline_requests: [96mTest whether multiple pipelined requests are processed and returned in the same order[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a2-test/ HTTP/1.1
+> Host: localhost:5000
+> 
+> HEAD /a2-test/2/index.html HTTP/1.1
+> Host: localhost:5000
+> 
+> GET /a2-test/ HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:27 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: keep-alive
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_long_lived_connection: [96mTest whether the socket connection is kept alive to process multiple requests successively[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a2-test/ HTTP/1.1
+> Host: localhost:5000
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:27 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: keep-alive
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_useragent_get_text_ok: [96mTest whether a request with a custom user-agent returns OK with corresponding text response[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET http://localhost:5000/a3-test/fairlane.txt HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 3 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_partial_content_range_language: [96mTest whether a valid range request header returns partial content in a specific langaue[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `206`, returned `404`[0m
+
+> GET http://localhost:5000/a3-test/index.html.es HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 3 Tester/1777135348
+> Referer: http://localhost:5000/a3-test/index.html
+> Range: bytes=0-99
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_chunked_404: [96mTest whether a 404 Not Found page returns chunked encoded HTML[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+* Status is `404`
+* `Content-Type` header is present
+* `Content-Type` header begins with `text/html`
+[91m[FAILED] ASSERTION: `Transfer-Encoding` header should be present[0m
+
+> GET /a3-test/index.htmll HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 3 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_conditional_head_image_fresh: [96mTest whether conditional HEAD of a fresh image file returns 304 Not Modified[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `304`, returned `405`[0m
+
+> HEAD /a3-test/fairlane.gif HTTP/1.1
+> Host: localhost:5000
+> If-Modified-Since: Sat, 10 Nov 2018 20:46:11 GMT
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_conditional_head_image_stale: [96mTest whether conditional HEAD of a stale image file returns 200 OK[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a3-test/fairlane.gif HTTP/1.1
+> Host: localhost:5000
+> If-Modified-Since: Sat, 27 Oct 2018 20:46:09 GMT
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_no_accept_header_multiple_choices: [96mTest whether missing Accept header yields multiple choices[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `300`, returned `405`[0m
+
+> HEAD /a3-test/fairlane HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_ambiguous_accept_header_multiple_choices: [96mTest whether an Accept header with the same qvalue for all image types yields multiple choices[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `300`, returned `404`[0m
+
+> GET /a3-test/fairlane HTTP/1.1
+> Accept: image/*; q=1.0
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_accept_header_png_ok: [96mTest whether an Accept header with unique qvalue returns a PNG[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a3-test/fairlane HTTP/1.1
+> Host: localhost:5000
+> Accept: image/jpeg; q=0.9, image/png; q=0.91, image/tiff; q=0.95
+> User-Agent: CS531 Assignment 3 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_accept_header_text_ok: [96mTest whether an Accept header with high qvalue returns plain text[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a3-test/fairlane HTTP/1.1
+> Host: localhost:5000
+> Accept: text/*; q=1.0, image/*; q=0.99
+> User-Agent: CS531 Assignment 3 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_not_accptable_encoding: [96mTest whether explicit zero qvalue for all supported encodings returns 406 Not Acceptable[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `406`, returned `405`[0m
+
+> HEAD /a3-test/vt-uva.html HTTP/1.1
+> Host: localhost:5000
+> Accept-Encoding: compress; q=0.0, gzip; q=0.0, deflate; q=0.5
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_explicit_extention_ignore_content_negotiation: [96mTest whether an explicit existing file extension ignores content negotiation[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `405`[0m
+
+> HEAD /a3-test/vt-uva.html.Z HTTP/1.1
+> Host: localhost:5000
+> Accept-Encoding: compress; q=0.0, gzip; q=0.5
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_ambiguous_accept_language_multiple_choices: [96mTest whether an Accept-Language header with the same qvalue for more than one available languages yields multiple choices[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `300`, returned `405`[0m
+
+> HEAD /a3-test/index.html HTTP/1.1
+> Host: localhost:5000
+> Accept-Language: en; q=1.0, de; q=1.0, fr; q=1.0
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_not_accptable_incompatiple_charset: [96mTest whether explicit zero qvalue of charset associated with the explicit language extension returns 406 Not Acceptable[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `406`, returned `405`[0m
+
+> HEAD /a3-test/index.html.ja HTTP/1.1
+> Host: localhost:5000
+> Accept-Language: en; q=1.0, ja; q=0.5
+> Accept-Charset: euc-jp; q=1.0, iso-2022-jp; q=0.0
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_partial_content_range_text: [96mTest whether a valid range request header returns partial content in plain text[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `206`, returned `404`[0m
+
+> GET /a3-test/fairlane.txt HTTP/1.1
+> Host: localhost:5000
+> Range: bytes=10-20
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_etag_precondition_failure: [96mTest whether a random If-Match ETag returns 412 Precondition Failed[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `412`, returned `404`[0m
+
+> GET /a3-test/fairlane.txt HTTP/1.1
+> Host: localhost:5000
+> If-Match: "20933948kjaldsf000002"
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_explicit_language_charset_etag: [96mTest whether explicit language and charset as extensions returns ETag and Content-Type with charset[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET /a3-test/index.html.ru.koi8-r HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 3 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_valid_etag_conditional_get: [96mTest whether conditional GET with a valid ETag returns 200 OK[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET /a3-test/index.html.ru.koi8-r HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 3 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_pipeline_range_negotiate: [96mTest whether multiple pipelined requests with content negotiations are processed and returned in the same order[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `206`, returned `404`[0m
+
+> HEAD http://localhost:5000/a3-test/index.html.en HTTP/1.1
+> Range: bytes=-100
+> Host: localhost:5000
+> 
+> HEAD http://localhost:5000/a3-test/index.html HTTP/1.1
+> Negotiate: 1.0
+> Host: localhost:5000
+> 
+> HEAD http://localhost:5000/a3-test/index.html.ja.jis HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: keep-alive
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_basic_auth_realm: [96mTest whether files are protected with HTTP Basic auth and return configured realm[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> GET http://localhost:5000/a4-test/limited1/protected HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_basic_wrong_auth_unauthorized: [96mTest whether access is unauthorized with wrong Authorization header[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> GET http://localhost:5000/a4-test/limited1/protected HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Authorization: Basic YmRhOm1sbg==
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_nested_basic_auth: [96mTest whether files in nested directories are protected with HTTP Basic auth[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> GET http://localhost:5000/a4-test/limited1/1/protected2 HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_basic_auth_ok: [96mTest whether access is granted with valid Authorization header[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET http://localhost:5000/a4-test/limited1/protected HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Referer: http://localhost:5000/a4-test/index.html
+> Authorization: Basic bWxuOm1sbg==
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_nested_basic_auth_ok: [96mTest whether access is granted with valid Authorization header in nested directories[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> GET http://localhost:5000/a4-test/limited1/1/protected2 HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Authorization: Basic YmRhOmJkYQ==
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_double_auth_bad: [96mTest whether two Authorization headers report a bad request[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `400`, returned `404`[0m
+
+> GET http://localhost:5000/a4-test/limited1/protected HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Authorization: Basic YmRhOmJkYQ==
+> Authorization: Basic ZZRhOmJkYQ==
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_nested_digest_auth: [96mTest whether files in nested directories are protected with HTTP Digest auth[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> GET http://localhost:5000/a4-test/limited2/foo/bar.txt HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_head_nested_digest_auth: [96mTest whether HEAD method in nested directories is protected with HTTP Digest auth[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> HEAD http://localhost:5000/a4-test/limited2/foo/bar.txt HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_options_nested_digest_auth: [96mTest whether OPTIONS method in nested directories is protected with HTTP Digest auth[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> OPTIONS http://localhost:5000/a4-test/limited2/foo/bar.txt HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_wrong_realm_unauthorized: [96mTest whether an incorrect realm prevents authorization[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> GET http://localhost:5000/a4-test/limited2/foo/bar.txt HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_wrong_ncount_unauthorized: [96mTest whether an incorrect nonce count prevents authorization[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> GET http://localhost:5000/a4-test/limited2/foo/bar.txt HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_wrong_digest_response_unauthorized: [96mTest whether an incorrect digest response prevents authorization[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> GET http://localhost:5000/a4-test/limited2/foo/bar.txt HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_wrong_digest_user_unauthorized: [96mTest whether an incorrect digest user prevents authorization[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> GET http://localhost:5000/a4-test/limited2/foo/bar.txt HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_correct_realm_authorized: [96mTest whether a correct realm with other values grants authorization[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> GET http://localhost:5000/a4-test/limited2/foo/bar.txt HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_auth_over_conditional_get: [96mTest whether authorization is ensured before conditional GET precondition check[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> GET /a4-test/limited2/foo/bar.txt HTTP/1.1
+> Host: localhost:5000
+> If-Match: "x248kjaldsf00000000002"
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_large_range_not_satisfiable: [96mTest whether a Range larger than the file returns 416 Range Not Satisfiable[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `416`, returned `405`[0m
+
+> HEAD /a4-test/index.html.ru.koi8-r HTTP/1.1
+> Host: localhost:5000
+> Range: bytes=20000-29999
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------
+test_pipeline_auth: [96mTest whether authorization is respected in pipeline requests[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `416`, returned `404`[0m
+
+> HEAD http://localhost:5000/a4-test/limited1/protected HTTP/1.1
+> Range: bytes=20000-29999
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Authorization: Basic YmRhOmJkYQ==
+> Host: localhost:5000
+> 
+> HEAD http://localhost:5000/a4-test/index.html.de HTTP/1.1
+> Host: localhost:5000
+> 
+> HEAD http://localhost:5000/a4-test/limited1/protected HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 4 Tester/1777135348
+> Authorization: Basic YmRhOmJkYQxx
+> 
+> HEAD http://localhost:5000/a4-test/index.html.en HTTP/1.1
+> Host: localhost:5000
+> 
+> HEAD http://localhost:5000/a4-test/index.html.ja.jis HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:28 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: keep-alive
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_protected_options_trace_full_method_support: [96mTest whether OPTIONS and TRACE methods are auth protected and return full HTTP method support[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> OPTIONS http://localhost:5000/a5-test/limited3/protected HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 5 Tester/1777135349
+> 
+> TRACE /a5-test/env.cgi?var1=foo&var2=bar HTTP/1.1
+> Host: localhost:5000
+> 
+> OPTIONS http://localhost:5000/a5-test/limited3/env.cgi HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 5 Tester/1777135349
+> Referer: http://localhost:5000/a5-test/index.html
+> Authorization: Basic amJvbGxlbjpqYm9sbGVu
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:29 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: keep-alive
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_multiple_cgi_scripts: [96mTest whether CGI scripts are executed and resulted in custom status, directory listing, and redirection[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `678`, returned `404`[0m
+
+> GET http://localhost:5000/a5-test/status.cgi HTTP/1.1
+> Host: localhost:5000
+> 
+> GET http://localhost:5000/a5-test/ls.cgi HTTP/1.1
+> Host: localhost:5000
+> 
+> GET http://localhost:5000/a5-test/location.cgi HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:29 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: keep-alive
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_cgi_auth_internal_error: [96mTest whether CGI scripts are protected and return 500 Internal Server Error on malformed output[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `401`, returned `404`[0m
+
+> GET http://localhost:5000/a5-test/limited4/foo/barbar.txt HTTP/1.1
+> Host: localhost:5000
+> 
+> GET http://localhost:5000/a5-test/500.cgi HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:30 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: keep-alive
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_allow_no_put_delete: [96mTest whether Allow header is present with values other than PUT and DELETE[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+[91m[FAILED] ASSERTION: Status expected `200`, returned `404`[0m
+
+> OPTIONS http://localhost:5000/a5-test/env.cgi HTTP/1.1
+> Host: localhost:5000
+> User-Agent: CS531 Assignment 5 Tester/1777135349
+> Connection: close
+> 
+
+< HTTP/1.1 404 Not Found
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:30 GMT
+< Content-Type: text/html
+< Content-Length: 134
+< Connection: close
+< 
+* [Payload redacted (134 bytes)]
+
+--------------------------------------------------------------------------------
+test_delete_not_allowed: [96mTest whether Allow header is present with appropriate values other than DELETE in the 405 Not Allowed response[0m
+* Connecting to the `localhost:5000` server
+* Request data sent
+* Response data read
+* Response parsed
+* Status is `405`
+[91m[FAILED] ASSERTION: `Allow` header should be present[0m
+
+> DELETE /a5-test/index.html.denmark HTTP/1.1
+> Host: localhost:5000
+> Connection: close
+> 
+
+< HTTP/1.1 405 Method Not Allowed
+< Server: webserv/1.0
+< Date: Sat, 25 Apr 2026 16:42:30 GMT
+< Content-Type: text/html
+< Content-Length: 152
+< Connection: close
+< 
+* [Payload redacted (152 bytes)]
+
+--------------------------------------------------------------------------------

@@ -130,6 +130,15 @@ void ResponseHandler::handle(
     // ── 5. Directory URI (path ends with '/') ─────────────────
     if (!req.path.empty() && req.path[req.path.size() - 1] == '/')
     {
+        struct stat dir_st;
+        if (::stat(fs_path.c_str(), &dir_st) < 0) {
+            _sendErrorInternal(404, req, cfg, wb);
+            return;
+        }
+        if (!S_ISDIR(dir_st.st_mode)) {
+            _sendErrorInternal(404, req, cfg, wb);
+            return;
+        }
         // POST upload to directory
         if (req.method == "POST")
         {
