@@ -10,6 +10,7 @@
 #include "Headers/EventLoop.hpp"
 #include "Headers/HttpParser.hpp"
 #include "Headers/ResponseHandler.hpp"
+#include "Headers/CgiStarter.hpp"
 
 #include <cerrno>
 #include <cstring>
@@ -59,11 +60,6 @@ void EventLoop::addServerSocket(int server_fd, const ServerConfig* config)
 {
     _server_fds.push_back(server_fd);
     _server_configs.push_back(config);
-
-    epoll_event ev;
-    ev.events  = EPOLLIN | EPOLLET;
-    ev.data.fd = server_fd;
-
     _registerEventFd(server_fd, EV_SERVER, EPOLLIN | EPOLLET);
     std::cerr << "[EventLoop] listening on fd " << server_fd << "\n";
 }
@@ -95,6 +91,82 @@ void EventLoop::_unregisterEventFd(int fd)
         _event_refs.erase(it);
     }
 }
+void EventLoop::_modifyEventFd(int fd, EventKind kind, uint32_t events)
+{
+    std::map<int, EventRef*>::iterator it = _event_refs.find(fd);
+    if (it == _event_refs.end()) return;
+    (void)kind;
+    epoll_event ev;
+    std::memset(&ev, 0, sizeof(ev));
+    ev.events   = events;
+    ev.data.ptr = it->second;
+    if (::epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0)
+        std::cerr << "[EventLoop] epoll_ctl MOD failed for fd " << fd
+                  << ": " << std::strerror(errno) << "\n";
+}
+
+void EventLoop::_rearmClient(int fd)
+{
+    Connection* conn = _manager->get(fd);
+    if (!conn) return;
+    uint32_t events = conn->buildEpollEvent().events;
+    _modifyEventFd(fd, EV_CLIENT, events);
+}
+
+void EventLoop::_closeClient(int fd)
+{
+    _closeCgiJobsForClient(fd);
+    _unregisterEventFd(fd);
+    _manager->closeConnection(fd);
+}
+
+void EventLoop::_handleClientEvent(int client_fd, uint32_t events)
+{
+    Connection* conn = _manager->get(client_fd);
+    if (!conn)
+    {
+        std::cerr << "[EventLoop] stale event — connection already gone\n";
+        return;
+    }
+
+    if (events & (EPOLLERR | EPOLLHUP))
+    {
+        _handleError(conn);
+        return;
+    }
+
+    if (events & EPOLLRDHUP)
+    {
+        if (conn->writeBuffer().empty())
+            _closeClient(client_fd);
+        else
+            conn->setPeerHalfClosed();
+        return;
+    }
+
+    if (events & EPOLLIN)
+    {
+        _handleRead(conn);
+        return;
+    }
+
+    if (events & EPOLLOUT)
+    {
+        _handleWrite(conn);
+        return;
+    }
+}
+
+void EventLoop::_closeTimedOutClients()
+{
+    std::vector<int> stale = _manager->getTimedOutFds();
+    for (size_t i = 0; i < stale.size(); ++i)
+    {
+        std::cerr << "[EventLoop] timeout — closing client fd " << stale[i] << "\n";
+        _closeClient(stale[i]);
+    }
+}
+
 void EventLoop::_addCgiFd(int result_fd, int client_fd)
 {
     _registerEventFd(result_fd, EV_CGI, EPOLLIN | EPOLLET | EPOLLHUP | EPOLLERR);
@@ -109,7 +181,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
     {
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
         conn->setWriting();
-        _manager->rearmEpoll(conn->fd());
+        _rearmClient(conn->fd());
         return;
     }
 
@@ -122,7 +194,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
         ::close(result_write_fd);
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
         conn->setWriting();
-        _manager->rearmEpoll(conn->fd());
+        _rearmClient(conn->fd());
         return;
     }
 
@@ -131,7 +203,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
     _addCgiFd(result_read_fd, conn->fd());
 
     conn->setCgiRunning();
-    _manager->rearmEpoll(conn->fd());
+    _rearmClient(conn->fd());
 
     bool ok = startCgi(conn->request(), *conn->config(), *info.location,
                        info.script_path, result_write_fd);
@@ -143,7 +215,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
         _closeCgiJob(result_read_fd);
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
         conn->setWriting();
-        _manager->rearmEpoll(conn->fd());
+        _rearmClient(conn->fd());
     }
 }
 
@@ -194,7 +266,7 @@ void EventLoop::_finishCgiJob(int result_fd)
                                    job->result_buffer,
                                    conn->writeBuffer());
         conn->setWriting();
-        _manager->rearmEpoll(conn->fd());
+        _rearmClient(conn->fd());
     }
 
     _closeCgiJob(result_fd);
@@ -208,7 +280,7 @@ void EventLoop::_failCgiJob(int result_fd, int status_code)
     {
         _responder.sendError(status_code, *conn->config(), conn->writeBuffer());
         conn->setWriting();
-        _manager->rearmEpoll(conn->fd());
+        _rearmClient(conn->fd());
     }
 
     _closeCgiJob(result_fd);
@@ -307,80 +379,14 @@ void EventLoop::run()
         for (int i = 0; i < n; ++i)
             _dispatch(events[i]);
 
-        // Per-connection timeout: uses each conn's config->timeout_seconds.
-        _manager->closeTimedOut();
+        _closeTimedOutClients();
         _closeTimedOutCgiJobs();
     }
 
     std::cerr << "[EventLoop] stopped\n";
 }
 
-// ── _dispatch ────────────────────────────────────────────────
-//
-// Route a single epoll_event to the correct handler.
-//
-// Server fds → registered with data.fd  → _handleAccept
-// Client fds → registered with data.ptr → _handleRead / _handleWrite
-//
-// ⚠️  Never use conn after any call that may closeConnection().
-//     Each handler returns immediately after a close.
-void EventLoop::_dispatch(const epoll_event& ev)
-{
-    // ── server fd ─────────────────────────────────────────
-    if (_isServerFd(ev.data.fd))
-    {
-        _handleAccept(ev.data.fd);
-        return;
-    }
-
-    // ── client fd ─────────────────────────────────────────
-    // Recover the Connection* that buildEpollEvent() stored in data.ptr.
-    Connection* conn = static_cast<Connection*>(ev.data.ptr);
-
-    // Safety check: the connection may have been closed earlier in the
-    // same epoll_wait batch (two events for the same fd in one tick).
-    if (!conn || !_manager->get(conn->fd()))
-    {
-        std::cerr << "[EventLoop] stale event — connection already gone\n";
-        return;
-    }
-
-    if (ev.events & (EPOLLERR | EPOLLHUP))
-    {
-        _handleError(conn);
-        return;  // conn is dangling
-    }
-
-    if (ev.events & EPOLLRDHUP)
-    {
-        // Peer shut down their write side (FIN received).
-        // If we still have data to send, let _handleWrite drain it first,
-        // then close. Otherwise close now.
-        if (conn->writeBuffer().empty())
-            _manager->closeConnection(conn->fd());
-        else
-            conn->setPeerHalfClosed();
-        return;
-    }
-
-    if (ev.events & EPOLLIN)
-    {
-        _handleRead(conn);
-        return;  // conn may be dangling
-    }
-
-    if (ev.events & EPOLLOUT)
-    {
-        _handleWrite(conn);
-        return;  // conn may be dangling
-    }
-}
-
 // ── _handleAccept ────────────────────────────────────────────
-//
-// Drain all pending clients on a server fd.
-// ConnectionManager::addConnection() does the full creation sequence:
-//   accept → setNonBlocking → new Connection → map insert → epoll ADD
 void EventLoop::_handleAccept(int server_fd)
 {
     const ServerConfig* config = _configForServer(server_fd);
@@ -389,7 +395,8 @@ void EventLoop::_handleAccept(int server_fd)
     {
         int client_fd = _manager->addConnection(server_fd, config);
         if (client_fd < 0)
-            break;  // EAGAIN — edge-trigger drained
+            break;
+        _registerEventFd(client_fd, EV_CLIENT, EPOLLIN | EPOLLET | EPOLLRDHUP);
     }
 }
 
@@ -401,7 +408,7 @@ void EventLoop::_handleError(Connection* conn)
 {
     const int fd = conn->fd();
     std::cerr << "[EventLoop] error/hup on fd " << fd << "\n";
-    _manager->closeConnection(fd);
+    _closeClient(fd);
 }
 
 // ── _handleRead ──────────────────────────────────────────────
@@ -432,7 +439,7 @@ void EventLoop::_handleRead(Connection* conn)
 
             if (n == 0)
             {
-                _manager->closeConnection(fd);
+                _closeClient(fd);
                 return;
             }
 
@@ -442,7 +449,7 @@ void EventLoop::_handleRead(Connection* conn)
                     break;  // edge-trigger drained
                 std::cerr << "[EventLoop] recv error on fd " << fd
                           << ": " << std::strerror(errno) << "\n";
-                _manager->closeConnection(fd);
+                _closeClient(fd);
                 return;
             }
 
@@ -460,7 +467,7 @@ void EventLoop::_handleRead(Connection* conn)
                                      *conn->config(),
                                      conn->writeBuffer());
                 conn->setWriting();
-                _manager->rearmEpoll(fd);
+                _rearmClient(fd);
                 return;  // wait for EPOLLOUT to drain the error response
             }
 /*this is where i am gonna add cgi call */
@@ -480,7 +487,7 @@ void EventLoop::_handleRead(Connection* conn)
                                 conn->writeBuffer());
 
                 conn->setWriting();
-                _manager->rearmEpoll(fd);
+                _rearmClient(fd);
                 return;
             }
 
@@ -494,7 +501,7 @@ void EventLoop::_handleRead(Connection* conn)
         // Phase 3: real 413 response
         _responder.sendError(413, *conn->config(), conn->writeBuffer());
         conn->setWriting();
-        _manager->rearmEpoll(fd);
+        _rearmClient(fd);
     }
 }
 
@@ -522,7 +529,7 @@ void EventLoop::_handleWrite(Connection* conn)
                 break;  // kernel buffer full — wait for next EPOLLOUT
             std::cerr << "[EventLoop] send error on fd " << fd
                       << ": " << std::strerror(errno) << "\n";
-            _manager->closeConnection(fd);
+            _closeClient(fd);
             return;
         }
     }
@@ -532,12 +539,11 @@ void EventLoop::_handleWrite(Connection* conn)
         if (!conn->peerHalfClosed() && conn->request().keepAlive())
         {
             conn->setReading();        // resets buffers + request + stamps time
-            _manager->rearmEpoll(fd);  // re-arm EPOLLIN
+            _rearmClient(fd);  // re-arm EPOLLIN
         }
         else
         {
-            _manager->closeConnection(fd);
-            // ⚠️ conn dangling
+            _closeClient(fd);
         }
     }
     // else: buffer not empty — EPOLLOUT will fire again

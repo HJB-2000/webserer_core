@@ -1,7 +1,7 @@
 #ifndef CGI_JOB_HPP
 #define CGI_JOB_HPP
 #include <ctime>
-#include <buffer.hpp>
+#include "buffer.hpp"
 
 
 struct CgiJob

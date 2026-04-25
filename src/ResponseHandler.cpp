@@ -253,6 +253,96 @@ void ResponseHandler::sendError(
     _appendStr(wb, oss.str());
 }
 
+// ============================================================
+//  PUBLIC: handleCgiOutput()
+//
+//  Converts raw CGI output (headers + blank line + body) into
+//  a well-formed HTTP/1.1 response written into wb.
+//
+//  CGI format expected:
+//    Status: 200 OK\r\n        (optional)
+//    Content-Type: text/html\r\n
+//    \r\n
+//    <body>
+//
+//  Returns 502 if the header/body separator is missing.
+// ============================================================
+void ResponseHandler::handleCgiOutput(
+    const HttpRequest&  req,
+    const ServerConfig& cfg,
+    const Buffer&       cgi_output,
+    Buffer&             wb)
+{
+    std::string raw(cgi_output.data(), cgi_output.size());
+
+    // Find header/body separator — prefer \r\n\r\n, accept \n\n
+    size_t sep       = raw.find("\r\n\r\n");
+    size_t body_skip = 4;
+    if (sep == std::string::npos)
+    {
+        sep       = raw.find("\n\n");
+        body_skip = 2;
+    }
+    if (sep == std::string::npos)
+    {
+        _sendErrorInternal(502, req, cfg, wb);
+        return;
+    }
+
+    std::string headers_raw = raw.substr(0, sep);
+    std::string body        = raw.substr(sep + body_skip);
+
+    // Parse CGI headers
+    int         status_code   = 200;
+    std::string content_type  = "text/html";
+    std::string extra_headers;
+
+    std::istringstream iss(headers_raw);
+    std::string line;
+    while (std::getline(iss, line))
+    {
+        if (!line.empty() && line[line.size() - 1] == '\r')
+            line.erase(line.size() - 1);
+        if (line.empty())
+            continue;
+
+        size_t colon = line.find(':');
+        if (colon == std::string::npos)
+            continue;
+
+        std::string key = line.substr(0, colon);
+        std::string val = line.substr(colon + 1);
+
+        size_t vs = val.find_first_not_of(" \t");
+        if (vs != std::string::npos)
+            val = val.substr(vs);
+
+        // Lowercase key for comparison only
+        std::string lkey = key;
+        for (size_t i = 0; i < lkey.size(); ++i)
+            lkey[i] = static_cast<char>(
+                std::tolower(static_cast<unsigned char>(lkey[i])));
+
+        if (lkey == "status")
+        {
+            std::istringstream sc(val);
+            sc >> status_code;
+        }
+        else if (lkey == "content-type")
+        {
+            content_type = val;
+        }
+        else
+        {
+            extra_headers += key + ": " + val + "\r\n";
+        }
+    }
+
+    _writeHeaders(status_code, content_type, body.size(), extra_headers, req, wb);
+    if (req.method != "HEAD")
+        _appendStr(wb, body);
+}
+
 bool ResponseHandler::resolveCgiRequest(
     const HttpRequest&  req,
     const ServerConfig& cfg,

@@ -47,7 +47,6 @@ public:
     ~EventLoop();
 
     void addServerSocket(int server_fd, const ServerConfig* config);
-    void _addCgiFd(int result_fd, int client_fd);
     void run();
 
     void stop();
@@ -88,15 +87,22 @@ private:
     // Phase 3: builds HTTP responses from completed requests.
     ResponseHandler                  _responder;
 
-    //CGI
+    //CGI + client event dispatch
     void _handleClientEvent(int client_fd, uint32_t events);
     void _handleCgiEvent(int result_fd, uint32_t events);
 
     void _startCgi(Connection* conn, const CgiRequestInfo& info);
     void _addCgiFd(int result_fd, int client_fd);
+    void _finishCgiJob(int result_fd);
+    void _failCgiJob(int result_fd, int status_code);
     void _closeCgiJob(int result_fd);
     void _closeCgiJobsForClient(int client_fd);
     void _closeTimedOutCgiJobs();
+
+    // unified client close (CGI cleanup + EventRef cleanup + conn close)
+    void _closeClient(int fd);
+    void _rearmClient(int fd);
+    void _closeTimedOutClients();
 
     void _registerEventFd(int fd, EventKind kind, uint32_t events);
     void _modifyEventFd(int fd, EventKind kind, uint32_t events);

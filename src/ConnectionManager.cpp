@@ -93,15 +93,7 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
     }
     _connections[client_fd] = conn;
 
-    epoll_event ev = conn->buildEpollEvent();
-    if (::epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client_fd, &ev) < 0)
-    {
-        _destroy(client_fd);
-        throw std::runtime_error(
-            std::string("[ConnectionManager] epoll_ctl ADD failed: ")
-            + std::strerror(errno));
-    }
-
+    // epoll registration is handled by EventLoop::_handleAccept via _registerEventFd
     std::cerr << "[ConnectionManager] accepted fd " << client_fd << "\n";
     return client_fd;
 }
@@ -157,11 +149,12 @@ const Connection* ConnectionManager::get(int fd) const
     return (it != _connections.end()) ? it->second : NULL;
 }
 
-// ── closeTimedOut ────────────────────────────────────────────
+// ── getTimedOutFds ───────────────────────────────────────────
 //
-// Collects stale fds BEFORE closing so the map is never
-// modified during iteration.
-void ConnectionManager::closeTimedOut(time_t default_timeout_seconds)
+// Returns fds of timed-out connections without closing them.
+// EventLoop calls _closeClient() on each to properly clean up
+// EventRef, CGI jobs, and the connection itself.
+std::vector<int> ConnectionManager::getTimedOutFds(time_t default_timeout_seconds)
 {
     std::vector<int> stale;
 
@@ -179,12 +172,7 @@ void ConnectionManager::closeTimedOut(time_t default_timeout_seconds)
             stale.push_back(it->first);
     }
 
-    for (std::vector<int>::iterator it = stale.begin();
-         it != stale.end(); ++it)
-    {
-        std::cerr << "[ConnectionManager] timeout — closing fd " << *it << "\n";
-        closeConnection(*it);
-    }
+    return stale;
 }
 
 // ── count / empty ────────────────────────────────────────────

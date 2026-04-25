@@ -19,6 +19,7 @@
 #define CONNECTION_MANAGER_HPP
 
 #include <map>
+#include <vector>
 #include <ctime>
 #include <cstddef>
 
@@ -56,7 +57,9 @@ public:
     const Connection* get(int fd) const;
 
     // ── TIMEOUT SWEEP ──────────────────────────────────────
-    void closeTimedOut(time_t default_timeout_seconds = 60);
+    // Returns fds that are timed out without closing them.
+    // EventLoop iterates this and calls _closeClient() for proper cleanup.
+    std::vector<int> getTimedOutFds(time_t default_timeout_seconds = 60);
 
     // ── DIAGNOSTICS ────────────────────────────────────────
     size_t count() const;
