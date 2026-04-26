@@ -222,6 +222,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
         int stdin_fd = cgi.releaseStdinFd();
         if (stdin_fd >= 0)
         {
+            fcntl(stdin_fd, F_SETFD, FD_CLOEXEC);
             job->stdin_fd     = stdin_fd;
             job->stdin_body   = conn->request().body;
             job->stdin_offset = 0;
