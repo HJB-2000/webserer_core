@@ -99,6 +99,13 @@ private:
     void _closeCgiJobsForClient(int client_fd);
     void _closeTimedOutCgiJobs();
 
+    // CGI stdin (non-blocking body writer) — driven by EPOLLOUT
+    void _handleCgiStdinEvent(int stdin_fd, uint32_t events);
+    void _closeCgiStdin(CgiJob* job);
+
+    // stdin_fd -> CgiJob*, so EPOLLOUT on the child's stdin pipe can find the job.
+    std::map<int, CgiJob*> _cgi_stdin_jobs;
+
     // unified client close (CGI cleanup + EventRef cleanup + conn close)
     void _closeClient(int fd);
     void _rearmClient(int fd);

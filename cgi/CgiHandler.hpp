@@ -39,6 +39,16 @@ class CgiHandler
         int  getStdinWriteFd()  const { return cgi_in_pipe[1];  }
         // int  getStdoutReadFd()  const { return cgi_out_pipe[0]; }
 
+        // Transfer ownership of the stdin write fd to the caller.
+        // After this call, CgiHandler will no longer close the fd in its
+        // destructor — the caller must close it.
+        int  releaseStdinFd()
+        {
+            int fd = cgi_in_pipe[1];
+            cgi_in_pipe[1] = -1;
+            return fd;
+        }
+
     private:
         void filling_meta_variables(const HttpRequest& request, const Server& config, const Location& location);
         std::vector<std::string> buildCgiEnvironment(const HttpRequest& request, const Server& server, const Location& location) const;

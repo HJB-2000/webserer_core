@@ -213,7 +213,23 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
     CgiHandler cgi(conn->request(), *conn->config(), *info.location, info.script_path);
     bool ok = cgi.startCgi(result_write_fd);
     if (ok)
+    {
         job->child_pid = cgi.getChildPid();
+
+        // If the request has a body, take ownership of the (non-blocking)
+        // stdin write fd and schedule writes via EPOLLOUT. This avoids the
+        // pipe-buffer deadlock for bodies larger than ~64KB.
+        int stdin_fd = cgi.releaseStdinFd();
+        if (stdin_fd >= 0)
+        {
+            job->stdin_fd     = stdin_fd;
+            job->stdin_body   = conn->request().body;
+            job->stdin_offset = 0;
+            _cgi_stdin_jobs[stdin_fd] = job;
+            _registerEventFd(stdin_fd, EV_CGI_STDIN,
+                             EPOLLOUT | EPOLLET | EPOLLERR | EPOLLHUP);
+        }
+    }
     ::close(result_write_fd);
 
     if (!ok)
@@ -223,6 +239,64 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
         conn->setWriting();
         _rearmClient(conn->fd());
     }
+}
+
+// Close the CGI stdin pipe fd (signals EOF to the child), unregister it
+// from epoll, and detach it from the job. Safe to call multiple times.
+void EventLoop::_closeCgiStdin(CgiJob* job)
+{
+    if (!job || job->stdin_fd < 0)
+        return;
+
+    int fd = job->stdin_fd;
+    _cgi_stdin_jobs.erase(fd);
+    _unregisterEventFd(fd);
+    ::close(fd);
+
+    job->stdin_fd     = -1;
+    job->stdin_offset = 0;
+    job->stdin_body.clear();
+}
+
+// EPOLLOUT / EPOLLERR / EPOLLHUP on the CGI child's stdin pipe.
+// Drain the body buffer incrementally until complete or the pipe blocks.
+void EventLoop::_handleCgiStdinEvent(int stdin_fd, uint32_t events)
+{
+    std::map<int, CgiJob*>::iterator it = _cgi_stdin_jobs.find(stdin_fd);
+    if (it == _cgi_stdin_jobs.end())
+        return;
+
+    CgiJob* job = it->second;
+
+    // EPOLLERR/EPOLLHUP on the write end means the child closed its stdin
+    // (or died). Close our end; the child either has what it needs or is gone.
+    if (events & (EPOLLERR | EPOLLHUP))
+    {
+        _closeCgiStdin(job);
+        return;
+    }
+
+    while (job->stdin_offset < job->stdin_body.size())
+    {
+        const char*  data = job->stdin_body.data() + job->stdin_offset;
+        const size_t left = job->stdin_body.size() - job->stdin_offset;
+        ssize_t n = ::write(stdin_fd, data, left);
+        if (n > 0)
+        {
+            job->stdin_offset += static_cast<size_t>(n);
+            continue;
+        }
+        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+            return;  // pipe full — wait for next EPOLLOUT
+
+        // EPIPE or other error: child closed stdin or died. Give up writing,
+        // but keep reading its stdout — it may still have produced output.
+        _closeCgiStdin(job);
+        return;
+    }
+
+    // Body fully written — close write end to signal EOF to the child.
+    _closeCgiStdin(job);
 }
 
 void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
@@ -298,6 +372,10 @@ void EventLoop::_closeCgiJob(int result_fd)
     if (it == _cgi_jobs.end())
         return;
 
+    // If the stdin writer is still active, close and unregister it first
+    // so the child sees EOF and exits promptly.
+    _closeCgiStdin(it->second);
+
     // Reap child process to prevent zombies
     if (it->second->child_pid > 0)
     {
@@ -362,6 +440,12 @@ void EventLoop::_dispatch(const epoll_event& ev)
     if (ref->kind == EV_CGI)
     {
         _handleCgiEvent(ref->fd, ev.events);
+        return;
+    }
+
+    if (ref->kind == EV_CGI_STDIN)
+    {
+        _handleCgiStdinEvent(ref->fd, ev.events);
         return;
     }
 

@@ -274,6 +274,16 @@ bool CgiHandler::startCgi(int write_end)
 
         if (need_stdin)
             dup2(cgi_in_pipe[0], STDIN_FILENO);
+        else
+        {
+            // No body: ensure the child doesn't inherit the server's stdin.
+            int devnull_in = open("/dev/null", O_RDONLY);
+            if (devnull_in >= 0)
+            {
+                dup2(devnull_in, STDIN_FILENO);
+                close(devnull_in);
+            }
+        }
 
         close_fd(cgi_in_pipe[0]);
         if (need_stdin)
@@ -309,16 +319,18 @@ bool CgiHandler::startCgi(int write_end)
     }
 
     // ── parent ──────────────────────────────────────────────
+    // Close the child's end of the stdin pipe. The caller (EventLoop) is
+    // responsible for writing the body to cgi_in_pipe[1] non-blockingly and
+    // closing it when done. We do NOT write here to avoid deadlocks when
+    // body size exceeds the pipe buffer (~64KB on Linux).
     if (need_stdin)
     {
-        ssize_t written = write(cgi_in_pipe[1], body.c_str(), body.size());
-        close_fd(cgi_in_pipe[1]);  // done writing — signal EOF to child stdin
         close_fd(cgi_in_pipe[0]);  // parent doesn't need read end
-        if (written != static_cast<ssize_t>(body.size()))
-        {
-            // Body write failed — child will get truncated input
-            // but we still let it run; core will timeout if needed
-        }
+        // Make the write end non-blocking so the EventLoop can drain it
+        // incrementally via EPOLLOUT without blocking the whole server.
+        int flags = fcntl(cgi_in_pipe[1], F_GETFL, 0);
+        if (flags != -1)
+            fcntl(cgi_in_pipe[1], F_SETFL, flags | O_NONBLOCK);
     }
 
     gettimeofday(&_start_time, NULL);

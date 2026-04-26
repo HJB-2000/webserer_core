@@ -6,7 +6,8 @@ enum EventKind
 {
     EV_SERVER,
     EV_CLIENT,
-    EV_CGI
+    EV_CGI,
+    EV_CGI_STDIN
 };
 
 struct EventRef

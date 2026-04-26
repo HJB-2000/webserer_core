@@ -132,6 +132,10 @@ int main(int argc, char* argv[])
     g_loop = &loop;
     std::signal(SIGINT,  sig_handler);
     std::signal(SIGTERM, sig_handler);
+    // Ignore SIGPIPE so that writing to a pipe/socket whose peer has closed
+    // (e.g. a CGI child that exited early) returns EPIPE instead of killing
+    // the server process.
+    std::signal(SIGPIPE, SIG_IGN);
 
     std::cerr << "[core] server ready — press Ctrl+C to stop\n";
     loop.run();
