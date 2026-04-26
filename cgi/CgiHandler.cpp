@@ -68,13 +68,14 @@ void CgiHandler::filling_meta_variables(const HttpRequest& request, const Server
 
 std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& request, const Server& server, const Location& location) const
 {
+    (void)location;
     std::vector<std::string> env;
     std::string host = server.getHost();
-    if (host.empty()) host = request.getHeader("host");
+    if (host.empty()) host = request.header("host");
 
-    std::string script_name     = request.getScriptName(location);
-    std::string script_filename = request.getScriptFileName(server, location);
-    std::string full_path       = request.getPath();
+    std::string script_name     = request.path;
+    std::string script_filename = _script_path;
+    std::string full_path       = request.path;
 
     std::string path_info;
     if (full_path.length() > script_name.length() && full_path.find(script_name) == 0)
@@ -91,13 +92,13 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
     }
 
     std::ostringstream content_length_ss;
-    content_length_ss << request.getContentLength();
+    content_length_ss << request.body.size();
     std::ostringstream server_port_ss;
     server_port_ss << server.getPort();
 
-    env.push_back("REQUEST_METHOD="    + request.getMethod());
-    env.push_back("QUERY_STRING="      + request.getQueryString());
-    env.push_back("CONTENT_TYPE="      + request.getContentType());
+    env.push_back("REQUEST_METHOD="    + request.method);
+    env.push_back("QUERY_STRING="      + request.query_string);
+    env.push_back("CONTENT_TYPE="      + request.header("content-type"));
     env.push_back("CONTENT_LENGTH="    + content_length_ss.str());
     env.push_back("SCRIPT_FILENAME="   + script_filename);
     env.push_back("SCRIPT_NAME="       + script_name);
@@ -106,13 +107,13 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
         env.push_back("PATH_TRANSLATED=" + path_translated);
     env.push_back("SERVER_NAME="       + host);
     env.push_back("SERVER_PORT="       + server_port_ss.str());
-    env.push_back("SERVER_PROTOCOL="   + request.getVersion());
+    env.push_back("SERVER_PROTOCOL="   + request.version);
     env.push_back("GATEWAY_INTERFACE=CGI/1.1");
     env.push_back("SERVER_SOFTWARE=webserv/1.0");
-    env.push_back("REMOTE_ADDR="       + request.getRemoteAddr());
+    env.push_back("REMOTE_ADDR=127.0.0.1");
 
-    for (std::map<std::string, std::string>::const_iterator it = request.getHeaders().begin();
-         it != request.getHeaders().end(); ++it)
+    for (std::map<std::string, std::string>::const_iterator it = request.headers.begin();
+         it != request.headers.end(); ++it)
     {
         std::string key = it->first;
         for (size_t i = 0; i < key.size(); ++i)
@@ -125,9 +126,9 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
     return env;
 }
 
-CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const Location& location)
+CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path)
     : _request(request), _config_server(config), _location(location),
-      _child_pid(-1), _state(CGI_IDLE), _bytes_written(0),
+      _script_path(script_path), _child_pid(-1), _state(CGI_IDLE), _bytes_written(0),
       _timeout_seconds(60), _error_code(0), _env_logged(false)
 {
     cgi_in_pipe[0]  = -1;
@@ -179,7 +180,7 @@ bool CgiHandler::startCgi(int write_end)
         return false;
     }
 
-    std::string script_file = _request.getScriptFileName(_config_server, _location);
+    std::string script_file = _script_path;
     if (script_file.empty())
     {
         _error_code = 404;
@@ -205,8 +206,8 @@ bool CgiHandler::startCgi(int write_end)
         return false;
     }
 
-    const std::string& method = _request.getMethod();
-    const std::string& body   = _request.getBody();
+    const std::string& method = _request.method;
+    const std::string& body   = _request.body;
     bool need_stdin = ((method == "POST" || method == "DELETE") && !body.empty());
 
     if (need_stdin)
@@ -284,172 +285,20 @@ bool CgiHandler::startCgi(int write_end)
     if (need_stdin)
         close_fd(cgi_in_pipe[0]);
 
-    close(write_end);
-
     gettimeofday(&_start_time, NULL);
     _state = CGI_WAITING;
     return true;
-}
-
-void CgiHandler::endCgi(int read_end)
-{
-    std::string raw_output;
-    char buf[4096];
-    ssize_t n;
-    while ((n = read(read_end, buf, sizeof(buf))) > 0)
-        raw_output.append(buf, static_cast<size_t>(n));
-
-    if (n == -1)
-    {
-        std::cerr << "read() error: " << std::endl;
-        close(read_end);
-        return ;
-    }
-    close(read_end);
-
-
-    std::cout << "========= RAW CGI OUTPUT ============" << std::endl;
-    std::cout << raw_output << std::endl;
-    std::cout << "========= END RAW CGI OUTPUT ========" << std::endl;
-
-    std::string final_http_response = _build_http_from_cgi_output(raw_output);
-
-    std::cout << "========= PARSED HTTP RESPONSE ============" << std::endl;
-    std::cout << final_http_response << std::endl;
-    std::cout << "========= END PARSED HTTP RESPONSE ========" << std::endl;
-
-}
-
-void CgiHandler::_parse_cgi_output()
-{
-    _response = _build_http_from_cgi_output(_output_buffer);
-    if (_response.empty()) _error_code = 502;
-}
-
-
-std::string CgiHandler::_build_http_from_cgi_output(const std::string& raw) const
-{
-    // std::cerr << "=== CGI RAW OUTPUT ===" << std::endl;
-    // std::cerr << raw << std::endl;
-    // std::cerr << "=== END CGI OUTPUT ===" << std::endl;
-    size_t sep = raw.find("\r\n\r\n");
-    size_t body_offset = 4;
-    if (sep == std::string::npos)
-    {
-        sep = raw.find("\n\n");
-        body_offset = 2;
-    }
-    if (sep == std::string::npos)
-        return "";
-
-    size_t body_start = sep + body_offset;
-    if (body_start > raw.size())
-        body_start = raw.size();
-    
-    std::string raw_headers = raw.substr(0, sep);
-    std::string body        = raw.substr(body_start);
-
-    int         status_code = 200;
-    std::string reason      = "OK";
-    std::string passthrough;
-    
-    passthrough.reserve(raw_headers.size());
-
-    std::istringstream hs(raw_headers);
-    std::string line;
-    while (std::getline(hs, line))
-    {
-        if (!line.empty() && line[line.size() - 1] == '\r')
-            line.erase(line.size() - 1);
-        if (line.empty())
-            continue;
-
-        size_t c = line.find(':');
-        if (c == std::string::npos)
-            continue;
-
-        std::string key       = _trim(line.substr(0, c));
-        std::string value     = _trim(line.substr(c + 1));
-        std::string key_lower = _toLower(key);
-
-        if (key_lower == "status")
-        {
-            std::istringstream ss(value);
-            int parsed = 0;
-            if (!(ss >> parsed) || parsed < 100 || parsed > 599)
-                return "";
-            status_code = parsed;
-            std::string rest;
-            std::getline(ss, rest);
-            rest   = _trim(rest);
-            reason = rest.empty() ? _reason_phrase(status_code) : rest;
-        }
-        else if (key_lower == "content-length" || 
-                 key_lower == "connection" ||
-                 key_lower == "transfer-encoding" ||
-                 key_lower == "keep-alive")
-        {
-            continue;
-        }
-        else
-        {
-            // Validate header name contains only allowed characters (RFC 7230)
-            bool valid_header = true;
-            for (size_t i = 0; i < key.size(); ++i)
-            {
-                char ch = key[i];
-                if (!((ch >= 'a' && ch <= 'z') || 
-                      (ch >= 'A' && ch <= 'Z') || 
-                      (ch >= '0' && ch <= '9') || 
-                      ch == '-'))
-                {
-                    valid_header = false;
-                    break;
-                }
-            }
-            
-            if (valid_header)
-            {
-                passthrough += key + ": " + value + "\r\n";
-            }
-        }
-    }
-
-    std::string out;
-    out.reserve(256 + passthrough.size() + body.size()); // why 256
-    
-    out += "HTTP/1.1 " + _toStrInt(status_code) + " " + reason + "\r\n";
-    out += passthrough;
-    out += "Content-Length: " + _toStrSize(body.size()) + "\r\n";
-    out += "Connection: close\r\n\r\n";
-    out += body;
-    
-    return out;
 }
 
 CgiHandler::~CgiHandler()
 {
     close_fd(cgi_in_pipe[0]);
     close_fd(cgi_in_pipe[1]);
-    // close_fd(cgi_out_pipe[0]);
-    // close_fd(cgi_out_pipe[1]);
-    if (_child_pid > 0) {
-        int status = 0;
-        if (waitpid(_child_pid, &status, WNOHANG) == 0) {
-            kill(_child_pid, SIGKILL);
-            waitpid(_child_pid, NULL, 0);
-        }
-        _child_pid = -1;
-    }
 }
 
 CgiState CgiHandler::getState() const 
 {
     return _state;
-}
-const std::string& CgiHandler::getResponse() const 
-{
-    return _response; 
 }
 int CgiHandler::getErrorCode() const 
 {
@@ -490,26 +339,3 @@ std::string CgiHandler::_toStrSize(size_t n)
     return oss.str();
 }
 
-std::string CgiHandler::_reason_phrase(int status_code)
-{
-    switch (status_code)
-    {
-        case 200: return "OK";
-        case 201: return "Created";
-        case 204: return "No Content";
-        case 301: return "Moved Permanently";
-        case 302: return "Found";
-        case 400: return "Bad Request";
-        case 401: return "Unauthorized";
-        case 403: return "Forbidden";
-        case 404: return "Not Found";
-        case 405: return "Method Not Allowed";
-        case 408: return "Request Timeout";
-        case 413: return "Payload Too Large";
-        case 500: return "Internal Server Error";
-        case 502: return "Bad Gateway";
-        case 503: return "Service Unavailable";
-        case 504: return "Gateway Timeout";
-        default:  return "Unknown";
-    }
-}
