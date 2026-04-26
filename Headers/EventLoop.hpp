@@ -106,6 +106,13 @@ private:
     // stdin_fd -> CgiJob*, so EPOLLOUT on the child's stdin pipe can find the job.
     std::map<int, CgiJob*> _cgi_stdin_jobs;
 
+    // Deferred-reap list: PIDs that were SIGKILL'd during _closeCgiJob but
+    // did not yet exit (e.g. child in D-state). Drained non-blockingly with
+    // waitpid(WNOHANG) on every event-loop iteration, so the loop never
+    // blocks waiting for a stuck child.
+    std::vector<pid_t> _pending_reap;
+    void _reapPending();
+
     // unified client close (CGI cleanup + EventRef cleanup + conn close)
     void _closeClient(int fd);
     void _rearmClient(int fd);

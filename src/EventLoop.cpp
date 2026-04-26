@@ -377,16 +377,19 @@ void EventLoop::_closeCgiJob(int result_fd)
     // so the child sees EOF and exits promptly.
     _closeCgiStdin(it->second);
 
-    // Reap child process to prevent zombies
+    // Reap child process to prevent zombies. Never block the event loop:
+    // if the child hasn't exited yet, send SIGKILL and defer the reap.
     if (it->second->child_pid > 0)
     {
         int status;
         pid_t ret = waitpid(it->second->child_pid, &status, WNOHANG);
         if (ret == 0)
         {
-            // Child still running — kill it
+            // Child still running — signal it and reap later (non-blocking).
+            // A child stuck in uninterruptible sleep (D-state) would otherwise
+            // stall the entire event loop if we used waitpid(..., 0) here.
             kill(it->second->child_pid, SIGKILL);
-            waitpid(it->second->child_pid, &status, 0);
+            _pending_reap.push_back(it->second->child_pid);
         }
     }
 
@@ -408,6 +411,29 @@ void EventLoop::_closeCgiJobsForClient(int client_fd)
 
     for (size_t i = 0; i < to_close.size(); ++i)
         _closeCgiJob(to_close[i]);
+}
+
+// Drain the deferred-reap list non-blockingly. Called every event-loop
+// iteration so kills dispatched from _closeCgiJob don't produce zombies
+// while never blocking the loop on a stuck child.
+void EventLoop::_reapPending()
+{
+    if (_pending_reap.empty())
+        return;
+
+    std::vector<pid_t> remaining;
+    remaining.reserve(_pending_reap.size());
+    for (size_t i = 0; i < _pending_reap.size(); ++i)
+    {
+        int   status;
+        pid_t pid = _pending_reap[i];
+        pid_t ret = waitpid(pid, &status, WNOHANG);
+        if (ret == 0)
+            remaining.push_back(pid);  // still not exited — try next tick
+        // ret > 0  : reaped
+        // ret < 0  : ECHILD or similar — drop it
+    }
+    _pending_reap.swap(remaining);
 }
 
 void EventLoop::_closeTimedOutCgiJobs()
@@ -485,6 +511,7 @@ void EventLoop::run()
 
         _closeTimedOutClients();
         _closeTimedOutCgiJobs();
+        _reapPending();
     }
 
     std::cerr << "[EventLoop] stopped\n";
