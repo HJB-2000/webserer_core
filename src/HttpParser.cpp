@@ -353,22 +353,28 @@ void HttpParser::_parseRequestLine(Buffer& buf, HttpRequest& req)
                 req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
 
             // ── URI ───────────────────────────────────────────────
-            case RL_URI:
-                if (ch == ' ')  { uri_end = p; state = RL_HTTP09; break; }
-                if (ch == '\r') { uri_end = p; http09 = true; state = RL_ALMOST_DONE; break; }
-                if (ch == '\n') { uri_end = p; http09 = true; done = true; break; }
-                if (!is_uri_char(static_cast<unsigned char>(ch))) {
-                    req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
-                }
-                break;
+            case RL_URI:  
+            if (ch == ' ')  { uri_end = p; state = RL_HTTP09; break; }  
+            if (ch == '\r' || ch == '\n') {  
+                // No HTTP version → malformed request (HTTP/0.9 not supported)  
+                req.parse_state = PSTATE_ERROR; req.error_code = 400; return;  
+            }  
+            if (!is_uri_char(static_cast<unsigned char>(ch))) {  
+                req.parse_state = PSTATE_ERROR; req.error_code = 400; return;  
+            }  
+            break;  
 
+            
             // ── deciding HTTP/0.9 vs versioned ────────────────────
-            case RL_HTTP09:
-                if (ch == ' ')  break;
-                if (ch == '\r') { http09 = true; state = RL_ALMOST_DONE; break; }
-                if (ch == '\n') { http09 = true; done = true; break; }
-                if (ch == 'H')  { state = RL_HTTP_H; break; }
-                req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
+            case RL_HTTP09:  
+            if (ch == ' ')  break;  
+            if (ch == '\r' || ch == '\n') {  
+                // No HTTP version after URI + space → malformed  
+                req.parse_state = PSTATE_ERROR; req.error_code = 400; return;  
+            }  
+            if (ch == 'H')  { state = RL_HTTP_H; break; }  
+            req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
+
 
             // ── "HTTP/" ───────────────────────────────────────────
             case RL_HTTP_H:
@@ -734,8 +740,8 @@ void HttpParser::_parseChunked(Buffer& buf, HttpRequest& req)
                 }  
                 chunk_sz = chunk_sz * 16 + d;  
                 valid    = true;  
+                
             }  
-  
             if (!valid) {  
                 req.parse_state = PSTATE_ERROR; req.error_code = 400; return;  
             }  
@@ -757,7 +763,7 @@ void HttpParser::_parseChunked(Buffer& buf, HttpRequest& req)
                     return;  
                 }  
             }
-            
+
             if (chunk_sz == 0) {
                 // Terminal chunk: must consume one more \r\n then we are done
                 req._chunk_done     = true;
