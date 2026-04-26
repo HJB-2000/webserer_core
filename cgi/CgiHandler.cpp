@@ -28,6 +28,7 @@ bool CgiHandler::isEnvKeyRequired(const std::string& key) const
 bool CgiHandler::validate_env_contract() const
 {
     bool ok = true;
+    // Check existing keys for empty values
     for (size_t i = 0; i < _meta_env.size(); ++i)
     {
         const std::string& line = _meta_env[i];
@@ -35,12 +36,38 @@ bool CgiHandler::validate_env_contract() const
         if (eq == std::string::npos || eq == 0)
         {
             ok = false;
-            continue; 
+            continue;
         }
         std::string key = line.substr(0, eq);
         std::string value = line.substr(eq + 1);
-        if (isEnvKeyRequired(key) && value.empty()) 
+        if (isEnvKeyRequired(key) && value.empty())
             ok = false;
+    }
+
+    // Check for missing required keys
+    const char* required[] = {
+        "REQUEST_METHOD", "REQUEST_URI", "SCRIPT_NAME",
+        "SCRIPT_FILENAME", "SERVER_NAME", "SERVER_PORT",
+        "SERVER_PROTOCOL", "GATEWAY_INTERFACE", "DOCUMENT_ROOT",
+        "REMOTE_ADDR", NULL
+    };
+    for (int r = 0; required[r] != NULL; ++r)
+    {
+        bool found = false;
+        std::string prefix = std::string(required[r]) + "=";
+        for (size_t i = 0; i < _meta_env.size(); ++i)
+        {
+            if (_meta_env[i].compare(0, prefix.size(), prefix) == 0)
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+        {
+            std::cerr << "[cgi][env] MISSING required key: " << required[r] << std::endl;
+            ok = false;
+        }
     }
     return ok;
 }
@@ -111,6 +138,9 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
     env.push_back("GATEWAY_INTERFACE=CGI/1.1");
     env.push_back("SERVER_SOFTWARE=webserv/1.0");
     env.push_back("REMOTE_ADDR=127.0.0.1");
+    env.push_back("REQUEST_URI=" + request.path +
+        (request.query_string.empty() ? "" : "?" + request.query_string));
+    env.push_back("DOCUMENT_ROOT=" + server.getRoot());
 
     for (std::map<std::string, std::string>::const_iterator it = request.headers.begin();
          it != request.headers.end(); ++it)
@@ -129,15 +159,13 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
 CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path)
     : _request(request), _location(location),
       _script_path(script_path), _child_pid(-1), _state(CGI_IDLE),
-      _timeout_seconds(60), _error_code(0), _env_logged(false)
+      _error_code(0), _env_logged(false)
 {
     cgi_in_pipe[0]  = -1;
     cgi_in_pipe[1]  = -1;
     // cgi_out_pipe[0] = -1;
     // cgi_out_pipe[1] = -1;
     gettimeofday(&_start_time, NULL);
-    if (_timeout_seconds <= 0) 
-        _timeout_seconds = 60;
     filling_meta_variables(request, config, location);
 }
 
@@ -218,23 +246,16 @@ bool CgiHandler::startCgi(int write_end)
             _state = CGI_ERROR;
             return false;
         }
-        ssize_t written = write(cgi_in_pipe[1], body.c_str(), body.size());
-        if (written != static_cast<ssize_t>(body.size()))
-        {
-            close_fd(cgi_in_pipe[0]);
-            close_fd(cgi_in_pipe[1]);
-            _error_code = 500;
-            _state = CGI_ERROR;
-            return false;
-        }
-        close_fd(cgi_in_pipe[1]);
     }
 
     _child_pid = fork();
     if (_child_pid < 0)
     {
-        if (need_stdin) 
+        if (need_stdin)
+        {
             close_fd(cgi_in_pipe[0]);
+            close_fd(cgi_in_pipe[1]);
+        }
         _error_code = 500;
         _state = CGI_ERROR;
         return false;
@@ -244,8 +265,12 @@ bool CgiHandler::startCgi(int write_end)
     {
         if(dup2(write_end, STDOUT_FILENO) == -1)
             _exit(1);
-        if(dup2(write_end, STDERR_FILENO) == -1)
-            _exit(1);
+        int devnull = open("/dev/null", O_WRONLY);
+        if (devnull >= 0)
+        {
+            dup2(devnull, STDERR_FILENO);
+            close(devnull);
+        }
 
         if (need_stdin)
             dup2(cgi_in_pipe[0], STDIN_FILENO);
@@ -253,6 +278,7 @@ bool CgiHandler::startCgi(int write_end)
         close_fd(cgi_in_pipe[0]);
         if (need_stdin)
             close_fd(cgi_in_pipe[1]);
+        close(write_end);  // original fd no longer needed after dup2
 
         std::string script_dir;
         std::string script_arg;
@@ -282,8 +308,18 @@ bool CgiHandler::startCgi(int write_end)
         _exit(127);
     }
 
+    // ── parent ──────────────────────────────────────────────
     if (need_stdin)
-        close_fd(cgi_in_pipe[0]);
+    {
+        ssize_t written = write(cgi_in_pipe[1], body.c_str(), body.size());
+        close_fd(cgi_in_pipe[1]);  // done writing — signal EOF to child stdin
+        close_fd(cgi_in_pipe[0]);  // parent doesn't need read end
+        if (written != static_cast<ssize_t>(body.size()))
+        {
+            // Body write failed — child will get truncated input
+            // but we still let it run; core will timeout if needed
+        }
+    }
 
     gettimeofday(&_start_time, NULL);
     _state = CGI_WAITING;

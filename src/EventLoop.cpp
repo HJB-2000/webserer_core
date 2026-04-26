@@ -17,6 +17,8 @@
 #include <cstring>
 #include <stdexcept>
 #include <iostream>
+#include <sys/wait.h>
+#include <signal.h>
 
 // ── stop ─────────────────────────────────────────────────────
 void EventLoop::stop() { _running = false; }
@@ -210,6 +212,8 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
     //                    info.script_path, result_write_fd);
     CgiHandler cgi(conn->request(), *conn->config(), *info.location, info.script_path);
     bool ok = cgi.startCgi(result_write_fd);
+    if (ok)
+        job->child_pid = cgi.getChildPid();
     ::close(result_write_fd);
 
     if (!ok)
@@ -293,6 +297,19 @@ void EventLoop::_closeCgiJob(int result_fd)
     std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
     if (it == _cgi_jobs.end())
         return;
+
+    // Reap child process to prevent zombies
+    if (it->second->child_pid > 0)
+    {
+        int status;
+        pid_t ret = waitpid(it->second->child_pid, &status, WNOHANG);
+        if (ret == 0)
+        {
+            // Child still running — kill it
+            kill(it->second->child_pid, SIGKILL);
+            waitpid(it->second->child_pid, &status, 0);
+        }
+    }
 
     _unregisterEventFd(result_fd);
     ::close(result_fd);

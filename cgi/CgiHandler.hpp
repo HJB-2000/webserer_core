@@ -34,6 +34,7 @@ class CgiHandler
 
         CgiState           getState()        const;
         int                getErrorCode()    const;
+        pid_t              getChildPid()     const { return _child_pid; }
 
         int  getStdinWriteFd()  const { return cgi_in_pipe[1];  }
         // int  getStdoutReadFd()  const { return cgi_out_pipe[0]; }
@@ -61,7 +62,6 @@ class CgiHandler
         CgiState     _state;
 
         struct timeval  _start_time;
-        int             _timeout_seconds;
 
         int          _error_code;
 
