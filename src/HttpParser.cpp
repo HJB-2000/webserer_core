@@ -602,7 +602,13 @@ void HttpParser::_parseHeaders(Buffer& buf, HttpRequest& req)
         // Store the normalised host back into headers
         req.headers["host"] = host_val;
     }
-
+    if (req.headers.find("content-length") != req.headers.end() && 
+        req.headers.find("transfer-encoding") != req.headers.end())  
+    {  
+        req.parse_state = PSTATE_ERROR;  
+        req.error_code  = 400;  
+        return;  
+    }  
     // Content-Length
     std::map<std::string, std::string>::const_iterator it =
         req.headers.find("content-length");
