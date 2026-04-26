@@ -314,7 +314,7 @@ void HttpParser::_parseRequestLine(Buffer& buf, HttpRequest& req)
 
     int  http_major = -1;
     int  http_minor = -1;
-    bool http09     = false;
+    // bool http09     = false;
     bool done       = false;
 
     RLState state = RL_START;

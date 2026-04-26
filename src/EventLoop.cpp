@@ -11,6 +11,9 @@
 #include "Headers/HttpParser.hpp"
 #include "Headers/ResponseHandler.hpp"
 #include "Headers/CgiStarter.hpp"
+#include "Common-Gateway-Interface-CGI/CgiHandler.hpp"
+// #include "Common-Gateway-Interface-CGI/HttpRequest.hpp"
+// #include "Common-Gateway-Interface-CGI/locationConfig.hpp"
 
 #include <cerrno>
 #include <cstring>
@@ -205,9 +208,10 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
     conn->setCgiRunning();
     _rearmClient(conn->fd());
 
-    bool ok = startCgi(conn->request(), *conn->config(), *info.location,
-                       info.script_path, result_write_fd);
-
+    // bool ok = startCgi(conn->request(), *conn->config(), *info.location,
+    //                    info.script_path, result_write_fd);
+    CgiHandler cgi(conn->request(), conn->config(), *info.location);
+    bool ok = cgi.startCgi(result_write_fd);
     ::close(result_write_fd);
 
     if (!ok)

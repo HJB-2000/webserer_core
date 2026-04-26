@@ -14,7 +14,8 @@ SRCS    = src/main.cpp \
           src/ConnectionManager.cpp \
           src/ConnectionState.cpp \
           src/ResponseHandler.cpp \
-          src/CgiStarter.cpp
+          Common-Gateway-Interface-CGI/CgiHandler.cpp
+        #   src/CgiStarter.cpp
 
 # ── teammate config-parser sources (Phase 1) ──────────────────
 SRCS   += conf/parsing.cpp \
