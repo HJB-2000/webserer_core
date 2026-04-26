@@ -11,9 +11,9 @@
 #include <iostream>
 #include <errno.h>
 
-// #include "locationConfig.hpp"
-// #include "miniserverConfig.hpp"
-#include "HttpRequest.hpp"
+#include "Headers/HttpRequest.hpp"
+#include "conf/serverConfig.hpp"
+#include "conf/locationConfig.hpp"
 
 enum CgiState {
     CGI_IDLE,
@@ -27,26 +27,20 @@ enum CgiState {
 class CgiHandler
 {
     public:
-        CgiHandler(const HttpRequest& request, const Server& config, const Location& location);
+        CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path);
         ~CgiHandler();
 
         bool startCgi(int write_end);
-        void endCgi(int read_end); // void for now
-
-        
 
         CgiState           getState()        const;
-        const std::string& getResponse()     const;
         int                getErrorCode()    const;
 
         int  getStdinWriteFd()  const { return cgi_in_pipe[1];  }
         // int  getStdoutReadFd()  const { return cgi_out_pipe[0]; }
 
-        std::string _build_http_from_cgi_output(const std::string& raw) const;
     private:
         void filling_meta_variables(const HttpRequest& request, const Server& config, const Location& location);
         std::vector<std::string> buildCgiEnvironment(const HttpRequest& request, const Server& server, const Location& location) const;
-        void        _parse_cgi_output();
         void        close_fd(int& fd_pipe);
         bool        isEnvKeyRequired(const std::string& key) const;
         bool        validate_env_contract() const;
@@ -56,24 +50,21 @@ class CgiHandler
         static std::string _toLower(const std::string& s);
         static std::string _toStrInt(int n);
         static std::string _toStrSize(size_t n);
-        static std::string _reason_phrase(int status_code);
-
-        HttpRequest          _request;
+        const HttpRequest&   _request;
         const Server&        _config_server;
         const Location&      _location;
+        std::string          _script_path;
 
         pid_t   _child_pid;
         int     cgi_in_pipe[2];
         // int     cgi_out_pipe[2];   // unused in new contract
 
         CgiState     _state;
-        std::string  _output_buffer;
         size_t       _bytes_written;
 
         struct timeval  _start_time;
         int             _timeout_seconds;
 
-        std::string  _response;
         int          _error_code;
 
         std::vector<std::string>  _meta_env;
