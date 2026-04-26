@@ -73,7 +73,51 @@ ResponseHandler::ResponseHandler()
     _mime[".ttf"]   = "font/ttf";
 }
 
-
+// ── Path normalization + traversal protection ──────────────  
+// Split path into components, resolve "." and "..",  
+// reject if ".." escapes above root.  
+static std::string normalizePath(const std::string& path)  
+{  
+    std::vector<std::string> segments;  
+    std::string seg;  
+    for (size_t i = 0; i < path.size(); ++i) {  
+        if (path[i] == '/') {  
+            if (!seg.empty()) {  
+                if (seg == "..") {  
+                    if (segments.empty())  
+                        return "";  // escapes root → signal error  
+                    segments.pop_back();  
+                } else if (seg != ".") {  
+                    segments.push_back(seg);  
+                }  
+                seg.clear();  
+            }  
+        } else {  
+            seg += path[i];  
+        }  
+    }  
+    // handle trailing segment (no trailing slash)  
+    if (!seg.empty()) {  
+        if (seg == "..") {  
+            if (segments.empty())  
+                return "";  
+            segments.pop_back();  
+        } else if (seg != ".") {  
+            segments.push_back(seg);  
+        }  
+    }  
+  
+    std::string result = "/";  
+    for (size_t i = 0; i < segments.size(); ++i) {  
+        result += segments[i];  
+        if (i + 1 < segments.size())  
+            result += "/";  
+    }  
+    // preserve trailing slash if original had one  
+    if (path.size() > 1 && path[path.size() - 1] == '/' && result[result.size() - 1] != '/')  
+        result += "/";  
+    return result;  
+}
 // ============================================================
 //  PUBLIC: handle()
 //
@@ -95,16 +139,15 @@ void ResponseHandler::handle(
     const ServerConfig& cfg,
     Buffer&             wb)
 {
-    // ── Path traversal protection ─────────────────────────────
-    // Reject any path containing a ".." component.
-    const std::string& rp = req.path;
-    if (rp.find("/../") != std::string::npos
-        || (rp.size() >= 3 && rp.compare(rp.size() - 3, 3, "/..") == 0)
-        || rp == "..")
-    {
-        _sendErrorInternal(400, req, cfg, wb);
-        return;
-    }
+    // ── Path normalization + traversal protection ──────────────  
+    std::string safe_path = normalizePath(req.path);  
+    if (safe_path.empty()) {  
+        _sendErrorInternal(400, req, cfg, wb);  
+        return;  
+    }  
+    // Use the normalized path from here on  
+    // (cast away const — or make a mutable copy of req.path)  
+    const_cast<HttpRequest&>(req).path = safe_path;
 
     // ── 1. Location match ─────────────────────────────────────
     const Location* loc = cfg.matchLocation(req.path);
