@@ -718,27 +718,46 @@ void HttpParser::_parseChunked(Buffer& buf, HttpRequest& req)
                 req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
             }
 
-            // Parse hex digits; ignore optional chunk extensions (after ';')
-            size_t chunk_sz = 0;
-            bool   valid    = false;
-            for (size_t i = 0; i < hex_line.size(); ++i) {
-                char c = hex_line[i];
-                if (c == ';') break; // start of chunk extension — stop here
-                unsigned int d;
-                if (c >= '0' && c <= '9')      d = static_cast<unsigned int>(c - '0');
-                else if (c >= 'a' && c <= 'f') d = static_cast<unsigned int>(c - 'a') + 10;
-                else if (c >= 'A' && c <= 'F') d = static_cast<unsigned int>(c - 'A') + 10;
-                else {
-                    req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
-                }
-                chunk_sz = chunk_sz * 16 + d;
-                valid    = true;
+            // Parse hex digits; stop at ';' (chunk extension) or end of line  
+            size_t chunk_sz = 0;  
+            bool   valid    = false;  
+            size_t ext_start = hex_line.size(); // no extension by default  
+            for (size_t i = 0; i < hex_line.size(); ++i) {  
+                char c = hex_line[i];  
+                if (c == ';') { ext_start = i; break; }  
+                unsigned int d;  
+                if (c >= '0' && c <= '9')      d = static_cast<unsigned int>(c - '0');  
+                else if (c >= 'a' && c <= 'f') d = static_cast<unsigned int>(c - 'a') + 10;  
+                else if (c >= 'A' && c <= 'F') d = static_cast<unsigned int>(c - 'A') + 10;  
+                else {  
+                    req.parse_state = PSTATE_ERROR; req.error_code = 400; return;  
+                }  
+                chunk_sz = chunk_sz * 16 + d;  
+                valid    = true;  
+            }  
+  
+            if (!valid) {  
+                req.parse_state = PSTATE_ERROR; req.error_code = 400; return;  
+            }  
+  
+            // ── RFC 7230 §4.1.1: validate chunk extensions ──────  
+            // Reject control chars (except HTAB) in the extension portion.  
+            // We don't need to interpret the extensions, just ensure they  
+            // aren't carrying garbage bytes.  
+            for (size_t i = ext_start; i < hex_line.size(); ++i) {  
+                unsigned char uc = static_cast<unsigned char>(hex_line[i]);  
+                if (uc < 0x20 && uc != 0x09) { // control char that isn't HTAB  
+                    req.parse_state = PSTATE_ERROR;  
+                    req.error_code  = 400;  
+                    return;  
+                }  
+                if (uc == 0x7F) { // DEL  
+                    req.parse_state = PSTATE_ERROR;  
+                    req.error_code  = 400;  
+                    return;  
+                }  
             }
-
-            if (!valid) {
-                req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
-            }
-
+            
             if (chunk_sz == 0) {
                 // Terminal chunk: must consume one more \r\n then we are done
                 req._chunk_done     = true;
