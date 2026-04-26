@@ -127,8 +127,8 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
 }
 
 CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path)
-    : _request(request), _config_server(config), _location(location),
-      _script_path(script_path), _child_pid(-1), _state(CGI_IDLE), _bytes_written(0),
+    : _request(request), _location(location),
+      _script_path(script_path), _child_pid(-1), _state(CGI_IDLE),
       _timeout_seconds(60), _error_code(0), _env_logged(false)
 {
     cgi_in_pipe[0]  = -1;

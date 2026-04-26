@@ -51,7 +51,6 @@ class CgiHandler
         static std::string _toStrInt(int n);
         static std::string _toStrSize(size_t n);
         const HttpRequest&   _request;
-        const Server&        _config_server;
         const Location&      _location;
         std::string          _script_path;
 
@@ -60,7 +59,6 @@ class CgiHandler
         // int     cgi_out_pipe[2];   // unused in new contract
 
         CgiState     _state;
-        size_t       _bytes_written;
 
         struct timeval  _start_time;
         int             _timeout_seconds;
