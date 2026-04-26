@@ -19,6 +19,7 @@
 #include <cctype>    // std::tolower
 #include <stdint.h>  // uint16_t (C++98 compatible)
 #include <map>
+#include <set>
 #include <string>
 
 // ── anonymous namespace: file-local helpers ──────────────────
@@ -508,8 +509,29 @@ void HttpParser::_parseRequestLine(Buffer& buf, HttpRequest& req)
 //  http_process_request_headers() — rewritten to consume
 //  incrementally instead of scanning the full buffer each call.
 // ════════════════════════════════════════════════════════════
+static std::set<std::string> init_singleton_headers() {
+    std::set<std::string> s;
+    // Tier 1 — smuggling vectors
+    s.insert("host");
+    s.insert("content-length");
+    s.insert("transfer-encoding");
+    // Tier 2 — RFC singleton enforcement
+    s.insert("content-type");
+    s.insert("content-location");
+    s.insert("authorization");
+    s.insert("date");
+    s.insert("location");
+    s.insert("retry-after");
+    s.insert("max-forwards");
+    s.insert("if-modified-since");
+    s.insert("if-unmodified-since");
+    s.insert("if-range");
+    return s;
+}
+
 void HttpParser::_parseHeaders(Buffer& buf, HttpRequest& req)
 {
+    static const std::set<std::string> SINGLETON_HEADERS = init_singleton_headers();
     while (true) {
         if (buf.size() == 0) return;
 
@@ -538,16 +560,27 @@ void HttpParser::_parseHeaders(Buffer& buf, HttpRequest& req)
 
         std::string name  = str_tolower(str_trim(line.substr(0, colon)));
         std::string value = str_trim(line.substr(colon + 1));
-
         if (name.empty()) {
-            req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
+            req.parse_state = PSTATE_ERROR;
+            req.error_code = 400;
+            return;
         }
-
-        req.headers[name] = value;
-
+        else if (req.headers.find(name) != req.headers.end())
+        {
+             if (SINGLETON_HEADERS.find(name) != SINGLETON_HEADERS.end()) {
+                req.parse_state = PSTATE_ERROR;
+                req.error_code = 400;
+                return;
+            }
+            req.headers[name] += ", " + value;
+        }
+        else
+            req.headers[name] = value;
         // Header count guard (RFC 7231 — 431 Request Header Fields Too Large)
         if (req.headers.size() > 100) {
-            req.parse_state = PSTATE_ERROR; req.error_code = 431; return;
+            req.parse_state = PSTATE_ERROR;
+            req.error_code = 431;
+            return;
         }
     }
 
