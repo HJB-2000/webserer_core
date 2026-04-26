@@ -153,11 +153,21 @@ void ResponseHandler::handle(
     const Location* loc = cfg.matchLocation(req.path);
 
     // ── 2. Method allowed ─────────────────────────────────────
-    if (loc && !loc->getMethods().empty()
-        && !_methodAllowed(req.method, loc->getMethods()))
-    {
-        _sendErrorInternal(405, req, cfg, wb);
-        return;
+    if (loc) {  
+        if (!loc->getMethods().empty()  
+            && !_methodAllowed(req.method, loc->getMethods()))  
+        {  
+            _sendErrorInternal(405, req, cfg, wb);  
+            return;  
+        }  
+        }
+        else
+        {  
+            // No location matched → only allow GET by default  
+            if (req.method != "GET") {  
+                _sendErrorInternal(405, req, cfg, wb);  
+                return;  
+            }  
     }
 
     // ── 3. Redirect ───────────────────────────────────────────

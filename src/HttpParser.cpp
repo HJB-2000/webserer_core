@@ -364,7 +364,7 @@ void HttpParser::_parseRequestLine(Buffer& buf, HttpRequest& req)
             }  
             break;  
 
-            
+
             // ── deciding HTTP/0.9 vs versioned ────────────────────
             case RL_HTTP09:  
             if (ch == ' ')  break;  
@@ -443,14 +443,10 @@ void HttpParser::_parseRequestLine(Buffer& buf, HttpRequest& req)
     if (method_start == NULL || method_end == NULL || uri_start == NULL) {
         req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
     }
+
     if (uri_end == NULL) uri_end = p; // no version: end = current position
     if (uri_end < uri_start) {
         req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
-    }
-
-    // Reject HTTP/0.9 (only 1.0 and 1.1 are supported)
-    if (http09) {
-        req.parse_state = PSTATE_ERROR; req.error_code = 505; return;
     }
 
     if (http_major < 0 || http_minor < 0) {
