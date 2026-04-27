@@ -43,6 +43,9 @@ EventLoop::EventLoop()
             std::string("[EventLoop] epoll_create failed: ")
             + std::strerror(errno));
 
+    // Prevent the epoll fd from leaking into CGI children via fork()+execve().
+    fcntl(_epoll_fd, F_SETFD, FD_CLOEXEC);
+
     _manager = new ConnectionManager(_epoll_fd);
 }
 
@@ -61,6 +64,9 @@ EventLoop::~EventLoop()
 // ⚠️  Caller must set the fd non-blocking before calling this.
 void EventLoop::addServerSocket(int server_fd, const ServerConfig* config)
 {
+    // Prevent listening sockets from leaking into CGI children.
+    fcntl(server_fd, F_SETFD, FD_CLOEXEC);
+
     _server_fds.push_back(server_fd);
     _server_configs.push_back(config);
     _registerEventFd(server_fd, EV_SERVER, EPOLLIN | EPOLLET);
@@ -201,6 +207,12 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
         _rearmClient(conn->fd());
         return;
     }
+
+    // Prevent the result pipe read-end from leaking into CGI children.
+    // Without FD_CLOEXEC the fd survives fork()+execve() and is inherited
+    // by every concurrent CGI process (same class of bug as the stdin fd
+    // leak fixed in 064d61d).
+    fcntl(result_read_fd, F_SETFD, FD_CLOEXEC);
 
     CgiJob* job = new CgiJob(conn->fd(), result_read_fd, conn->writeBuffer().maxSize());
     _cgi_jobs[result_read_fd] = job;
