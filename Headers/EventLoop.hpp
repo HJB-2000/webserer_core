@@ -78,6 +78,7 @@ private:
     std::vector<const ServerConfig*> _server_configs;
     std::map<int, CgiJob*>   _cgi_jobs;
     std::map<int, EventRef*> _event_refs;
+    std::vector<EventRef*>   _stale_refs;
 
     // Phase 2: one stateless parser serves all connections.
     // All parse progress lives in HttpRequest, so no per-connection
@@ -98,6 +99,20 @@ private:
     void _closeCgiJob(int result_fd);
     void _closeCgiJobsForClient(int client_fd);
     void _closeTimedOutCgiJobs();
+
+    // CGI stdin (non-blocking body writer) — driven by EPOLLOUT
+    void _handleCgiStdinEvent(int stdin_fd, uint32_t events);
+    void _closeCgiStdin(CgiJob* job);
+
+    // stdin_fd -> CgiJob*, so EPOLLOUT on the child's stdin pipe can find the job.
+    std::map<int, CgiJob*> _cgi_stdin_jobs;
+
+    // Deferred-reap list: PIDs that were SIGKILL'd during _closeCgiJob but
+    // did not yet exit (e.g. child in D-state). Drained non-blockingly with
+    // waitpid(WNOHANG) on every event-loop iteration, so the loop never
+    // blocks waiting for a stuck child.
+    std::vector<pid_t> _pending_reap;
+    void _reapPending();
 
     // unified client close (CGI cleanup + EventRef cleanup + conn close)
     void _closeClient(int fd);
