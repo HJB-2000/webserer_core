@@ -90,7 +90,8 @@ void EventLoop::_unregisterEventFd(int fd)
     std::map<int, EventRef*>::iterator it = _event_refs.find(fd);
     if (it != _event_refs.end())
     {
-        delete it->second;
+        it->second->kind = EV_INVALID;
+        _stale_refs.push_back(it->second);
         _event_refs.erase(it);
     }
 }
@@ -455,7 +456,7 @@ void EventLoop::_closeTimedOutCgiJobs()
 void EventLoop::_dispatch(const epoll_event& ev)
 {
     EventRef* ref = static_cast<EventRef*>(ev.data.ptr);
-    if (!ref)
+    if (!ref || ref->kind == EV_INVALID)
         return;
 
     if (ref->kind == EV_SERVER)
@@ -508,6 +509,10 @@ void EventLoop::run()
 
         for (int i = 0; i < n; ++i)
             _dispatch(events[i]);
+
+        for (size_t i = 0; i < _stale_refs.size(); ++i)
+            delete _stale_refs[i];
+        _stale_refs.clear();
 
         _closeTimedOutClients();
         _closeTimedOutCgiJobs();

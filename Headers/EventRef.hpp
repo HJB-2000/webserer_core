@@ -4,6 +4,7 @@
 
 enum EventKind 
 {
+    EV_INVALID,
     EV_SERVER,
     EV_CLIENT,
     EV_CGI,

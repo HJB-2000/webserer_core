@@ -78,6 +78,7 @@ private:
     std::vector<const ServerConfig*> _server_configs;
     std::map<int, CgiJob*>   _cgi_jobs;
     std::map<int, EventRef*> _event_refs;
+    std::vector<EventRef*>   _stale_refs;
 
     // Phase 2: one stateless parser serves all connections.
     // All parse progress lives in HttpRequest, so no per-connection
