@@ -23,6 +23,18 @@
 // ── stop ─────────────────────────────────────────────────────
 void EventLoop::stop() { _running = false; }
 
+// ── _setCloexec ──────────────────────────────────────────────
+bool EventLoop::_setCloexec(int fd, const char* label)
+{
+    if (::fcntl(fd, F_SETFD, FD_CLOEXEC) < 0)
+    {
+        std::cerr << "[EventLoop] FD_CLOEXEC failed on " << label
+                  << " fd " << fd << ": " << std::strerror(errno) << "\n";
+        return false;
+    }
+    return true;
+}
+
 // ── setNonBlocking ───────────────────────────────────────────
 int EventLoop::setNonBlocking(int fd)
 {
@@ -43,8 +55,7 @@ EventLoop::EventLoop()
             std::string("[EventLoop] epoll_create failed: ")
             + std::strerror(errno));
 
-    // Prevent the epoll fd from leaking into CGI children via fork()+execve().
-    fcntl(_epoll_fd, F_SETFD, FD_CLOEXEC);
+    _setCloexec(_epoll_fd, "epoll");
 
     _manager = new ConnectionManager(_epoll_fd);
 }
@@ -64,8 +75,7 @@ EventLoop::~EventLoop()
 // ⚠️  Caller must set the fd non-blocking before calling this.
 void EventLoop::addServerSocket(int server_fd, const ServerConfig* config)
 {
-    // Prevent listening sockets from leaking into CGI children.
-    fcntl(server_fd, F_SETFD, FD_CLOEXEC);
+    _setCloexec(server_fd, "server");
 
     _server_fds.push_back(server_fd);
     _server_configs.push_back(config);
@@ -187,7 +197,7 @@ void EventLoop::_addCgiFd(int result_fd, int client_fd)
 void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
 {
     int fds[2];
-    if (::pipe(fds) < 0)
+    if (::pipe2(fds, O_CLOEXEC) < 0)
     {
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
         conn->setWriting();
@@ -207,12 +217,6 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
         _rearmClient(conn->fd());
         return;
     }
-
-    // Prevent the result pipe read-end from leaking into CGI children.
-    // Without FD_CLOEXEC the fd survives fork()+execve() and is inherited
-    // by every concurrent CGI process (same class of bug as the stdin fd
-    // leak fixed in 064d61d).
-    fcntl(result_read_fd, F_SETFD, FD_CLOEXEC);
 
     CgiJob* job = new CgiJob(conn->fd(), result_read_fd, conn->writeBuffer().maxSize());
     _cgi_jobs[result_read_fd] = job;
@@ -235,7 +239,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
         int stdin_fd = cgi.releaseStdinFd();
         if (stdin_fd >= 0)
         {
-            fcntl(stdin_fd, F_SETFD, FD_CLOEXEC);
+            _setCloexec(stdin_fd, "cgi-stdin");
             job->stdin_fd     = stdin_fd;
             job->stdin_body   = conn->request().body;
             job->stdin_offset = 0;
@@ -350,7 +354,10 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
 
 void EventLoop::_finishCgiJob(int result_fd)
 {
-    CgiJob* job = _cgi_jobs[result_fd];
+    std::map<int, CgiJob*>::iterator jt = _cgi_jobs.find(result_fd);
+    if (jt == _cgi_jobs.end())
+        return;
+    CgiJob* job = jt->second;
     Connection* conn = _manager->get(job->client_fd);
 
     if (conn)
@@ -367,7 +374,10 @@ void EventLoop::_finishCgiJob(int result_fd)
 }
 void EventLoop::_failCgiJob(int result_fd, int status_code)
 {
-    CgiJob* job = _cgi_jobs[result_fd];
+    std::map<int, CgiJob*>::iterator jt = _cgi_jobs.find(result_fd);
+    if (jt == _cgi_jobs.end())
+        return;
+    CgiJob* job = jt->second;
     Connection* conn = _manager->get(job->client_fd);
 
     if (conn)
@@ -402,7 +412,8 @@ void EventLoop::_closeCgiJob(int result_fd)
             // A child stuck in uninterruptible sleep (D-state) would otherwise
             // stall the entire event loop if we used waitpid(..., 0) here.
             kill(it->second->child_pid, SIGKILL);
-            _pending_reap.push_back(it->second->child_pid);
+            _pending_reap.push_back(std::make_pair(it->second->child_pid,
+                                                     std::time(NULL)));
         }
     }
 
@@ -428,21 +439,33 @@ void EventLoop::_closeCgiJobsForClient(int client_fd)
 
 // Drain the deferred-reap list non-blockingly. Called every event-loop
 // iteration so kills dispatched from _closeCgiJob don't produce zombies
-// while never blocking the loop on a stuck child.
+// while never blocking the loop on a stuck child.  Entries older than
+// REAP_STALE_SECONDS are dropped to prevent unbounded growth from
+// children stuck in uninterruptible sleep (D-state).
 void EventLoop::_reapPending()
 {
     if (_pending_reap.empty())
         return;
 
-    std::vector<pid_t> remaining;
+    const time_t now = std::time(NULL);
+    std::vector< std::pair<pid_t, time_t> > remaining;
     remaining.reserve(_pending_reap.size());
     for (size_t i = 0; i < _pending_reap.size(); ++i)
     {
+        pid_t  pid  = _pending_reap[i].first;
+        time_t when = _pending_reap[i].second;
+
+        if (now - when > REAP_STALE_SECONDS)
+        {
+            std::cerr << "[EventLoop] giving up reap for pid " << pid
+                      << " after " << REAP_STALE_SECONDS << "s\n";
+            continue;  // drop — likely D-state; avoid unbounded growth
+        }
+
         int   status;
-        pid_t pid = _pending_reap[i];
         pid_t ret = waitpid(pid, &status, WNOHANG);
         if (ret == 0)
-            remaining.push_back(pid);  // still not exited — try next tick
+            remaining.push_back(_pending_reap[i]);  // still not exited
         // ret > 0  : reaped
         // ret < 0  : ECHILD or similar — drop it
     }
@@ -544,8 +567,7 @@ void EventLoop::_handleAccept(int server_fd)
         int client_fd = _manager->addConnection(server_fd, config);
         if (client_fd < 0)
             break;
-        // Prevent client sockets from leaking into CGI children.
-        fcntl(client_fd, F_SETFD, FD_CLOEXEC);
+        _setCloexec(client_fd, "client");
         _registerEventFd(client_fd, EV_CLIENT, EPOLLIN | EPOLLET | EPOLLRDHUP);
     }
 }
