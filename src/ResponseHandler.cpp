@@ -153,9 +153,12 @@ void ResponseHandler::handle(
     const Location* loc = cfg.matchLocation(req.path);
 
     // ── 2. Method allowed ─────────────────────────────────────
+    // HEAD is implicitly allowed whenever GET is (RFC 7231 §4.3.2)
+    std::string check_method = (req.method == "HEAD") ? "GET" : req.method;
+
     if (loc) {  
         if (!loc->getMethods().empty()  
-            && !_methodAllowed(req.method, loc->getMethods()))  
+            && !_methodAllowed(check_method, loc->getMethods()))  
         {  
             _sendErrorInternal(405, req, cfg, wb);  
             return;  
@@ -163,8 +166,8 @@ void ResponseHandler::handle(
         }
         else
         {  
-            // No location matched → only allow GET by default  
-            if (req.method != "GET") {  
+            // No location matched → only allow GET/HEAD by default  
+            if (check_method != "GET") {  
                 _sendErrorInternal(405, req, cfg, wb);  
                 return;  
             }  
@@ -720,8 +723,9 @@ void ResponseHandler::_sendErrorInternal(
         << "Content-Type: text/html\r\n"
         << "Content-Length: " << body.size()            << "\r\n"
         << "Connection: "     << _connectionHeader(req) << "\r\n"
-        << "\r\n"
-        << body;
+        << "\r\n";
+    if (req.method != "HEAD")
+        oss << body;
 
     _appendStr(wb, oss.str());
 }
