@@ -240,7 +240,7 @@ bool CgiHandler::startCgi(int write_end)
 
     if (need_stdin)
     {
-        if (pipe(cgi_in_pipe) == -1) 
+        if (pipe2(cgi_in_pipe, O_CLOEXEC) == -1) 
         {
             _error_code = 500;
             _state = CGI_ERROR;

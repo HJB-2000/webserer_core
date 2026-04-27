@@ -110,14 +110,18 @@ private:
     // Deferred-reap list: PIDs that were SIGKILL'd during _closeCgiJob but
     // did not yet exit (e.g. child in D-state). Drained non-blockingly with
     // waitpid(WNOHANG) on every event-loop iteration, so the loop never
-    // blocks waiting for a stuck child.
-    std::vector<pid_t> _pending_reap;
+    // blocks waiting for a stuck child. Entries older than 60 s are dropped
+    // to prevent unbounded growth from children stuck in D-state.
+    static const int REAP_STALE_SECONDS = 60;
+    std::vector< std::pair<pid_t, time_t> > _pending_reap;
     void _reapPending();
 
     // unified client close (CGI cleanup + EventRef cleanup + conn close)
     void _closeClient(int fd);
     void _rearmClient(int fd);
     void _closeTimedOutClients();
+
+    static bool _setCloexec(int fd, const char* label);
 
     void _registerEventFd(int fd, EventKind kind, uint32_t events);
     void _modifyEventFd(int fd, EventKind kind, uint32_t events);
