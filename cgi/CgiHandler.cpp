@@ -266,23 +266,21 @@ bool CgiHandler::startCgi(int write_end)
         if(dup2(write_end, STDOUT_FILENO) == -1)
             _exit(1);
         int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0)
-        {
-            dup2(devnull, STDERR_FILENO);
-            close(devnull);
-        }
+        if (devnull < 0 || dup2(devnull, STDERR_FILENO) == -1)
+            _exit(1);
+        close(devnull);
 
         if (need_stdin)
-            dup2(cgi_in_pipe[0], STDIN_FILENO);
+        {
+            if (dup2(cgi_in_pipe[0], STDIN_FILENO) == -1)
+                _exit(1);
+        }
         else
         {
-            // No body: ensure the child doesn't inherit the server's stdin.
             int devnull_in = open("/dev/null", O_RDONLY);
-            if (devnull_in >= 0)
-            {
-                dup2(devnull_in, STDIN_FILENO);
-                close(devnull_in);
-            }
+            if (devnull_in < 0 || dup2(devnull_in, STDIN_FILENO) == -1)
+                _exit(1);
+            close(devnull_in);
         }
 
         close_fd(cgi_in_pipe[0]);
