@@ -544,6 +544,8 @@ void EventLoop::_handleAccept(int server_fd)
         int client_fd = _manager->addConnection(server_fd, config);
         if (client_fd < 0)
             break;
+        // Prevent client sockets from leaking into CGI children.
+        fcntl(client_fd, F_SETFD, FD_CLOEXEC);
         _registerEventFd(client_fd, EV_CLIENT, EPOLLIN | EPOLLET | EPOLLRDHUP);
     }
 }
