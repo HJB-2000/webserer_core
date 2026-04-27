@@ -52,6 +52,36 @@ EventLoop::EventLoop()
 // ── Destructor ───────────────────────────────────────────────
 EventLoop::~EventLoop()
 {
+    // Close all in-flight CGI jobs: this signals EOF to children via
+    // _closeCgiStdin, reaps (or defers) child PIDs, unregisters result
+    // fds from epoll, closes fds, and deletes the CgiJob objects.
+    // _closeCgiJob erases from _cgi_jobs, so snapshot the keys first.
+    std::vector<int> cgi_fds;
+    cgi_fds.reserve(_cgi_jobs.size());
+    for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
+         it != _cgi_jobs.end(); ++it)
+        cgi_fds.push_back(it->first);
+    for (size_t i = 0; i < cgi_fds.size(); ++i)
+        _closeCgiJob(cgi_fds[i]);
+
+    // Reap any children still pending (non-blocking — anything that
+    // refuses to exit will be reparented to init on process teardown).
+    _reapPending();
+    _pending_reap.clear();
+    _cgi_stdin_jobs.clear();
+
+    // Delete any EventRefs still registered (e.g. server/client fds).
+    for (std::map<int, EventRef*>::iterator it = _event_refs.begin();
+         it != _event_refs.end(); ++it)
+        delete it->second;
+    _event_refs.clear();
+
+    // Delete stale refs accumulated during the final event-loop iteration
+    // (and any we just produced via _closeCgiJob → _unregisterEventFd).
+    for (size_t i = 0; i < _stale_refs.size(); ++i)
+        delete _stale_refs[i];
+    _stale_refs.clear();
+
     delete _manager;
     if (_epoll_fd >= 0)
         ::close(_epoll_fd);
