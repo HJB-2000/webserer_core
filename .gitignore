@@ -4,3 +4,4 @@ a.out
 webserv
 webserv.log
 *.md
+!.github/copilot/*.md
