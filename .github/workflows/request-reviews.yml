@@ -2,7 +2,7 @@ name: Request Reviews
 
 on:
   pull_request:
-    types: [opened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
   request-copilot-review:
