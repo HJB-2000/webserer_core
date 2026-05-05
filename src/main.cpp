@@ -1,13 +1,3 @@
-// ============================================================
-//  main.cpp  —  Server entry point
-//
-//  1. Calls API_conf(argc, argv) → vector of ServerConfig
-//  2. Binds one listening socket per server block
-//  3. Registers each socket with the EventLoop
-//  4. Installs SIGINT / SIGTERM handlers
-//  5. Runs until signal → clean shutdown
-// ============================================================
-
 #include "Headers/EventLoop.hpp"
 #include "serverConfig.hpp"
 #include "Headers/API_conf.hpp"
@@ -25,11 +15,6 @@
 #include <iostream>
 #include <vector>
 
-// ── Read kernel accept-queue cap ─────────────────────────────
-//
-// Reads /proc/sys/net/core/somaxconn using only allowed syscalls
-// (open, read, close). Falls back to SOMAXCONN if the file is
-// unavailable (non-Linux or permission issue).
 static int readSomaxconn()
 {
     int fd = ::open("/proc/sys/net/core/somaxconn", O_RDONLY);
@@ -43,16 +28,13 @@ static int readSomaxconn()
     return (val > 0) ? val : SOMAXCONN;
 }
 
-// ── Signal handling ──────────────────────────────────────────
 static EventLoop* g_loop = NULL;
-
-static void sig_handler(int /*signo*/)
+static void sig_handler(int)
 {
     if (g_loop)
         g_loop->stop();
 }
 
-// ── Bind a listening socket ──────────────────────────────────
 static int make_listener(const char* host, int port)
 {
     int fd = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -104,15 +86,11 @@ static int make_listener(const char* host, int port)
     return fd;
 }
 
-// ── main ─────────────────────────────────────────────────────
 int main(int argc, char* argv[])
 {
     Logger::instance().open("webserv.log");
-
-    // Parse config — all logic lives in API_conf.cpp
     std::vector<ServerConfig> servers = API_conf(argc, argv);
 
-    // Bind one socket per server block
     EventLoop            loop;
     std::vector<int>     listen_fds;
 
@@ -128,22 +106,14 @@ int main(int argc, char* argv[])
         loop.addServerSocket(fd, &servers[i]);
     }
 
-    // Signal handling
     g_loop = &loop;
     std::signal(SIGINT,  sig_handler);
     std::signal(SIGTERM, sig_handler);
-    // Ignore SIGPIPE so that writing to a pipe/socket whose peer has closed
-    // (e.g. a CGI child that exited early) returns EPIPE instead of killing
-    // the server process.
     std::signal(SIGPIPE, SIG_IGN);
-
     std::cerr << "[core] server ready — press Ctrl+C to stop\n";
     loop.run();
-
-    // Cleanup
     for (size_t i = 0; i < listen_fds.size(); ++i)
         ::close(listen_fds[i]);
-
     std::cerr << "[core] shutdown complete\n";
     Logger::instance().close();
     return 0;

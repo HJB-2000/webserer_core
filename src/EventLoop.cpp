@@ -39,7 +39,8 @@ bool EventLoop::_setCloexec(int fd, const char* label)
 int EventLoop::setNonBlocking(int fd)
 {
     int flags = ::fcntl(fd, F_GETFL, 0);
-    if (flags < 0) return -1;
+    if (flags < 0)
+        return -1;
     return ::fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
@@ -536,7 +537,8 @@ void EventLoop::run()
         int n = ::epoll_wait(_epoll_fd, events, MAX_EVENTS, EPOLL_TIMEOUT_MS);
         if (n < 0)
         {
-            if (errno == EINTR) continue;   // signal interrupted — loop again
+            if (errno == EINTR) 
+                continue;   // signal interrupted — loop again
             std::cerr << "[EventLoop] epoll_wait error: "
                       << std::strerror(errno) << "\n";
             break;
