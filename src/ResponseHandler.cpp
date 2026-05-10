@@ -256,8 +256,8 @@ void ResponseHandler::handle(
         _sendRedirect(301, req.path + "/", req, wb);
         return;
     }
-/*---------------------------------------------------fahd touch------------------------------------------------------------------*/
-    // ── 7. CGI check (Phase 4 seam) ─────────────────────────── // modiified by fahd  suporting multiple extensions (BONUS)
+
+    // ── 7. CGI check (Phase 4 seam) ─────────────────────────── // modified by fahd to support multi-extension CGI matching)
     if (loc && !loc->getCGI_extensions().empty())
     {
         const std::vector<std::string>& exts = loc->getCGI_extensions();
@@ -272,7 +272,6 @@ void ResponseHandler::handle(
             }
         }
     }
-/*---------------------------------------------------fahd ------------------------------------------------------------------*/
 
     // ── 8. Method dispatch ────────────────────────────────────
     if (req.method == "GET" || req.method == "HEAD")
@@ -412,7 +411,6 @@ void ResponseHandler::handleCgiOutput(
     if (req.method != "HEAD")
         _appendStr(wb, body);
 }
-/*---------------------------------------------------fahd touch------------------------------------------------------------------*/
 bool ResponseHandler::resolveCgiRequest(
     const HttpRequest&  req,
     const ServerConfig& cfg,
@@ -438,7 +436,6 @@ bool ResponseHandler::resolveCgiRequest(
     out.script_path = _resolveFsPath(req, loc, cfg);
     return true;
 }
-/*-------------------------------------------------------fahd --------------------------------------------------------------*/
 
 // ============================================================
 //  _serveStaticFile

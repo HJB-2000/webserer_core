@@ -251,8 +251,8 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
         else
         {
             // No colon — two sub-cases:
-            //   a) pure port number     e.g. listen 8080;  → host defaults to 0.0.0.0
-            //   b) bare IPv4 address    e.g. listen 127.0.0.1;  → port defaults to 80
+            //   a) pure port number     e.g. listen 9090;  → host defaults to 0.0.0.0
+            //   b) bare IPv4 address    e.g. listen 127.0.0.1;  → port defaults to 9090
             long port_long;
             if (safe_strtol(val, port_long))
             {
@@ -269,7 +269,6 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
             {
                 // Sub-case b: bare IPv4 — port defaults to 9090
                 std::string tmp_host = val;
-                std::cout << "host ========== " << val << std::endl;
                 server.setHost(tmp_host);
                 int default_port = 9090;
                 server.setPort(default_port);
@@ -392,7 +391,6 @@ void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexem
             Location new_loc(obj_Server);
             parsLocation(new_loc, stream_lexems, i);
             new_loc.check_for_allowed_methods();
-            // validate_locations_of_server(new_loc, stream_lexems, i); // removed for now
             obj_Server.addLocation(new_loc);
         }
         else if (type == "TYPE_DIRECTIVE")
@@ -449,7 +447,7 @@ void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexem
     {
         // Validate index filenames for locations that actually serve static files
         bool is_redirect = (locs[idx].getReturnRedirection_code() != -1);
-    bool is_cgi      = (!locs[idx].getCGI_path().empty() && !locs[idx].getCGI_extensions().empty());
+        bool is_cgi      = (!locs[idx].getCGI_path().empty() && !locs[idx].getCGI_extensions().empty());
         if (!is_redirect && !is_cgi)
             validate_index_filenames(locs[idx].getIndex_s(), stream_lexems, i,
                                      ("parsServer/location[" + locs[idx].getPath() + "]/index").c_str());

@@ -26,7 +26,6 @@ std::vector<ServerConfig> API_conf(int argc, char** argv)
         servers.push_back(s);
         return servers;
     }
-    /*-------------------------------fahd touch------------------------------------*/
     const std::string config_path(argv[1]);
     if (config_path.size() < 5 || config_path.substr(config_path.size() - 5) != ".conf")
     {
@@ -34,19 +33,12 @@ std::vector<ServerConfig> API_conf(int argc, char** argv)
                   << config_path << "\n";
         std::exit(1);
     }
-    if (config_path.empty() || config_path[0] == '.')
+    if (config_path.empty())
     {
-        std::cerr << "[API_conf] hidden config files are not allowed: "
+        std::cerr << "[API_conf] empty files are not allowed: "
                   << config_path << "\n";
         std::exit(1);
     }
-    if (config_path.find("/.") != std::string::npos)
-    {
-        std::cerr << "[API_conf] config path cannot include hidden directories: "
-                  << config_path << "\n";
-        std::exit(1);
-    }
-
     std::ifstream config_file(config_path.c_str());
     if (!config_file.is_open())
     {

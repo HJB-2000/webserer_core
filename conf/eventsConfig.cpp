@@ -58,7 +58,7 @@ void   eventsConfig::set_worker_connections(int work_connets)
 {
     this->_worker_connections = work_connets;
 }
-void   eventsConfig::set_event_model(string event_model)
+void   eventsConfig::set_event_model(std::string event_model)
 {
     this->_event_model = event_model;
 
@@ -67,7 +67,7 @@ int eventsConfig::get_worker_connections()
 {
     return _worker_connections;
 }
-string eventsConfig::get_event_model()
+std::string eventsConfig::get_event_model()
 {
     return _event_model;
 }
@@ -78,9 +78,9 @@ void eventsConfig::set_default_conf()
     _event_model = "epoll";
 }
 
-void ParserConf::parseDirective(eventsConfig &events, const string &directive, vector<Lexer> &stream, size_t &i)
+void ParserConf::parseDirective(eventsConfig &events, const std::string &directive, std::vector<Lexer> &stream, size_t &i)
 {
-    vector<string> values = consumeValuesLenient(i, stream);
+    std::vector<std::string> values = consumeValuesLenient(i, stream);
 
     if(values.empty())
     {
@@ -122,7 +122,7 @@ void ParserConf::parseDirective(eventsConfig &events, const string &directive, v
     }
 }
 
-void ParserConf::parseEvents(eventsConfig &obj_events, vector<Lexer> &stream_lexems, size_t &i)
+void ParserConf::parseEvents(eventsConfig &obj_events, std::vector<Lexer> &stream_lexems, size_t &i)
 {
     i++;
     size_t len = stream_lexems.size();
@@ -131,8 +131,8 @@ void ParserConf::parseEvents(eventsConfig &obj_events, vector<Lexer> &stream_lex
         report_parse_error("Expected '{' after events", stream_lexems, i, "parseEvents");
     }
     i++;
-    set<string> seen_directives;
-    set<string> unique_directives;
+    std::set<std::string> seen_directives;
+    std::set<std::string> unique_directives;
     unique_directives.insert("worker_connections");
     unique_directives.insert("event_model");
 
@@ -141,8 +141,8 @@ void ParserConf::parseEvents(eventsConfig &obj_events, vector<Lexer> &stream_lex
 
     while(i < len && stream_lexems[i].get_token_type() != "TYPE_RBRACE")
     {
-        string type = stream_lexems[i].get_token_type();
-        string val = stream_lexems[i].get_value();
+        std::string type = stream_lexems[i].get_token_type();
+        std::string val = stream_lexems[i].get_value();
         if(type == "TYPE_LBRACE")
             report_parse_error("Syntax Error: cant have nested context", stream_lexems, i, "parseEvents");
 

@@ -2,7 +2,6 @@
 #define EVENTS_CONFIG_HPP
 
 #include <string>
-using namespace std;
 
 class eventsConfig
 {
@@ -12,13 +11,13 @@ class eventsConfig
         eventsConfig& operator=(const eventsConfig& obj);
         ~eventsConfig();
         void set_worker_connections(int work_connets);
-        void set_event_model(string event_model);
+        void set_event_model(std::string event_model);
         int get_worker_connections();
-        string get_event_model();
+        std::string get_event_model();
         void set_default_conf();
     private:
         int  _worker_connections;
-        string  _event_model;
+        std::string  _event_model;
 };
 
 

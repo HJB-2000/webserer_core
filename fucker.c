@@ -13,15 +13,13 @@ int main() {
     char *buffer = malloc(size);
     fread(buffer, 1, size, f);
 
-    char *http = strstr(buffer, "http ");
-    if (http) {
-        long offset = http - buffer + strlen("http");
+    char *match = strstr(buffer, "events ");
+    if (match) {
+        long offset = match - buffer + strlen("events");
         printf("Offset: %ld\n", offset);
-        char zeros[8] = {0};
 
         fseek(f, offset, SEEK_SET);
-        fwrite(zeros, 8, 8, f);
-        // fwrite(NULL, 8, 8, f);
+        fwrite("\0", 1, 1, f);
     }
 
     free(buffer);

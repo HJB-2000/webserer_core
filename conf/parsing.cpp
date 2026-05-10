@@ -173,6 +173,22 @@ static bool is_readable(const std::string& path)
 
 void validate_final_config(std::vector<Server>& servers, long long http_default_cmbs)
 {
+    std::set<int> seen_ports;
+    for (size_t s = 0; s < servers.size(); ++s)
+    {
+        int port = servers[s].getPort();
+        
+        if (seen_ports.find(port) != seen_ports.end())
+        {
+            std::cerr << "[fatal] Duplicate port: " << port 
+                      << " is used by multiple server blocks." << std::endl;
+            std::cerr << "        Each server block must listen on a unique port." << std::endl;
+            std::cerr << "        Cannot bind to the same port twice." << std::endl;
+            exit(1);
+        }
+        seen_ports.insert(port);
+    }
+
     for (size_t s = 0; s < servers.size(); ++s) 
     {
         const Server& server = servers[s];
@@ -248,10 +264,6 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
                 std::cerr << "[WARN] at [-------location--------] " << loc_id
                           << ": Client_max_body_size too small, forcing default 1m" << std::endl;
             }
-
-            // std::cerr << "[location result = ] " << server_id
-            //           << ": client_max_body_size = : " << client_max_body_size_location << std::endl;
-
             std::vector<std::string> idxs = loc.getIndex_s();
             for (size_t i = 0; i < idxs.size(); ++i) 
             {
@@ -285,17 +297,6 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
                     exit(1);
                 }
             }
-
-            if (loc.getReturnRedirection_code() != -1) 
-            {
-                int r_code = loc.getReturnRedirection_code();
-                if (r_code < 300 || r_code >= 400) 
-                {
-                    std::cerr << "[fatal] " << loc_id << ": Redirect code must be 3xx." << std::endl;
-                    exit(1);
-                }
-            }
-            
             std::map<int, std::string> l_errs = loc.get_error_page_loc();
             for (std::map<int, std::string>::const_iterator it = l_errs.begin(); it != l_errs.end(); ++it) 
             {

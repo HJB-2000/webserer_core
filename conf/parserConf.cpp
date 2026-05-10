@@ -76,7 +76,7 @@ void ParserConf::parseDirective(httpConfig &http, const std::string &directive, 
             report_parse_error("Syntax Error: directive ", stream, i,
                 "'client_max_body_size expects a single value' in parseDirective of http");
         long long tmp = parse_cl_mx_bd_sz(values[0]);
-        if(tmp < 0 || tmp > MAX_CLIENT_BODY_SIZE_LIMIT)
+        if(tmp == -1 || tmp > MAX_CLIENT_BODY_SIZE_LIMIT)
         {
             report_parse_error("Syntax Error", stream, i, "Invalid client_max_body_size");
         }
@@ -120,7 +120,6 @@ bool is_valid_size(const std::string str)
     {
         if (len < 2 || !isdigit(static_cast<unsigned char>(str[len - 2])))
         {
-            std::cout << "here------------------------" << std::endl;
             return false;
         }
         num_end = len - 1;
