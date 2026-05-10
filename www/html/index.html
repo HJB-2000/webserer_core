@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <script>
+    // Auto-redirect to dashboard if already logged in
+    (async function() {
+        try {
+            const res = await fetch('/cgi-bin/check_session.py');
+            if (res.ok) {
+                // Valid session found → go to the playground
+                window.location.replace('/dashboard/index.html');
+            }
+            // Else stay on this page (no action)
+        } catch (e) {
+            // Network error, stay on page
+        }
+    })();
+    </script>
+    <div class="container">
+        <h1>Welcome to Our Service</h1>
+        <p class="subtitle">Sign up, log in, and manage your session.</p>
+
+        <div class="box">
+            <h3>🔐 Authentication</h3>
+            <div class="buttons">
+                <a href="/signup.html" class="btn signup">Sign Up</a>
+                <a href="/login.html" class="btn login">Log In</a>
+                <a href="/cgi-bin/dashboard.py" class="btn dashboard">Dashboard</a>
+                <a href="/cgi-bin/logout.py" class="btn logout">Log Out</a>
+            </div>
+            <div class="info-box">
+                <p><strong>Flow:</strong> Sign up → Log in → Dashboard. If you’re not registered, login will send you to signup.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

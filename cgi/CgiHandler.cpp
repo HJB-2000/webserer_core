@@ -28,7 +28,6 @@ bool CgiHandler::isEnvKeyRequired(const std::string& key) const
 bool CgiHandler::validate_env_contract() const
 {
     bool ok = true;
-    // Check existing keys for empty values
     for (size_t i = 0; i < _meta_env.size(); ++i)
     {
         const std::string& line = _meta_env[i];
@@ -38,13 +37,15 @@ bool CgiHandler::validate_env_contract() const
             ok = false;
             continue;
         }
-        std::string key = line.substr(0, eq);
+        std::string key   = line.substr(0, eq);
         std::string value = line.substr(eq + 1);
         if (isEnvKeyRequired(key) && value.empty())
+        {
+            std::cerr << "[cgi][env] EMPTY required key: " << key << std::endl;
             ok = false;
+        }
     }
 
-    // Check for missing required keys
     const char* required[] = {
         "REQUEST_METHOD", "REQUEST_URI", "SCRIPT_NAME",
         "SCRIPT_FILENAME", "SERVER_NAME", "SERVER_PORT",
@@ -86,7 +87,14 @@ void CgiHandler::log_env_once()
 void CgiHandler::filling_meta_variables(const HttpRequest& request, const Server& config, const Location& location)
 {
     _meta_env = buildCgiEnvironment(request, config, location);
+
+    // _env_ptrs holds raw char* into _meta_env's string buffers.
+    // CRITICAL: _meta_env must NEVER be modified after this point —
+    // any push_back/resize/assignment on _meta_env will reallocate its
+    // internal strings and silently invalidate every pointer here,
+    // causing execve() to receive garbage environment pointers.
     _env_ptrs.clear();
+    _env_ptrs.reserve(_meta_env.size() + 1);
     for (size_t i = 0; i < _meta_env.size(); ++i)
         _env_ptrs.push_back(const_cast<char*>(_meta_env[i].c_str()));
     _env_ptrs.push_back(NULL);
@@ -97,8 +105,16 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
 {
     (void)location;
     std::vector<std::string> env;
-    std::string host = server.getHost();
-    if (host.empty()) host = request.header("host");
+
+    // Fix #6: SERVER_NAME must be the hostname from the Host request header
+    // (RFC 3875 §4.1.14), not the server's bind address. Strip port if present.
+    std::string server_name = request.header("host");
+    if (server_name.empty())
+        server_name = server.getHost();
+    // Strip port suffix (host:port → host)
+    size_t colon_pos = server_name.rfind(':');
+    if (colon_pos != std::string::npos)
+        server_name = server_name.substr(0, colon_pos);
 
     std::string script_name     = request.path;
     std::string script_filename = _script_path;
@@ -118,21 +134,17 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
         path_translated = doc_root + path_info;
     }
 
-    std::ostringstream content_length_ss;
-    content_length_ss << request.body.size();
     std::ostringstream server_port_ss;
     server_port_ss << server.getPort();
 
     env.push_back("REQUEST_METHOD="    + request.method);
     env.push_back("QUERY_STRING="      + request.query_string);
-    env.push_back("CONTENT_TYPE="      + request.header("content-type"));
-    env.push_back("CONTENT_LENGTH="    + content_length_ss.str());
     env.push_back("SCRIPT_FILENAME="   + script_filename);
     env.push_back("SCRIPT_NAME="       + script_name);
     env.push_back("PATH_INFO="         + path_info);
-    if (!path_translated.empty()) 
+    if (!path_translated.empty())
         env.push_back("PATH_TRANSLATED=" + path_translated);
-    env.push_back("SERVER_NAME="       + host);
+    env.push_back("SERVER_NAME="       + server_name);
     env.push_back("SERVER_PORT="       + server_port_ss.str());
     env.push_back("SERVER_PROTOCOL="   + request.version);
     env.push_back("GATEWAY_INTERFACE=CGI/1.1");
@@ -141,6 +153,24 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
     env.push_back("REQUEST_URI=" + request.path +
         (request.query_string.empty() ? "" : "?" + request.query_string));
     env.push_back("DOCUMENT_ROOT=" + server.getRoot());
+
+    // Fix #7: CONTENT_TYPE and CONTENT_LENGTH only set when body is present
+    // (RFC 3875 §4.1.2 — omit CONTENT_LENGTH when there is no message body)
+    if (!request.body.empty())
+    {
+        std::ostringstream content_length_ss;
+        content_length_ss << request.body.size();
+        env.push_back("CONTENT_TYPE="   + request.header("content-type"));
+        env.push_back("CONTENT_LENGTH=" + content_length_ss.str());
+    }
+    else
+    {
+        // Still set CONTENT_TYPE when sent by the client even without a body,
+        // but leave CONTENT_LENGTH absent.
+        std::string ct = request.header("content-type");
+        if (!ct.empty())
+            env.push_back("CONTENT_TYPE=" + ct);
+    }
 
     for (std::map<std::string, std::string>::const_iterator it = request.headers.begin();
          it != request.headers.end(); ++it)
@@ -161,17 +191,15 @@ CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const L
       _script_path(script_path), _child_pid(-1), _state(CGI_IDLE),
       _error_code(0), _env_logged(false)
 {
-    cgi_in_pipe[0]  = -1;
-    cgi_in_pipe[1]  = -1;
-    // cgi_out_pipe[0] = -1;
-    // cgi_out_pipe[1] = -1;
+    cgi_in_pipe[0] = -1;
+    cgi_in_pipe[1] = -1;
     gettimeofday(&_start_time, NULL);
     filling_meta_variables(request, config, location);
 }
 
 void CgiHandler::close_fd(int& fd_pipe)
 {
-    if (fd_pipe != -1) 
+    if (fd_pipe != -1)
     {
         close(fd_pipe);
         fd_pipe = -1;
@@ -181,7 +209,7 @@ void CgiHandler::close_fd(int& fd_pipe)
 bool CgiHandler::startCgi(int write_end)
 {
     std::string cgi_path = _location.getCGI_path();
-    if (cgi_path.empty()) 
+    if (cgi_path.empty())
     {
         _error_code = 500;
         _state = CGI_ERROR;
@@ -192,19 +220,19 @@ bool CgiHandler::startCgi(int write_end)
     if (stat(cgi_path.c_str(), &sb) != 0)
     {
         _error_code = 500;
-        _state = CGI_ERROR; 
+        _state = CGI_ERROR;
         return false;
     }
     if (!S_ISREG(sb.st_mode))
     {
         _error_code = 500;
-        _state = CGI_ERROR; 
+        _state = CGI_ERROR;
         return false;
     }
     if (access(cgi_path.c_str(), X_OK) != 0)
     {
         _error_code = 500;
-        _state = CGI_ERROR; 
+        _state = CGI_ERROR;
         return false;
     }
 
@@ -212,35 +240,45 @@ bool CgiHandler::startCgi(int write_end)
     if (script_file.empty())
     {
         _error_code = 404;
-        _state = CGI_ERROR; 
+        _state = CGI_ERROR;
         return false;
     }
     if (stat(script_file.c_str(), &sb) != 0)
     {
         _error_code = 404;
-        _state = CGI_ERROR; 
+        _state = CGI_ERROR;
         return false;
     }
     if (!S_ISREG(sb.st_mode))
     {
         _error_code = 403;
-        _state = CGI_ERROR; 
+        _state = CGI_ERROR;
         return false;
     }
     if (access(script_file.c_str(), R_OK) != 0)
     {
         _error_code = 403;
-        _state = CGI_ERROR; 
+        _state = CGI_ERROR;
         return false;
     }
 
-    const std::string& method = _request.method;
-    const std::string& body   = _request.body;
-    bool need_stdin = ((method == "POST" || method == "DELETE") && !body.empty());
+    // Fix #5: validate env contract before forking — hard failure if broken
+    if (!validate_env_contract())
+    {
+        std::cerr << "[cgi] env contract FAILED — aborting CGI launch\n";
+        _error_code = 500;
+        _state = CGI_ERROR;
+        return false;
+    }
+
+    // Fix #3: need_stdin whenever the request has a body, regardless of method.
+    // RFC 3875 §4.1.2 — STDIN is used when CONTENT_LENGTH > 0.
+    const std::string& body = _request.body;
+    bool need_stdin = !body.empty();
 
     if (need_stdin)
     {
-        if (pipe2(cgi_in_pipe, O_CLOEXEC) == -1) 
+        if (pipe2(cgi_in_pipe, O_CLOEXEC) == -1)
         {
             _error_code = 500;
             _state = CGI_ERROR;
@@ -263,13 +301,28 @@ bool CgiHandler::startCgi(int write_end)
 
     if (_child_pid == 0)
     {
-        if(dup2(write_end, STDOUT_FILENO) == -1)
-            _exit(1);
-        int devnull = open("/dev/null", O_WRONLY);
-        if (devnull < 0 || dup2(devnull, STDERR_FILENO) == -1)
-            _exit(1);
-        close(devnull);
+        // ── Fix #1: dup2 ALL three fds before closing any originals ──────
+        // Doing them in sequence risks fd aliasing: if write_end == 2, then
+        // dup2(devnull, STDERR_FILENO) would close write_end before we
+        // redirect stdout, corrupting the output pipe.
+        // Safe pattern: dup2 all targets first, then close all originals.
 
+        // 1. stdout → write_end (CGI output pipe)
+        if (dup2(write_end, STDOUT_FILENO) == -1)
+            _exit(1);
+
+        // 2. stderr → /dev/null
+        int devnull_w = open("/dev/null", O_WRONLY);
+        if (devnull_w < 0)
+            _exit(1);
+        if (dup2(devnull_w, STDERR_FILENO) == -1)
+        {
+            close(devnull_w);
+            _exit(1);
+        }
+        close(devnull_w);   // original fd no longer needed
+
+        // 3. stdin → cgi_in_pipe[0] or /dev/null
         if (need_stdin)
         {
             if (dup2(cgi_in_pipe[0], STDIN_FILENO) == -1)
@@ -277,16 +330,25 @@ bool CgiHandler::startCgi(int write_end)
         }
         else
         {
-            int devnull_in = open("/dev/null", O_RDONLY);
-            if (devnull_in < 0 || dup2(devnull_in, STDIN_FILENO) == -1)
+            int devnull_r = open("/dev/null", O_RDONLY);
+            if (devnull_r < 0)
                 _exit(1);
-            close(devnull_in);
+            if (dup2(devnull_r, STDIN_FILENO) == -1)
+            {
+                close(devnull_r);
+                _exit(1);
+            }
+            close(devnull_r);
         }
 
+        // All dup2s done — now safe to close originals.
+        // write_end, cgi_in_pipe[0/1] are all either dup'd or unneeded.
+        close(write_end);
         close_fd(cgi_in_pipe[0]);
-        if (need_stdin)
-            close_fd(cgi_in_pipe[1]);
-        close(write_end);  // original fd no longer needed after dup2
+        // cgi_in_pipe[1] is the write end — child never uses it.
+        // It was opened O_CLOEXEC so execve will close it automatically,
+        // but we close it explicitly here to be safe.
+        close_fd(cgi_in_pipe[1]);
 
         std::string script_dir;
         std::string script_arg;
@@ -296,7 +358,7 @@ bool CgiHandler::startCgi(int write_end)
             script_dir = script_file.substr(0, slash);
             script_arg = script_file.substr(slash + 1);
         }
-        else 
+        else
         {
             script_dir = ".";
             script_arg = script_file;
@@ -309,6 +371,7 @@ bool CgiHandler::startCgi(int write_end)
         argv[1] = const_cast<char*>(script_arg.c_str());
         argv[2] = NULL;
 
+        // Sanity-check: _env_ptrs must be NULL-terminated
         if (_env_ptrs.empty() || _env_ptrs.back() != NULL)
             _exit(127);
 
@@ -316,16 +379,12 @@ bool CgiHandler::startCgi(int write_end)
         _exit(127);
     }
 
-    // ── parent ──────────────────────────────────────────────
-    // Close the child's end of the stdin pipe. The caller (EventLoop) is
-    // responsible for writing the body to cgi_in_pipe[1] non-blockingly and
-    // closing it when done. We do NOT write here to avoid deadlocks when
-    // body size exceeds the pipe buffer (~64KB on Linux).
+    // ── parent ───────────────────────────────────────────────────────────
     if (need_stdin)
     {
-        close_fd(cgi_in_pipe[0]);  // parent doesn't need read end
-        // Make the write end non-blocking so the EventLoop can drain it
-        // incrementally via EPOLLOUT without blocking the whole server.
+        close_fd(cgi_in_pipe[0]);  // parent never reads from child's stdin
+        // Make the write end non-blocking so EventLoop can drain it
+        // incrementally via EPOLLOUT without blocking the server.
         int flags = fcntl(cgi_in_pipe[1], F_GETFL, 0);
         if (flags != -1)
             fcntl(cgi_in_pipe[1], F_SETFL, flags | O_NONBLOCK);
@@ -342,46 +401,12 @@ CgiHandler::~CgiHandler()
     close_fd(cgi_in_pipe[1]);
 }
 
-CgiState CgiHandler::getState() const 
+CgiState CgiHandler::getState() const
 {
     return _state;
 }
-int CgiHandler::getErrorCode() const 
-{
-    return _error_code; 
-}
 
-std::string CgiHandler::_trim(const std::string& s)
+int CgiHandler::getErrorCode() const
 {
-    if (s.empty()) return s;
-    size_t b = 0;
-    while (b < s.size() && std::isspace(static_cast<unsigned char>(s[b])))
-        ++b;
-    size_t e = s.size();
-    while (e > b && std::isspace(static_cast<unsigned char>(s[e - 1])))
-        --e;
-    return s.substr(b, e - b);
+    return _error_code;
 }
-
-std::string CgiHandler::_toLower(const std::string& s)
-{
-    std::string out = s;
-    for (size_t i = 0; i < out.size(); ++i)
-        out[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(out[i])));
-    return out;
-}
-
-std::string CgiHandler::_toStrInt(int n)
-{
-    std::ostringstream oss;
-    oss << n;
-    return oss.str();
-}
-
-std::string CgiHandler::_toStrSize(size_t n)
-{
-    std::ostringstream oss;
-    oss << n;
-    return oss.str();
-}
-

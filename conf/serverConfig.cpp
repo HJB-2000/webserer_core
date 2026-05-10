@@ -6,6 +6,10 @@
 
 const Server* matchServer(const std::vector<Server>& servers, const std::string& host_header, int port)
 {
+    std::string host_only = host_header;
+    size_t colon_pos = host_only.find(':');
+    if (colon_pos != std::string::npos)
+        host_only = host_only.substr(0, colon_pos);
     for (size_t i = 0; i < servers.size(); ++i)
     {
         if (servers[i].getPort() == port)
@@ -13,7 +17,7 @@ const Server* matchServer(const std::vector<Server>& servers, const std::string&
             std::vector<std::string> names = servers[i].getServerNames();
             for (size_t j = 0; j < names.size(); ++j)
             {
-                if (names[j] == host_header)
+                if (names[j] == host_only)
                     return &servers[i];
             }
         }
@@ -30,23 +34,34 @@ const Location* Server::matchLocation(const std::string& path) const
 {
     const Location* best = NULL;
     size_t best_len = 0;
+
     for (size_t i = 0; i < _locations.size(); ++i)
     {
-        const std::string &loc_path = _locations[i].getPath();
+        const std::string& loc_path = _locations[i].getPath();
         if (loc_path.empty())
             continue;
-        if (path.find(loc_path) == 0)
+
+        // Must be a prefix
+        if (path.compare(0, loc_path.size(), loc_path) != 0)
+            continue;
+
+        // Enforce path‑component boundary
+        if (!loc_path.empty() && loc_path[loc_path.size() - 1] != '/')
         {
-            if (loc_path.length() > best_len)
-            {
-                best = &_locations[i];
-                best_len = loc_path.length();
-            }
+            // location doesn't end with '/'; next char must be '/' or end
+            if (path.size() > loc_path.size() && path[loc_path.size()] != '/')
+                continue;
+        }
+
+        // Pick the longest matching prefix
+        if (loc_path.length() > best_len)
+        {
+            best = &_locations[i];
+            best_len = loc_path.length();
         }
     }
     return best;
 }
-
 Server::Server() :
     _host(""),
     _port(-1),
@@ -111,12 +126,15 @@ int         Server::get_timeout_seconds() const { return _timeout_seconds; }
 std::map<int, std::string> Server::getErrorPageMap() const { return _error_page; }
 std::vector<std::string>   Server::getIndex_s() const      { return _index_Files; }
 std::vector<std::string>   Server::getServerNames() const  { return _server_names; }
-std::vector<Location>      Server::get_locations() const   { return _locations; }
-
+const std::vector<Location>& Server::get_locations() const { return _locations; }
+std::vector<Location>& Server::getLocations() { return _locations; }
 void Server::setHost(const std::string& host)        { this->_host = host; }
 void Server::setRoot(std::string& root)              { this->_root = root; }
 void Server::setIndex_s(const std::string& index_s)  { this->_index_Files.push_back(index_s); }
-void Server::setMaxBodySize(long long size)           { this->_client_max_body_size = size; }
+void Server::setMaxBodySize(long long size)
+{
+    this->_client_max_body_size = size;
+}
 void Server::addLocation(Location& loc)              { this->_locations.push_back(loc); }
 void Server::set_timeout_seconds(int time_out)       { this->_timeout_seconds = time_out; }
 

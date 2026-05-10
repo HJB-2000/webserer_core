@@ -7,6 +7,8 @@
 #include "serverConfig.hpp"
 #include "LexerConfig.hpp"
 
+#define MAX_CLIENT_BODY_SIZE_LIMIT 1073741824LL
+
 class httpConfig
 {
     public:
@@ -33,7 +35,8 @@ class httpConfig
 
         // servers vector
         void set_servers(Server& server);
-        const std::vector<Server>& get_all_servers() const;
+    std::vector<Server>& get_all_servers();
+    const std::vector<Server>& get_all_servers() const;
 
         void set_default_conf();
         void set_exist_location();
@@ -46,6 +49,6 @@ class httpConfig
         bool _exist_location;
 };
 long long parse_cl_mx_bd_sz(std::string val);
-bool is_valid_number(const std::string str);
 void report_parse_error(const std::string& msg, std::vector<Lexer>& stream, size_t i, const char* where);
+bool safe_strtol(const std::string& s, long& out);
 #endif

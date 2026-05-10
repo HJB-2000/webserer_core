@@ -19,4 +19,5 @@ std::vector<std::string> storing_in_vec(std::stringstream &buff);
 // http { } block is parsed into parser.get_http().
 void parsing_lexems(ParserConf& parser, std::vector<Lexer>& stream_lexems);
 
+void check_valid_content(std::stringstream &buff);
 #endif

@@ -26,20 +26,45 @@ std::vector<ServerConfig> API_conf(int argc, char** argv)
         servers.push_back(s);
         return servers;
     }
+    /*-------------------------------fahd touch------------------------------------*/
+    const std::string config_path(argv[1]);
+    if (config_path.size() < 5 || config_path.substr(config_path.size() - 5) != ".conf")
+    {
+        std::cerr << "[API_conf] invalid config extension (expected .conf): "
+                  << config_path << "\n";
+        std::exit(1);
+    }
+    if (config_path.empty() || config_path[0] == '.')
+    {
+        std::cerr << "[API_conf] hidden config files are not allowed: "
+                  << config_path << "\n";
+        std::exit(1);
+    }
+    if (config_path.find("/.") != std::string::npos)
+    {
+        std::cerr << "[API_conf] config path cannot include hidden directories: "
+                  << config_path << "\n";
+        std::exit(1);
+    }
 
-    std::ifstream config_file(argv[1]);
+    std::ifstream config_file(config_path.c_str());
     if (!config_file.is_open())
     {
-        std::cerr << "[API_conf] cannot open: " << argv[1] << "\n";
+        std::cerr << "[API_conf] cannot open: " << config_path << "\n";
         std::exit(1);
     }
 
     std::stringstream buff;
     buff << config_file.rdbuf();
-
+    if (buff.str().empty())
+    {
+        std::cerr << "[API_conf] config file is empty: " << config_path << "\n";
+        std::exit(1);
+    }
+    check_valid_content(buff);
+    insert_space(buff);
     remove_comments(buff);
     refactoring_buffer(buff);
-    insert_space(buff);
 
     std::vector<std::string> tokens = storing_in_vec(buff);
 

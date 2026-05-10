@@ -25,7 +25,9 @@ class Server
         int getPort() const;
         std::vector<std::string> getIndex_s() const;
         std::vector<std::string> getServerNames() const;
-        std::vector<Location> get_locations() const;
+        // Non-const accessor – used by the parser to fill in defaults
+        std::vector<Location>& getLocations();
+        const std::vector<Location>& get_locations() const;
         const Location* matchLocation(const std::string& path) const;
         int get_timeout_seconds() const;
 

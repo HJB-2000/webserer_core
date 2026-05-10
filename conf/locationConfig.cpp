@@ -1,10 +1,10 @@
 #include "locationConfig.hpp"
-
+#include <iostream>
 Location::Location() :  _path(""),
                         _root(""),
                         _autoindex(false),
                         _cgi_path(""),
-                        _cgi_extension(""),
+                        _cgi_extensions(),
                         _upload(""),
                         _return_code(-1),
                         _return_value(""),
@@ -20,7 +20,7 @@ Location::Location(const Location& obj)
     this->_index_Files = obj._index_Files;
     this->_autoindex = obj._autoindex;
     this->_cgi_path = obj._cgi_path;
-    this->_cgi_extension = obj._cgi_extension;
+    this->_cgi_extensions = obj._cgi_extensions;
     this->_upload = obj._upload;
     this->_return_code = obj._return_code;
     this->_return_value = obj._return_value;
@@ -39,7 +39,7 @@ Location::Location(const Server& obj_server)
     this->_path = "";
     this->_autoindex = false;
     this->_cgi_path = "";
-    this->_cgi_extension = "";
+    this->_cgi_extensions.clear();
     this->_upload = "";
     this->_return_code = -1;
     this->_return_value = "";
@@ -57,7 +57,7 @@ Location& Location::operator=(const Location& obj)
         this->_index_Files = obj._index_Files;
         this->_autoindex = obj._autoindex;
         this->_cgi_path = obj._cgi_path;
-        this->_cgi_extension = obj._cgi_extension;
+        this->_cgi_extensions = obj._cgi_extensions;
         this->_upload = obj._upload;
         this->_return_code = obj._return_code;
         this->_return_value = obj._return_value;
@@ -76,10 +76,16 @@ void Location::setPath(std::string path)           { this->_path = path; }
 void Location::setMethods(std::string method)      { this->_allowed_methods.push_back(method); }
 void Location::setRoot(const std::string& root)    { this->_root = root; }
 void Location::setIndex_s(const std::string& idx)  { this->_index_Files.push_back(idx); }
-void Location::setCGI_extension(const std::string& ext)  { this->_cgi_extension = ext; }
+void Location::setCGI_extensions(const std::vector<std::string>& extensions)
+{
+    this->_cgi_extensions = extensions;
+}
 void Location::setCGI_path(const std::string& path)      { this->_cgi_path = path; }
 void Location::setUploadStore(const std::string& upload) { this->_upload = upload; }
-void Location::setClientMaxBodySize(long long size)       { this->_client_max_body_size = size; }
+void Location::setClientMaxBodySize(long long size)
+{
+    this->_client_max_body_size = size;
+}
 
 void Location::setAutoindex(const std::string& autoindex)
 {
@@ -104,7 +110,7 @@ std::vector<std::string> Location::getMethods() const             { return _allo
 std::string              Location::getRoot() const                 { return _root; }
 std::vector<std::string> Location::getIndex_s() const             { return _index_Files; }
 bool                     Location::getAutoindex() const            { return _autoindex; }
-std::string              Location::getCGI_extension() const        { return _cgi_extension; }
+const std::vector<std::string>& Location::getCGI_extensions() const { return _cgi_extensions; }
 std::string              Location::getCGI_path() const             { return _cgi_path; }
 std::string              Location::getUploadStore() const          { return _upload; }
 size_t                   Location::getClientMaxBodySize() const    { return static_cast<size_t>(this->_client_max_body_size); }
@@ -128,7 +134,7 @@ void Location::set_default_conf(int num)
         this->_allowed_methods.push_back("GET");
         this->_allowed_methods.push_back("POST");
         this->_cgi_path = "";
-        this->_cgi_extension = "";
+        this->_cgi_extensions.clear();
         this->_upload = "";
         this->_return_code = -1;
         this->_return_value = "";
@@ -147,7 +153,7 @@ void Location::set_default_conf(int num)
         this->_allowed_methods.push_back("POST");
         this->_allowed_methods.push_back("DELETE");
         this->_cgi_path = "";
-        this->_cgi_extension = "";
+        this->_cgi_extensions.clear();
         this->_upload = "/tmp/uploads";
         this->_return_code = -1;
         this->_return_value = "";
@@ -165,10 +171,10 @@ void Location::set_default_conf(int num)
         this->_autoindex = false;
         this->_allowed_methods.push_back("GET");
         this->_cgi_path = "";
-        this->_cgi_extension = "";
+        this->_cgi_extensions.clear();
         this->_upload = "";
         this->_return_code = 301;
-        this->_return_value = "/new-page";
+        this->_return_value = "/";
         this->_redirect_enabled = true;
         this->_client_max_body_size = 10485760;
         this->_error_page[400] = "./errors/400.html";
@@ -185,7 +191,8 @@ void Location::set_default_conf(int num)
         this->_allowed_methods.push_back("GET");
         this->_allowed_methods.push_back("POST");
         this->_cgi_path = "/usr/bin/python3";
-        this->_cgi_extension = ".py";
+        this->_cgi_extensions.clear();
+        this->_cgi_extensions.push_back(".py");
         this->_upload = "";
         this->_return_code = -1;
         this->_return_value = "";

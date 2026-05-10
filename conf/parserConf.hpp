@@ -11,6 +11,7 @@
 #include "serverConfig.hpp"
 #include "LexerConfig.hpp"
 #include "httpConfig.hpp"
+#include "eventsConfig.hpp"
 
 class ParserConf
 {
@@ -19,8 +20,10 @@ class ParserConf
         ParserConf(bool default_conf);
         ~ParserConf();
 
-        void parsHTTP(std::vector<Lexer> &stream_lexems, size_t &i);
-        void parseDirective(httpConfig &http, const std::string &directive, std::vector<Lexer> &stream, size_t &i);
+    void parsHTTP(std::vector<Lexer> &stream_lexems, size_t &i);
+    void parseDirective(httpConfig &http, const std::string &directive, std::vector<Lexer> &stream, size_t &i);
+    void parseEvents(eventsConfig &obj_events, std::vector<Lexer> &stream_lexems, size_t &i);
+    void parseDirective(eventsConfig &events, const std::string &directive, std::vector<Lexer> &stream, size_t &i);
 
         httpConfig& get_http();
 
@@ -31,9 +34,10 @@ class ParserConf
 
         void set_exist_server();
         bool get_exist_server();
-
+        void printer_of_conf_parser();
     private:
-        httpConfig _http;
+    httpConfig _http;
+    eventsConfig _events;
         bool _exist_http;
         bool _exist_server;
 };

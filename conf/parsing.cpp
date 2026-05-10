@@ -1,15 +1,47 @@
 #include "parsing.hpp"
 #include <iostream>
 #include <cctype>
+#include <stdlib.h>
+#include <vector>
+#include <string>
+#include <map>
+#include <set>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <algorithm>
+
+void check_valid_content(std::stringstream &buff)
+{
+    std::string str = buff.str();
+    
+    for (size_t i = 0; i < str.size(); i++)
+    {
+        unsigned char c = static_cast<unsigned char>(str[i]);
+        
+        if (c == 9 || c == 10 || c == 13 || (c >= 32 && c <= 126))
+            continue;
+        
+        std::cerr << "Invalid character [byte = 0x" << std::hex << static_cast<int>(c)  << "] in config file" << std::endl;
+        exit(1);
+    }
+}
 
 void remove_comments(std::stringstream &buff)
 {
     std::string str = buff.str();
     char hashtag = '#';
     std::string out;
+    bool in_single_quote = false;
+    bool in_double_quote = false;
     for(size_t i = 0; i < str.length(); i++)
     {
-        if(str[i] == hashtag)
+        if(str[i] == '\'' && !in_double_quote)
+            in_single_quote = !in_single_quote;
+        else if(str[i] == '"' && !in_single_quote)
+            in_double_quote = !in_double_quote;
+
+        bool starts_token = (i == 0) || std::isspace(static_cast<unsigned char>(str[i - 1]));
+        if(str[i] == hashtag && starts_token && !in_single_quote && !in_double_quote)
         {
             i++;
             for(; i < str.length(); i++)
@@ -87,26 +119,196 @@ std::vector<std::string> storing_in_vec(std::stringstream &buff)
     return tokens;
 }
 
-// Skip past a balanced { } block starting at stream_lexems[i]
-// (i should be pointing at TYPE_LBRACE on entry; exits after TYPE_RBRACE).
-static void skipBlock(std::vector<Lexer>& stream, size_t& i)
+static std::string port_to_str(int port) 
 {
-    size_t len = stream.size();
-    // find opening brace
-    while (i < len && stream[i].get_token_type() != "TYPE_LBRACE")
-        i++;
-    if (i >= len) return;
-    i++; // consume '{'
-    int depth = 1;
-    while (i < len && depth > 0)
-    {
-        std::string t = stream[i].get_token_type();
-        if (t == "TYPE_LBRACE")  depth++;
-        else if (t == "TYPE_RBRACE") depth--;
-        i++;
-    }
+    std::ostringstream oss;
+    oss << port;
+    return oss.str();
 }
 
+static bool is_valid_filename(const std::string& name)
+{
+    if (name.empty() || name == "." || name == "..")
+        return false;
+
+    if (name.find('/') != std::string::npos)
+        return false;
+
+    if (name[0] == '.')
+        return false;
+
+    if (name[name.size() - 1] == '.')
+        return false;
+    if (name.rfind('.') == std::string::npos)
+        return false;
+
+    return true;
+}
+
+static bool is_directory(const std::string& path) 
+{
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0)
+        return false;
+    return (info.st_mode & S_IFDIR);
+}
+
+static bool is_regular_file(const std::string& path) 
+{
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0)
+        return false;
+    return (info.st_mode & S_IFREG);
+}
+
+static bool is_executable(const std::string& path) 
+{
+    return (access(path.c_str(), X_OK) == 0);
+}
+
+static bool is_readable(const std::string& path) 
+{
+    return (access(path.c_str(), R_OK) == 0);
+}
+
+void validate_final_config(std::vector<Server>& servers, long long http_default_cmbs)
+{
+    for (size_t s = 0; s < servers.size(); ++s) 
+    {
+        const Server& server = servers[s];
+        std::string server_id = "Server on port " + port_to_str(server.getPort());
+
+
+        std::string s_root = server.getRoot();
+        if (s_root.empty() || (s_root[0] != '.' && s_root[0] != '/')) 
+        {
+            std::cerr << "[fatal] " << server_id << ": Root path must be absolute or relative (./)." << std::endl;
+            exit(1);
+        }
+        if (!is_directory(s_root)) 
+        {
+            std::cerr << "[fatal] " << server_id << ": Root directory not found: " << s_root << std::endl;
+            exit(1);
+        }
+
+        std::map<int, std::string> s_errs = server.getErrorPageMap();
+        for (std::map<int, std::string>::const_iterator it = s_errs.begin(); it != s_errs.end(); ++it) 
+        {
+            if (it->first < 300 || it->first > 599) 
+            {
+                std::cerr << "[fatal] " << server_id << ": Invalid error code " << it->first << std::endl;
+                exit(1);
+            }
+            std::string joined_path = server.getRoot() + "/" + it->second;
+            if (!is_regular_file(joined_path) || !is_readable(joined_path)) 
+            {
+                std::cerr << "[fatal] " << server_id << ": Error page file not found or unreadable: " << joined_path << std::endl;
+                exit(1);
+            }
+        }
+        long long client_max_body_size_server = server.getMaxBody();
+        if (client_max_body_size_server == 0)
+        {
+            long long fallback = (http_default_cmbs > 0) ? http_default_cmbs : 1048576;
+            servers[s].setMaxBodySize(fallback);
+            std::cerr << "[WARN] at [-------server--------] " << server_id
+                      << ": Client_max_body_size missing, using default " << fallback << std::endl;
+        }
+        else if (client_max_body_size_server < 20000)
+        {
+            servers[s].setMaxBodySize(1048576);
+            std::cerr << "[WARN] at [-------server--------] " << server_id
+                      << ": Client_max_body_size too small, forcing default 1m" << std::endl;
+        }
+
+        std::vector<Location>& locs = servers[s].getLocations();
+        for (size_t l = 0; l < locs.size(); ++l) 
+        {
+            Location& loc = locs[l];
+            std::string loc_id = server_id + " [" + loc.getPath() + "]";
+            
+            if (!is_directory(loc.getRoot())) 
+            {
+                std::cerr << "[fatal] " << loc_id << ": Location root not found: " << loc.getRoot() << std::endl;
+                exit(1);
+            }
+            long long client_max_body_size_location = loc.getClientMaxBodySize();
+            if (client_max_body_size_location == 0)
+            {
+                long long inherited = servers[s].getMaxBody();
+                loc.setClientMaxBodySize(inherited);
+                client_max_body_size_location = inherited;
+                std::cerr << "[WARN] at [-------location--------] " << loc_id
+                          << ": Client_max_body_size missing, inheriting " << inherited << std::endl;
+            }
+            else if (client_max_body_size_location < 20000)
+            {
+                loc.setClientMaxBodySize(1048576);
+                client_max_body_size_location = 1048576;
+                std::cerr << "[WARN] at [-------location--------] " << loc_id
+                          << ": Client_max_body_size too small, forcing default 1m" << std::endl;
+            }
+
+            // std::cerr << "[location result = ] " << server_id
+            //           << ": client_max_body_size = : " << client_max_body_size_location << std::endl;
+
+            std::vector<std::string> idxs = loc.getIndex_s();
+            for (size_t i = 0; i < idxs.size(); ++i) 
+            {
+                if (!is_valid_filename(idxs[i])) 
+                {
+                    std::cerr << "[fatal] " << loc_id << ": Invalid index filename: " << idxs[i] << std::endl;
+                    exit(1);
+                }
+            }
+
+            if (!loc.getCGI_path().empty() || !loc.getCGI_extensions().empty()) 
+            {
+                if (loc.getCGI_path().empty() || loc.getCGI_extensions().empty()) 
+                {
+                    std::cerr << "[fatal] " << loc_id << ": CGI requires both path and extension." << std::endl;
+                    exit(1);
+                }
+                if (!is_executable(loc.getCGI_path())) 
+                {
+                    std::cerr << "[fatal] " << loc_id << ": CGI binary not executable: " << loc.getCGI_path() << std::endl;
+                    exit(1);
+                }
+            }
+
+            if (!loc.getUploadStore().empty()) 
+            {
+                std::string up = loc.getUploadStore();
+                if (!is_directory(up) || access(up.c_str(), W_OK) != 0) 
+                {
+                    std::cerr << "[fatal] " << loc_id << ": Upload directory not found or not writable: " << up << std::endl;
+                    exit(1);
+                }
+            }
+
+            if (loc.getReturnRedirection_code() != -1) 
+            {
+                int r_code = loc.getReturnRedirection_code();
+                if (r_code < 300 || r_code >= 400) 
+                {
+                    std::cerr << "[fatal] " << loc_id << ": Redirect code must be 3xx." << std::endl;
+                    exit(1);
+                }
+            }
+            
+            std::map<int, std::string> l_errs = loc.get_error_page_loc();
+            for (std::map<int, std::string>::const_iterator it = l_errs.begin(); it != l_errs.end(); ++it) 
+            {
+                std::string joined_path = loc.getRoot() + "/" + it->second;
+                if (!is_regular_file(joined_path) || !is_readable(joined_path)) 
+                {
+                    std::cerr << "[fatal] " << loc_id << ": Error page file not found: " << joined_path << std::endl;
+                    exit(1);
+                }
+            }
+        }
+    }
+}
 void parsing_lexems(ParserConf& parser, std::vector<Lexer>& stream_lexems)
 {
     size_t len = stream_lexems.size();
@@ -118,9 +320,8 @@ void parsing_lexems(ParserConf& parser, std::vector<Lexer>& stream_lexems)
 
         if (type == "TYPE_CONTEXT" && val == "events")
         {
-            // events { } is the core's territory — skip entirely.
-            i++;
-            skipBlock(stream_lexems, i);
+            eventsConfig events;
+            parser.parseEvents(events, stream_lexems, i);
         }
         else if (type == "TYPE_CONTEXT" && val == "http")
         {
@@ -139,4 +340,11 @@ void parsing_lexems(ParserConf& parser, std::vector<Lexer>& stream_lexems)
         }
     }
     parser.check_for_blocks();
+    if(parser.get_http().get_cl_mx_bd_sz() < 20000)
+    {        parser.get_http().set_cl_mx_bd_sz(1048576);
+        std::cerr << "[WARN] at [-------http--------]" << ": Client_max_body_size was not provided, Use Default 1m" << std::endl;
+
+    }
+    validate_final_config(parser.get_http().get_all_servers(),
+                          parser.get_http().get_cl_mx_bd_sz());
 }

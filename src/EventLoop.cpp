@@ -317,6 +317,43 @@ void EventLoop::_handleCgiStdinEvent(int stdin_fd, uint32_t events)
     _closeCgiStdin(job);
 }
 
+// void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
+// {
+//     std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
+//     if (it == _cgi_jobs.end())
+//         return;
+
+//     CgiJob* job = it->second;
+
+//     if (events & (EPOLLERR | EPOLLHUP))
+//     {
+//         // still try to drain; HUP often means writer closed after writing
+//     }
+
+//     char buf[8192];
+//     while (true)
+//     {
+//         ssize_t n = ::read(result_fd, buf, sizeof(buf));
+//         if (n > 0)
+//         {
+//             job->result_buffer.append(buf, static_cast<size_t>(n));
+//             continue;
+//         }
+//         if (n == 0)
+//         {
+//             _finishCgiJob(result_fd);
+//             return;
+//         }
+//         if (errno == EAGAIN || errno == EWOULDBLOCK)
+//             return;
+
+//         _failCgiJob(result_fd, 502);
+//         return;
+//     }
+// }
+
+
+/*------------------------------fahd touch bugC7--------------------------------------*/
 void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
 {
     std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
@@ -327,31 +364,38 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
 
     if (events & (EPOLLERR | EPOLLHUP))
     {
-        // still try to drain; HUP often means writer closed after writing
+        // still try to drain
     }
 
     char buf[8192];
-    while (true)
+    try                          // ← add this
     {
-        ssize_t n = ::read(result_fd, buf, sizeof(buf));
-        if (n > 0)
+        while (true)
         {
-            job->result_buffer.append(buf, static_cast<size_t>(n));
-            continue;
-        }
-        if (n == 0)
-        {
-            _finishCgiJob(result_fd);
-            return;
-        }
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return;
+            ssize_t n = ::read(result_fd, buf, sizeof(buf));
+            if (n > 0)
+            {
+                job->result_buffer.append(buf, static_cast<size_t>(n));
+                continue;
+            }
+            if (n == 0)
+            {
+                _finishCgiJob(result_fd);
+                return;
+            }
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                return;
 
-        _failCgiJob(result_fd, 502);
-        return;
+            _failCgiJob(result_fd, 502);
+            return;
+        }
+    }
+    catch (const BodyLimitException&)   // ← and this
+    {
+        _failCgiJob(result_fd, 413);
     }
 }
-
+/*------------------------------fahd  bugC7--------------------------------------*/
 void EventLoop::_finishCgiJob(int result_fd)
 {
     std::map<int, CgiJob*>::iterator jt = _cgi_jobs.find(result_fd);
