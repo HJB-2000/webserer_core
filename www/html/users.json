@@ -1,25 +1,22 @@
 {
-  "kali@gmail.com": {
-    "name": "fahd",
-    "password": "kali"
-  },
-  "fahd@gmail.com": {
-    "name": "fahd",
-    "password": "fahd"
-  },
   "kali": {
-    "password": "kali",
-    "created_at": "2026-04-28 08:25:52 UTC",
-    "last_login": "2026-05-10 00:51:51 UTC"
+    "password": "600000$ecff1e79b08f848763da9eb780346dc507e6f7a5fce50de25a6442c602031ac3$013addb32aaf2331bb00d4a1cfff2cb2555d7e9a9a900513d6203d3be0fb1336",
+    "created_at": "2026-05-11 00:42:43 UTC",
+    "last_login": null
+  },
+  "user": {
+    "password": "600000$afb18189f46e9edcc1e06dc2b78ed8a84e7ad0949bb0eaba10678fbcb1158f2d$c02acb8dfb8b06a61b45e79b502cf5a9ea706231a249887e33280857ec1901a9",
+    "created_at": "2026-05-11 00:43:32 UTC",
+    "last_login": "2026-05-11 00:44:02 UTC"
   },
   "fahd": {
-    "password": "fahd",
-    "created_at": "2026-04-28 09:40:50 UTC",
-    "last_login": "2026-05-10 02:14:07 UTC"
+    "password": "600000$bde9fbc63953f580a1c08ae5d69a493e87137f09f66baa657b1f4ed5eff0ce25$5303890d7dbeb69118eca2ad9dc94b75031abbaa0dcaa6c1ad18231ce11ba0b3",
+    "created_at": "2026-05-11 00:44:28 UTC",
+    "last_login": "2026-05-11 02:01:42 UTC"
   },
   "grr": {
-    "password": "grr",
-    "created_at": "2026-05-09 18:59:53 UTC",
-    "last_login": "2026-05-10 00:52:28 UTC"
+    "password": "600000$7d8b19490cc41d0ae550c38f37967f3adedf55e5f46ee7acbb2e4211b98f9332$1e214a6b77011deb2cf78cd07f8c0fd1dc14bbf12b3f789fc5db9a8c303741f2",
+    "created_at": "2026-05-11 00:51:37 UTC",
+    "last_login": "2026-05-11 00:51:44 UTC"
   }
 }

@@ -22,6 +22,11 @@ ParserConf::~ParserConf()
 {
 }
 
+void ParserConf::set_events(eventsConfig& obj_events)
+{
+    this->_events = obj_events;
+}
+
 httpConfig& ParserConf::get_http()
 {
     return _http;

@@ -215,10 +215,9 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
                 std::cerr << "[fatal] " << server_id << ": Invalid error code " << it->first << std::endl;
                 exit(1);
             }
-            std::string joined_path = server.getRoot() + "/" + it->second;
-            if (!is_regular_file(joined_path) || !is_readable(joined_path)) 
+            if (!is_regular_file(it->second) || !is_readable(it->second)) 
             {
-                std::cerr << "[fatal] " << server_id << ": Error page file not found or unreadable: " << joined_path << std::endl;
+                std::cerr << "[fatal] " << server_id << ": Error page file not found or unreadable: " << it->second << std::endl;
                 exit(1);
             }
         }
@@ -300,10 +299,9 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
             std::map<int, std::string> l_errs = loc.get_error_page_loc();
             for (std::map<int, std::string>::const_iterator it = l_errs.begin(); it != l_errs.end(); ++it) 
             {
-                std::string joined_path = loc.getRoot() + "/" + it->second;
-                if (!is_regular_file(joined_path) || !is_readable(joined_path)) 
+                if (!is_regular_file(it->second) || !is_readable(it->second)) 
                 {
-                    std::cerr << "[fatal] " << loc_id << ": Error page file not found: " << joined_path << std::endl;
+                    std::cerr << "[fatal] " << loc_id << ": Error page file not found: " << it->second << std::endl;
                     exit(1);
                 }
             }
@@ -323,6 +321,7 @@ void parsing_lexems(ParserConf& parser, std::vector<Lexer>& stream_lexems)
         {
             eventsConfig events;
             parser.parseEvents(events, stream_lexems, i);
+            parser.set_events(events);
         }
         else if (type == "TYPE_CONTEXT" && val == "http")
         {

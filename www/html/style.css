@@ -5,6 +5,7 @@ body {
     padding: 0;
     color: #0f172a;
 }
+
 .container {
     max-width: 900px;
     margin: 6% auto;
@@ -13,10 +14,12 @@ body {
     border-radius: 10px;
     box-shadow: 0 0 20px rgba(0,0,0,0.1);
 }
+
 .buttons {
     margin-top: 30px;
     text-align: center;
 }
+
 .btn {
     display: inline-flex;
     align-items: center;
@@ -30,63 +33,59 @@ body {
     transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     box-shadow: 0 8px 16px rgba(15, 23, 42, 0.15);
 }
+
 .signup { background-color: #28a745; }
 .signup:hover { background-color: #218838; }
+
 .login  { background-color: #007bff; }
 .login:hover  { background-color: #0056b3; }
+
 .dashboard { background-color: #7c3aed; }
 .dashboard:hover { background-color: #6d28d9; }
+
 .logout { background-color: #ef4444; }
 .logout:hover { background-color: #dc2626; }
+
 form {
     text-align: left;
 }
+
 label {
     font-weight: bold;
 }
+
 input {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin: 10px;
-    padding: 12px 26px;
+    width: 100%;
+    padding: 10px 12px;
+    margin-top: 6px;
+    margin-bottom: 14px;
     font-size: 16px;
-    text-decoration: none;
-    color: white;
-    border-radius: 12px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-    background: #007bff;
-    color: white;
-        width: 100%;
-        padding: 10px 12px;
-        margin-top: 6px;
-        margin-bottom: 14px;
-        font-size: 16px;
-        border-radius: 8px;
-        border: 1px solid #cbd5f5;
-        background: #ffffff;
-        color: #0f172a;
     border-radius: 8px;
     border: 1px solid #cbd5f5;
-    padding: 18px;
-    border-radius: 10px;
-    border-left: 4px solid #38bdf8;
+    background: #ffffff;
+    color: #0f172a;
 }
 
+/* Grid layout - REMOVED conflicting display: inline-block */
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border-radius: 10px;
+    gap: 20px;
     margin-top: 15px;
+}
+
+/* Card style for grid items */
+.grid > .card {
+    background: #ffffff;
+    padding: 18px;
+    border-radius: 10px;
+    border-left: 4px solid #38bdf8;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.grid > .card:hover {
     transform: translateY(-1px);
-        transform: translateY(-1px);
-    display: inline-block;
-    padding: 3px 8px;
-    background: #334155;
-    border-radius: 4px;
-    font-size: 0.75em;
-    color: #94a3b8;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 hr {
@@ -108,4 +107,14 @@ hr {
     background: #ffffff;
     border: 1px dashed #cbd5f5;
     color: #1f2937;
+}
+
+/* Badge styles */
+.badge {
+    display: inline-block;
+    padding: 3px 8px;
+    background: #334155;
+    border-radius: 4px;
+    font-size: 0.75em;
+    color: #94a3b8;
 }

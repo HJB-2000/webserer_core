@@ -24,6 +24,7 @@ class ParserConf
     void parseDirective(httpConfig &http, const std::string &directive, std::vector<Lexer> &stream, size_t &i);
     void parseEvents(eventsConfig &obj_events, std::vector<Lexer> &stream_lexems, size_t &i);
     void parseDirective(eventsConfig &events, const std::string &directive, std::vector<Lexer> &stream, size_t &i);
+        void set_events(eventsConfig& events);
 
         httpConfig& get_http();
 
@@ -36,8 +37,8 @@ class ParserConf
         bool get_exist_server();
         void printer_of_conf_parser();
     private:
-    httpConfig _http;
-    eventsConfig _events;
+        httpConfig _http;
+        eventsConfig _events;
         bool _exist_http;
         bool _exist_server;
 };

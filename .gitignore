@@ -5,3 +5,5 @@ webserv
 webserv.log
 *.md
 !.github/copilot/*.md
+*.json
+*.txt

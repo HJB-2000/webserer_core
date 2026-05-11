@@ -116,7 +116,7 @@
         <div class="test-card">
             <h3>📋 Env Var Dump</h3>
             <p>Check if C++ code passes Headers and Meta-vars correctly.</p>
-            <button onclick="runTest('/cgi-bin/env.py')">Dump Environ</button>
+            <button onclick="runTest(event, '/cgi-bin/env.py')">Dump Environ</button>
             <div id="result-env" class="result"></div>
         </div>
 
@@ -124,8 +124,8 @@
         <div class="test-card" style="border-left-color: #f59e0b;">
             <h3>⏱️ Gateway Timeout</h3>
             <p>Tests if your server handles a 15s hang without blocking (should return 504).</p>
-            <button onclick="runTest('/cgi-bin/sleep_15s.py?seconds=15', 16)">Trigger Sleep (15s)</button>
-            <button onclick="runTest('/cgi-bin/sleep_15s.py?seconds=5', 6)">Test Short (5s)</button>
+            <button onclick="runTest(event, '/cgi-bin/sleep_15s.py?seconds=15', 16)">Trigger Sleep (15s)</button>
+            <button onclick="runTest(event, '/cgi-bin/sleep_15s.py?seconds=5', 6)">Test Short (5s)</button>
             <div id="result-sleep" class="result"></div>
         </div>
 
@@ -133,7 +133,7 @@
         <div class="test-card" style="border-left-color: #ef4444;">
             <h3>💥 Script Crash</h3>
             <p>Tests server handling of crashing CGI scripts.</p>
-            <button onclick="runTest('/cgi-bin/crash.py')">Force Crash</button>
+            <button onclick="runTest(event, '/cgi-bin/crash.py')">Force Crash</button>
             <div id="result-crash" class="result"></div>
         </div>
 
@@ -141,7 +141,7 @@
         <div class="test-card" style="border-left-color: #ec4899;">
             <h3>🔄 Infinite Loop</h3>
             <p>Tests if timeout protection works (should return 504).</p>
-            <button onclick="runTest('/cgi-bin/infinite.py', 5)">Run Infinite (5s timeout)</button>
+            <button onclick="runTest(event, '/cgi-bin/infinite.py', 5)">Run Infinite (5s timeout)</button>
             <div id="result-infinite" class="result"></div>
         </div>
 
@@ -150,7 +150,7 @@
             <h3>📤 Large Body POST Test</h3>
             <p>Test handling of large request bodies.</p>
             <textarea id="largeBody" rows="3" style="width:100%; background:#0f172a; color:#e2e8f0; border:1px solid #334155;">Send large payload...</textarea>
-            <button onclick="sendLargePost()">Send Large POST</button>
+            <button onclick="sendLargePost(event)">Send Large POST</button>
             <div id="result-large" class="result"></div>
         </div>
     </div>
@@ -159,12 +159,24 @@
 </div>
 
 <script>
-    async function runTest(url, timeoutSeconds = 30) {
-        const resultDiv = event.target.parentElement.querySelector('.result');
-        const originalText = event.target.textContent;
+    /**
+     * Run a CGI test by fetching a URL.
+     * 
+     * @param {Event} event - The click event from the button
+     * @param {string} url - The URL to fetch
+     * @param {number} timeoutSeconds - AbortController timeout in seconds
+     */
+    async function runTest(event, url, timeoutSeconds = 30) {
+        // Find the result div within the same test-card as the clicked button
+        const button = event.target;
+        const card = button.closest('.test-card');
+        const resultDiv = card.querySelector('.result');
+        const originalText = button.textContent;
         
         // Show loading state
         resultDiv.innerHTML = '<span class="loading"></span> Loading...';
+        button.textContent = '⏳ Running...';
+        button.disabled = true;
         
         // Create abort controller for timeout
         const controller = new AbortController();
@@ -201,13 +213,27 @@
             } else {
                 resultDiv.innerHTML = `<span class="status-badge status-error">✗ Network Error</span>\n\n${error.message}`;
             }
+        } finally {
+            // Restore button state
+            button.textContent = originalText;
+            button.disabled = false;
         }
     }
     
-    async function sendLargePost() {
-        const resultDiv = document.getElementById('result-large');
-        const body = document.getElementById('largeBody').value;
+    /**
+     * Send a large POST request to test body handling.
+     * 
+     * @param {Event} event - The click event from the button
+     */
+    async function sendLargePost(event) {
+        const button = event.target;
+        const card = button.closest('.test-card');
+        const resultDiv = card.querySelector('.result');
+        const body = card.querySelector('#largeBody').value;
         
+        const originalText = button.textContent;
+        button.textContent = '⏳ Sending...';
+        button.disabled = true;
         resultDiv.innerHTML = '<span class="loading"></span> Sending large POST...';
         
         try {
@@ -220,9 +246,18 @@
             resultDiv.innerHTML = `<span class="status-badge status-success">✓ ${response.status}</span>\n\n${escapeHtml(text).substring(0, 1000)}`;
         } catch (error) {
             resultDiv.innerHTML = `<span class="status-badge status-error">✗ Error</span>\n\n${error.message}`;
+        } finally {
+            button.textContent = originalText;
+            button.disabled = false;
         }
     }
     
+    /**
+     * Escape HTML special characters to prevent XSS.
+     * 
+     * @param {string} text - The text to escape
+     * @returns {string} HTML-escaped text
+     */
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;

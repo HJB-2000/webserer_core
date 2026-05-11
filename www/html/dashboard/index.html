@@ -161,19 +161,29 @@
     const DB_URL = '/cgi-bin/toydb.py';
     const SESSION_CHECK_URL = '/cgi-bin/check_session.py';
 
-    (async function showUser() {
-        try {
-            const res = await fetch(SESSION_CHECK_URL);
-            if (res.ok) {
-                const username = await res.text();
+    // In dashboard/index.html, change this section:
+(async function showUser() {
+    try {
+        const res = await fetch(SESSION_CHECK_URL);
+        if (res.ok) {
+            const text = await res.text();
+            // Try to parse as JSON first, fall back to plain text
+            try {
+                const data = JSON.parse(text);
+                // Handle both formats: {"username": "grr", ...} or plain username
+                const username = data.username || data || text;
                 document.getElementById('currentUser').textContent = `👤 ${username}`;
-            } else {
-                window.location.replace('/login.html');
+            } catch (e) {
+                // Not JSON, use as plain text
+                document.getElementById('currentUser').textContent = `👤 ${text}`;
             }
-        } catch(e) {
-            document.getElementById('currentUser').textContent = '👤 (offline)';
+        } else {
+            window.location.replace('/login.html');
         }
-    })();
+    } catch(e) {
+        document.getElementById('currentUser').textContent = '👤 (offline)';
+    }
+})();
 
     function showResult(elementId, status, data) {
         const el = document.getElementById(elementId);
