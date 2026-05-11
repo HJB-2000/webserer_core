@@ -257,7 +257,7 @@ void ResponseHandler::handle(
         return;
     }
 
-    // ── 7. CGI check (Phase 4 seam) ─────────────────────────── // modified by fahd to support multi-extension CGI matching)
+    // ── 7. CGI check (multi-extension matching) ───────────────────────────
     if (loc && !loc->getCGI_extensions().empty())
     {
         const std::vector<std::string>& exts = loc->getCGI_extensions();
@@ -418,7 +418,7 @@ bool ResponseHandler::resolveCgiRequest(
 ) const
 {
     const Location* loc = cfg.matchLocation(req.path);
-    if (!loc || loc->getCGI_extensions().empty()){ return false; } // modified by fahd  supporting multiple cgi extensions (BONUS)
+    if (!loc || loc->getCGI_extensions().empty()){ return false; }
     const std::vector<std::string>& exts = loc->getCGI_extensions();
     bool matched = false;
     for (size_t ei = 0; ei < exts.size(); ++ei)

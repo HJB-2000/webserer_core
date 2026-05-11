@@ -91,19 +91,19 @@ void ParserConf::parseDirective(httpConfig &http, const std::string &directive, 
     {
         if (values.size() < 2)
             report_parse_error("Syntax Error: directive ", stream, i,
-                "'error_page needs at least a code and a path' in parseDirective of server");
+                "'error_page needs at least a code and a path' in parseDirective of http");
         std::string error_path = values.back();
         for (size_t j = 0; j < values.size() - 1; j++)
         {
             long code_long;
             if (!safe_strtol(values[j], code_long))
                 report_parse_error("Syntax Error: directive ", stream, i,
-                    "'Invalid error code' in parseDirective of server");
+                    "'Invalid error code' in parseDirective of http");
             
             int code = static_cast<int>(code_long);
             if (code < 300 || code > 599)
                 report_parse_error("Syntax Error: directive ", stream, i,
-                    "'Invalid error code' in parseDirective of server");
+                    "'Invalid error code' in parseDirective of http");
             http.set_error_page(code, error_path);
         }
     }

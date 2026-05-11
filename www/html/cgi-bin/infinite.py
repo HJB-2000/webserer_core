@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-import time
-print("Status: 200 OK")
-print("Content-Type: text/html")
+print("Status: 404 Not Found")
+print("Content-Type: text/plain")
 print()
-print("<h1>Infinite Loop Started</h1>")
-print("<p>This will run forever...</p>")
-import sys
-sys.stdout.flush()
-while True:
-    time.sleep(1)
+print("This endpoint is disabled.")

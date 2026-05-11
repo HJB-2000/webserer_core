@@ -29,7 +29,15 @@ def get_session_user():
         return None
     sid = sid_morsel.value
     sessions = load_json(SESSIONS_FILE, {})
-    return sessions.get(sid)
+    session_data = sessions.get(sid)
+    if isinstance(session_data, dict):
+        username = session_data.get('username')
+        if isinstance(username, str) and username.strip():
+            return username.strip()
+        return None
+    if isinstance(session_data, str) and session_data.strip():
+        return session_data.strip()
+    return None
 
 def http_response(status_code, content_type, body):
     print(f"Status: {status_code}")

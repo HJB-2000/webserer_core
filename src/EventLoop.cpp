@@ -317,7 +317,7 @@ void EventLoop::_handleCgiStdinEvent(int stdin_fd, uint32_t events)
     _closeCgiStdin(job);
 }
 
-// Wrapped the read loop in a try/catch block to return a clean 502 Bad Gateway instead of crashing.
+// Wrapped the read loop in a try/catch block to return a clean 413 instead of crashing.
 void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
 {
     std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
@@ -356,7 +356,7 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
     }
     catch (const BodyLimitException&)
     {
-        _failCgiJob(result_fd, 502);
+        _failCgiJob(result_fd, 413);
     }
 }
 void EventLoop::_finishCgiJob(int result_fd)

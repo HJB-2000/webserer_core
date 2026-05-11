@@ -35,7 +35,6 @@ class ParserConf
 
         void set_exist_server();
         bool get_exist_server();
-        void printer_of_conf_parser();
     private:
         httpConfig _http;
         eventsConfig _events;

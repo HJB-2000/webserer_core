@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import html
 import os
 import sys
 import re
@@ -16,7 +17,10 @@ MAX_UPLOAD_SIZE = 30 * 1024 * 1024  # 30MB
 def parse_multipart():
     """Simple multipart form-data parser."""
     content_type = os.environ.get('CONTENT_TYPE', '')
-    content_length = int(os.environ.get('CONTENT_LENGTH', '0'))
+    try:
+        content_length = int(os.environ.get('CONTENT_LENGTH', '0') or '0')
+    except ValueError:
+        content_length = 0
     
     if content_length == 0:
         return None, None, b''
@@ -24,12 +28,12 @@ def parse_multipart():
     # Read body
     body = sys.stdin.buffer.read(content_length)
     
-    # Extract boundary
-    boundary_match = re.search(r'boundary=(-+.*)', content_type)
+    # Extract boundary (supports quoted values and ignores trailing params)
+    boundary_match = re.search(r'boundary=(?:"([^"]+)"|([^;]+))', content_type)
     if not boundary_match:
         return None, None, body
-    
-    boundary = boundary_match.group(1).encode()
+
+    boundary = (boundary_match.group(1) or boundary_match.group(2)).strip().encode()
     
     # Split by boundary
     parts = body.split(b'--' + boundary)
@@ -102,17 +106,20 @@ try:
     with open(filepath, 'wb') as f:
         f.write(content)
     
+    safe_filename = html.escape(filename, quote=True)
+    safe_saved = html.escape(os.path.basename(filepath), quote=True)
+
     print(f"""<!DOCTYPE html>
 <html>
 <head><title>Upload OK</title></head>
 <body style="font-family:Arial;padding:20px;">
     <h2 style="color:green;">Upload Successful!</h2>
-    <p><strong>File:</strong> {filename}</p>
-    <p><strong>Saved as:</strong> {os.path.basename(filepath)}</p>
+    <p><strong>File:</strong> {safe_filename}</p>
+    <p><strong>Saved as:</strong> {safe_saved}</p>
     <p><strong>Size:</strong> {len(content):,} bytes</p>
     <p><a href="/uploads/">View uploads</a></p>
 </body>
 </html>""")
 
 except Exception as e:
-    print(f"<h2>Error</h2><p>{e}</p>")
+    print(f"<h2>Error</h2><p>{html.escape(str(e))}</p>")

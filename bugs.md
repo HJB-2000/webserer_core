@@ -1,6 +1,18 @@
 Comprehensive Bug Report - 42 Webserv Project
 Executive Summary
 After deep analysis of the webserv implementation against the 42 subject requirements, I've identified 23 bugs categorized by severity. The most critical issues involve out-of-bounds memory access, incorrect HTTP header validation, and protocol violations.
+
+## Recent Fixes (May 11, 2026)
+- Hardened session parsing in `www/html/cgi-bin/toydb.py` to extract usernames from dict-based sessions.
+- Improved `www/html/cgi-bin/upload_file.py` robustness: safe CONTENT_LENGTH parsing, boundary parsing, and HTML-escaped output/error messages.
+- Updated `www/html/errors/413.html` and `www/html/test-413.html` to reflect webserv and configured body limits (10MB global, 30MB for /cgi-bin).
+- Cleaned ResponseHandler CGI comment to remove personal notes.
+- Removed legacy commented-out code in `www/html/cgi-bin/dashboard.py`.
+- Disabled the `www/html/cgi-bin/infinite.py` endpoint to avoid remote DoS risk.
+- Corrected `error_page` parser error messages to reference the http context.
+- Updated `conf/parsing.hpp` comments to reflect events parsing.
+- Removed the unused `printer_of_conf_parser()` declaration from `conf/parserConf.hpp`.
+- Mapped CGI body-limit exceptions to 413 in `src/EventLoop.cpp`.
 # CRITICAL SEVERITY (Crash/UB/Security)
 ##✅ BUG-C1: Out-of-Bounds Array Access in return Directive Parser
 File: conf/location_parser.cpp, Line 133
@@ -209,3 +221,15 @@ cppvoid EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
     }
 }
 That turns a server crash into a clean 502 Bad Gateway.
+
+
+
+
+
+
+
+
+
+
+
+

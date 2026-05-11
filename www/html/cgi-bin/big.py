@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# place at /home/fahd/fork/webserer_core/www/html/cgi-bin/big.py
 
 import sys
 

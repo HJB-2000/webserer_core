@@ -45,7 +45,7 @@
 <body>
     <div class="container">
         <h1>📤 Test 413 Payload Too Large</h1>
-        <p>Upload a file larger than <strong>100MB</strong> to trigger the 413 error.</p>
+    <p>Upload a file larger than <strong>10MB</strong> (or 30MB for /cgi-bin uploads) to trigger the 413 error.</p>
         
         <form method="POST" action="/cgi-bin/upload_file.py" enctype="multipart/form-data">
             <input type="file" name="file" required>
@@ -54,10 +54,10 @@
         
         <div class="info">
             💡 <strong>How to test 413:</strong><br>
-            1. Create a large file: <code>dd if=/dev/zero of=/tmp/large.bin bs=1M count=150</code><br>
+            1. Create a large file: <code>dd if=/dev/zero of=/tmp/large.bin bs=1M count=12</code><br>
             2. Upload that file using this form<br>
-            3. nginx will return 413 Payload Too Large<br>
-            4. nginx will serve /errors/413.html custom error page
+            3. webserv will return 413 Payload Too Large<br>
+            4. webserv will serve /errors/413.html custom error page
         </div>
         
         <p><a href="/dashboard/index.html" style="color:#38bdf8;">← Back to Dashboard</a></p>
