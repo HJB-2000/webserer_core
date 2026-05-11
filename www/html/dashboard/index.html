@@ -157,6 +157,19 @@
     </div>
 </div>
 
+<!-- FILE UPLOAD TEST -->
+<h2>📤 File Upload Test</h2>
+<div class="grid">
+    <div class="card" style="border-left: 3px solid #8b5cf6;">
+        <h3>📎 Upload File</h3>
+        <input type="file" id="uploadFileInput" style="width:100%; padding:10px; margin:10px 0; background:#0f172a; border:2px dashed #334155; border-radius:8px; color:#94a3b8;">
+        <button onclick="uploadFile()" class="btn btn-success" style="width:100%;">📤 Upload</button>
+        <div id="uploadResult" class="info-box" style="margin-top:10px;">Select a file and click Upload</div>
+    </div>
+</div>
+
+
+
 <script>
     const DB_URL = '/cgi-bin/toydb.py';
     const SESSION_CHECK_URL = '/cgi-bin/check_session.py';
@@ -260,9 +273,42 @@
         div.textContent = text;
         return div.innerHTML;
     }
-
+    async function uploadFile() {
+    const fileInput = document.getElementById('uploadFileInput');
+    const resultDiv = document.getElementById('uploadResult');
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        resultDiv.innerHTML = '❌ Please select a file first.';
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    resultDiv.innerHTML = `⏳ Uploading ${file.name} (${(file.size / 1024).toFixed(1)} KB)...`;
+    
+    try {
+        const res = await fetch('/cgi-bin/upload_file.py', {
+            method: 'POST',
+            body: formData
+        });
+        const text = await res.text();
+        
+        if (res.ok) {
+            resultDiv.innerHTML = `✅ Upload successful!<br>File: ${file.name}<br>Status: ${res.status}`;
+        } else if (res.status === 413) {
+            resultDiv.innerHTML = `❌ 413 Payload Too Large — File exceeds server limit`;
+        } else {
+            resultDiv.innerHTML = `❌ Upload failed (${res.status}): ${text.substring(0, 200)}`;
+        }
+    } catch (err) {
+        resultDiv.innerHTML = `❌ Error: ${err.message}`;
+    }
+}
     refreshStore();
     setInterval(refreshStore, 30000);
+
 </script>
 </body>
 </html>
