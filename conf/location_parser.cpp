@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <set>
 #include <errno.h>
+#include <ctype.h>
 
 bool safe_strtol(const std::string& s, long& out)
 {

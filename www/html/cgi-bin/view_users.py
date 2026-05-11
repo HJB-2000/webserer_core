@@ -30,7 +30,13 @@ def html_escape(text):
 
 
 def get_session_user():
-    """Validate session and return username if authenticated."""
+    """
+    Validate session and return username if authenticated.
+    
+    Returns:
+        str: The username if session is valid and not expired.
+        None: If no valid session exists.
+    """
     cookie_str = os.environ.get('HTTP_COOKIE', '')
     if not cookie_str:
         return None
@@ -49,9 +55,13 @@ def get_session_user():
     
     session_data = sessions[sid]
     
-    # Handle both old format (string) and new format (dict)
+    # Handle both old format (plain string) and new format (dict)
     if isinstance(session_data, dict):
         username = session_data.get('username')
+        
+        # Verify username is present and is a non-empty string
+        if not username or not isinstance(username, str) or not username.strip():
+            return None
         
         # Check session expiration
         expires_at = session_data.get('expires_at')
@@ -65,9 +75,17 @@ def get_session_user():
             except (ValueError, TypeError):
                 pass
         
-        return username
+        return username.strip()
+    
+    elif isinstance(session_data, str):
+        # Legacy format: sessions[sid] is a plain username string
+        if not session_data.strip():
+            return None
+        return session_data.strip()
+    
     else:
-        return session_data
+        # Unknown format — reject
+        return None
 
 
 def redirect(location):

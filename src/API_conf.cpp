@@ -33,12 +33,6 @@ std::vector<ServerConfig> API_conf(int argc, char** argv)
                   << config_path << "\n";
         std::exit(1);
     }
-    if (config_path.empty())
-    {
-        std::cerr << "[API_conf] empty files are not allowed: "
-                  << config_path << "\n";
-        std::exit(1);
-    }
     std::ifstream config_file(config_path.c_str());
     if (!config_file.is_open())
     {
@@ -57,6 +51,13 @@ std::vector<ServerConfig> API_conf(int argc, char** argv)
     insert_space(buff);
     remove_comments(buff);
     refactoring_buffer(buff);
+
+    if (buff.str().find_first_not_of(" \t\r\n") == std::string::npos)
+    {
+        std::cerr << "[API_conf] config has no directives after preprocessing: "
+                  << config_path << "\n";
+        std::exit(1);
+    }
 
     std::vector<std::string> tokens = storing_in_vec(buff);
 

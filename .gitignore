@@ -5,5 +5,10 @@ webserv
 webserv.log
 *.md
 !.github/copilot/*.md
-*.json
+
+www/html/users.json
+www/html/sessions.json
+www/html/user_log.txt
+www/html/toydb.json 
+
 *.txt

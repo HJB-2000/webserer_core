@@ -15,6 +15,38 @@ body {
     box-shadow: 0 0 20px rgba(0,0,0,0.1);
 }
 
+.box {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 10px;
+    background: #ffffff;
+    border-left: 4px solid #38bdf8;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.nav-links {
+    margin-top: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #0f172a;
+    background: #e2e8f0;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid #cbd5f5;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.nav-links a:hover {
+    background: #cbd5f5;
+    transform: translateY(-1px);
+}
+
 .buttons {
     margin-top: 30px;
     text-align: center;

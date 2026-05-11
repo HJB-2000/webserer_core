@@ -18,15 +18,14 @@ static std::vector<std::string> consumeValuesLenient(size_t &i, std::vector<Lexe
     {
         i++;
     }
+    else if (i < stream.size())
+    {
+        report_parse_error("Missing ';' after events directive", stream, i, "consumeValuesLenient");
+    }
     else
     {
-        std::cerr << "[WARN] events: missing ';' — skipping to next token" << std::endl;
-        while (i < stream.size()
-            && stream[i].get_token_type() != "TYPE_SEMICOLON"
-            && stream[i].get_token_type() != "TYPE_RBRACE")
-            i++;
-        if (i < stream.size() && stream[i].get_token_type() == "TYPE_SEMICOLON")
-            i++;
+        report_parse_error("Unexpected end of file: expected ';' after events directive", stream, i - 1,
+                           "consumeValuesLenient");
     }
 
     return values;
