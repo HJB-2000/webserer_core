@@ -230,9 +230,41 @@ That turns a server crash into a clean 502 Bad Gateway.
 
 
 
+# For this bug reported by Copilot 
+ParserConf::parseDirective(eventsConfig, ...) logs warnings and silently returns for invalid/missing values, leaving eventsConfig in its default-constructed (0/"") state. Since other config parsing paths treat invalid directives as fatal, this inconsistency can lead to a seemingly-successful parse with unusable events settings. Consider either calling report_parse_error for invalid values or applying events.set_default_conf() when directives are missing/invalid.
+
+### Thank you for the review. The warning-and-continue behavior in parseDirective(eventsConfig, ...) is intentional.
+
+#### The events block is parsed as a future expansion point — the subject does not require handling of Nginx-style event models, and the core currently drives its own event loop independently. Because the server does not rely on the parsed events data at runtime, a malformed events block should not block startup. Logging a warning allows developers to notice misconfiguration without breaking the server.
+
+#### Calling report_parse_error would be inconsistent with the design goal of treating the events block as optional enhancement rather than a required critical path. We’ve chosen to keep the warnings to allow the server to run even if the events directives are incorrect or missing, while still alerting the user.
+
+#### This is documented in the project notes as a conscious feature choice.
+
+
+
+### Misleading Comment in Config File
+
+**File:** `fahd.conf`
+
+**Bug:** Comment said "Use ABSOLUTE path to avoid confusion" but the `root` directive used a relative path (`./www/html`). The comment contradicted the actual configuration.
+
+**Impact:** Misleading for developers reading the config — could cause confusion about preferred path style.
+
+**Fix:** Updated comment to match the portable, relative-path approach:
+nginx
 
 
 
 
+### Redirect Test Fixed – Target File Moved to Server Root
 
+**File:** `www/html/redirect/new-page.html` → `www/html/new-page.html`
 
+**Bug:** The `location /redirect/` block returned `301 /new-page.html`, but the file was inside `/redirect/` itself — unreachable because all requests to that path trigger a redirect.
+
+**Fix:** Moved `new-page.html` from `./www/html/redirect/` to `./www/html/` (the server root), where it can be served after the redirect.
+
+**Test:**
+bash
+curl -vL http://127.0.0.1:8080/redirect/

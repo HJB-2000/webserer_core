@@ -26,7 +26,7 @@ SRCS   += conf/parsing.cpp \
           conf/httpConfig.cpp \
           conf/parserConf.cpp \
           conf/server_parser.cpp \
-          conf/location_parser.cpp
+          conf/location_parser.cpp 
 
 OBJS    = $(SRCS:.cpp=.o)
 

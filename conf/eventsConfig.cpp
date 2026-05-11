@@ -53,9 +53,9 @@ eventsConfig& eventsConfig::operator=(const eventsConfig& obj)
 eventsConfig::~eventsConfig()
 {
 }
-void   eventsConfig::set_worker_connections(int work_connets)
+void   eventsConfig::set_worker_connections(int worker_connections)
 {
-    this->_worker_connections = work_connets;
+    this->_worker_connections = worker_connections;
 }
 void   eventsConfig::set_event_model(std::string event_model)
 {

@@ -10,7 +10,7 @@ class eventsConfig
         eventsConfig(const eventsConfig& obj);
         eventsConfig& operator=(const eventsConfig& obj);
         ~eventsConfig();
-        void set_worker_connections(int work_connets);
+        void set_worker_connections(int worker_connections);
         void set_event_model(std::string event_model);
         int get_worker_connections();
         std::string get_event_model();
