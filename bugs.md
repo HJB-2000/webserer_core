@@ -13,6 +13,9 @@ After deep analysis of the webserv implementation against the 42 subject require
 - Updated `conf/parsing.hpp` comments to reflect events parsing.
 - Removed the unused `printer_of_conf_parser()` declaration from `conf/parserConf.hpp`.
 - Mapped CGI body-limit exceptions to 413 in `src/EventLoop.cpp`.
+- Escaped reflected body/params output in `echo.py`, `body_lab.py`, `form_handler.py`, and `deepseek.py`.
+- Updated `crash.py` docstring to reference webserv.
+- Clarified `ParserConf` events comment and cleaned Makefile trailing whitespace.
 # CRITICAL SEVERITY (Crash/UB/Security)
 ##✅ BUG-C1: Out-of-Bounds Array Access in return Directive Parser
 File: conf/location_parser.cpp, Line 133

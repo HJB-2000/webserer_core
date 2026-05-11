@@ -4,8 +4,8 @@
     ParserConf — top-level config parser.
 
     Handles the http { } block, events { } block, and server/location sub-blocks.
-    Events directives (event model, worker_connections) are parsed here and
-    passed to the core EventLoop configuration.
+    Events directives (event model, worker_connections) are parsed and stored
+    in ParserConf for future integration.
 */
 #include "locationConfig.hpp"
 #include "serverConfig.hpp"
