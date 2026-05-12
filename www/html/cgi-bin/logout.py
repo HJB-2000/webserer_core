@@ -1,25 +1,16 @@
 #!/usr/bin/env python3
-import json
 import os
 from http.cookies import SimpleCookie
 
-SESSIONS_FILE = os.path.join(os.path.dirname(__file__), '..', 'sessions.json')
+from cgi_data_store import SESSIONS_FILE, load_json, save_json_atomic
 
-def load_json(path, default):
-    if os.path.exists(path):
-        with open(path, 'r') as f:
-            return json.load(f)
-    return default
-
-def save_json(path, data):
-    with open(path, 'w') as f:
-        json.dump(data, f, indent=2)
 
 def destroy_session(sid):
     sessions = load_json(SESSIONS_FILE, {})
     if sid in sessions:
         del sessions[sid]
-        save_json(SESSIONS_FILE, sessions)
+        save_json_atomic(SESSIONS_FILE, sessions)
+
 
 # Get session from cookie and delete it
 cookie_str = os.environ.get('HTTP_COOKIE', '')

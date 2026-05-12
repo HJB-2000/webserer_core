@@ -2,6 +2,28 @@
 #include <string>
 #include <iostream>
 #include <cstdlib>
+#include <cerrno>
+#include <cctype>
+
+bool safe_strtol(const std::string& s, long& out)
+{
+    if (s.empty())
+        return false;
+
+    for (size_t i = 0; i < s.length(); ++i)
+    {
+        if (!std::isdigit(static_cast<unsigned char>(s[i])))
+            return false;
+    }
+
+    errno = 0;
+    out = std::strtol(s.c_str(), NULL, 10);
+
+    if (errno == ERANGE)
+        return false;
+
+    return true;
+}
 
 httpConfig::httpConfig() : _client_max_body_size(), _exist_location(false)
 {

@@ -229,13 +229,6 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
             std::cerr << "[WARN] at [-------server--------] " << server_id
                       << ": Client_max_body_size missing, using default " << fallback << std::endl;
         }
-        else if (client_max_body_size_server < 20000)
-        {
-            servers[s].setMaxBodySize(1048576);
-            std::cerr << "[WARN] at [-------server--------] " << server_id
-                      << ": Client_max_body_size too small, forcing default 1m" << std::endl;
-        }
-
         std::vector<Location>& locs = servers[s].getLocations();
         for (size_t l = 0; l < locs.size(); ++l) 
         {
@@ -255,13 +248,6 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
                 client_max_body_size_location = inherited;
                 std::cerr << "[WARN] at [-------location--------] " << loc_id
                           << ": Client_max_body_size missing, inheriting " << inherited << std::endl;
-            }
-            else if (client_max_body_size_location < 20000)
-            {
-                loc.setClientMaxBodySize(1048576);
-                client_max_body_size_location = 1048576;
-                std::cerr << "[WARN] at [-------location--------] " << loc_id
-                          << ": Client_max_body_size too small, forcing default 1m" << std::endl;
             }
             std::vector<std::string> idxs = loc.getIndex_s();
             for (size_t i = 0; i < idxs.size(); ++i) 

@@ -3,20 +3,11 @@ import json
 import os
 import sys
 import urllib.parse
+from datetime import datetime
 from http.cookies import SimpleCookie
 
-DB_FILE = os.path.join(os.path.dirname(__file__), '..', 'toydb.json')
-SESSIONS_FILE = os.path.join(os.path.dirname(__file__), '..', 'sessions.json')
+from cgi_data_store import SESSIONS_FILE, TOYDB_FILE as DB_FILE, load_json, save_json_atomic
 
-def load_json(path, default):
-    if os.path.exists(path):
-        with open(path, 'r') as f:
-            return json.load(f)
-    return default
-
-def save_json(path, data):
-    with open(path, 'w') as f:
-        json.dump(data, f, indent=2)
 
 def get_session_user():
     cookie_str = os.environ.get('HTTP_COOKIE', '')
@@ -32,6 +23,14 @@ def get_session_user():
     session_data = sessions.get(sid)
     if isinstance(session_data, dict):
         username = session_data.get('username')
+        expires_at = session_data.get('expires_at')
+        if expires_at:
+            try:
+                expire_time = datetime.fromisoformat(expires_at)
+                if datetime.utcnow() > expire_time:
+                    return None
+            except (ValueError, TypeError):
+                pass
         if isinstance(username, str) and username.strip():
             return username.strip()
         return None
@@ -90,7 +89,7 @@ elif method == 'POST':
     else:
         user_data[key] = value
         db[username] = user_data
-        save_json(DB_FILE, db)
+        save_json_atomic(DB_FILE, db)
         http_response('201 Created', 'text/plain', f'Key "{key}" stored.')
 
 elif method == 'DELETE':
@@ -101,7 +100,7 @@ elif method == 'DELETE':
     else:
         del user_data[key]
         db[username] = user_data
-        save_json(DB_FILE, db)
+        save_json_atomic(DB_FILE, db)
         http_response('200 OK', 'text/plain', f'Key "{key}" deleted.')
 
 else:

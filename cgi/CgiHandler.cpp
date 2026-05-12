@@ -175,6 +175,10 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
     for (std::map<std::string, std::string>::const_iterator it = request.headers.begin();
          it != request.headers.end(); ++it)
     {
+        // RFC 3875 §4.1.18: Content-Type and Content-Length are CONTENT_TYPE /
+        // CONTENT_LENGTH only — do not duplicate as HTTP_* meta-variables.
+        if (it->first == "content-type" || it->first == "content-length")
+            continue;
         std::string key = it->first;
         for (size_t i = 0; i < key.size(); ++i)
         {

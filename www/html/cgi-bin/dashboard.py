@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
-import json
 import os
 import html
-from datetime import datetime, timedelta
+from datetime import datetime
 from http.cookies import SimpleCookie
 
-USERS_FILE = os.path.join(os.path.dirname(__file__), '..', 'users.json')
-SESSIONS_FILE = os.path.join(os.path.dirname(__file__), '..', 'sessions.json')
+from cgi_data_store import USERS_FILE, SESSIONS_FILE, load_json, save_json_atomic
 
-def load_json(path, default):
-    if os.path.exists(path):
-        with open(path, 'r') as f:
-            return json.load(f)
-    return default
 
 def html_escape(text):
     """Escape HTML special characters to prevent XSS."""
@@ -51,7 +44,7 @@ def get_session_user():
                 expire_time = datetime.fromisoformat(expires_at)
                 if datetime.utcnow() > expire_time:
                     del sessions[sid]
-                    save_json(SESSIONS_FILE, sessions)
+                    save_json_atomic(SESSIONS_FILE, sessions)
                     return None
             except (ValueError, TypeError):
                 pass
@@ -60,11 +53,6 @@ def get_session_user():
     else:
         # Legacy format (plain username string)
         return session_data
-
-def save_json(path, data):
-    """Save data to a JSON file."""
-    with open(path, 'w') as f:
-        json.dump(data, f, indent=2)
 
 def redirect(location):
     """Send HTTP 302 redirect response."""

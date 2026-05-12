@@ -101,32 +101,23 @@ import uuid
 import hashlib
 import secrets
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timedelta
 from http.cookies import SimpleCookie
 
-USERS_FILE = os.path.join(os.path.dirname(__file__), '..', 'users.json')
-SESSIONS_FILE = os.path.join(os.path.dirname(__file__), '..', 'sessions.json')
-LOG_FILE = os.path.join(os.path.dirname(__file__), '..', 'user_log.txt')
+from cgi_data_store import (
+    SESSIONS_FILE,
+    USERS_FILE,
+    USER_LOG_FILE as LOG_FILE,
+    load_json,
+    save_json_atomic,
+    append_log_line,
+)
 
 # ============================================================
 # Security Configuration
 # ============================================================
 MAX_LOGIN_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 300  # 5 minutes
-
-
-def load_json(path, default):
-    """Load and parse a JSON file. Returns default if file doesn't exist."""
-    if os.path.exists(path):
-        with open(path, 'r') as f:
-            return json.load(f)
-    return default
-
-
-def save_json(path, data):
-    """Save data to a JSON file with pretty-print formatting."""
-    with open(path, 'w') as f:
-        json.dump(data, f, indent=2)
 
 
 def create_session(username):
@@ -139,9 +130,10 @@ def create_session(username):
     sessions = load_json(SESSIONS_FILE, {})
     sessions[sid] = {
         'username': username,
-        'created_at': datetime.utcnow().isoformat()
+        'created_at': datetime.utcnow().isoformat(),
+        'expires_at': (datetime.utcnow() + timedelta(days=7)).isoformat(),
     }
-    save_json(SESSIONS_FILE, sessions)
+    save_json_atomic(SESSIONS_FILE, sessions)
     return sid
 
 
@@ -283,8 +275,7 @@ else:
 
 if not password_valid:
     # Log failed attempt
-    with open(LOG_FILE, 'a') as log:
-        log.write(f"FAILED LOGIN: {username} from {os.environ.get('REMOTE_ADDR', 'unknown')} at {datetime.utcnow().isoformat()}\n")
+    append_log_line(LOG_FILE, f"FAILED LOGIN: {username} from {os.environ.get('REMOTE_ADDR', 'unknown')} at {datetime.utcnow().isoformat()}")
     
     error_response("Login Failed", "Incorrect password.")
 
@@ -295,13 +286,12 @@ if not password_valid:
 # Migrate legacy plain-text passwords to hashed format
 if is_legacy_password(stored_password):
     user['password'] = hash_password(password)
-    with open(LOG_FILE, 'a') as log:
-        log.write(f"PASSWORD MIGRATED: {username} from plain-text to PBKDF2 at {datetime.utcnow().isoformat()}\n")
+    append_log_line(LOG_FILE, f"PASSWORD MIGRATED: {username} from plain-text to PBKDF2 at {datetime.utcnow().isoformat()}")
 
 # Update last_login timestamp
 user['last_login'] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
 users[username] = user
-save_json(USERS_FILE, users)
+save_json_atomic(USERS_FILE, users)
 
 # Create session
 sid = create_session(username)
@@ -311,8 +301,7 @@ cookie['session_id']['path'] = '/'
 cookie['session_id']['httponly'] = True  # Prevent JavaScript access
 
 # Log successful login
-with open(LOG_FILE, 'a') as log:
-    log.write(f"LOGIN: {username} from {os.environ.get('REMOTE_ADDR', 'unknown')} at {datetime.utcnow().isoformat()}\n")
+append_log_line(LOG_FILE, f"LOGIN: {username} from {os.environ.get('REMOTE_ADDR', 'unknown')} at {datetime.utcnow().isoformat()}")
 
 # Redirect to dashboard
 redirect("/cgi-bin/dashboard.py", cookie=cookie)

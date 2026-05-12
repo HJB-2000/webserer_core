@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
-import json
 import os
 from datetime import datetime
 from http.cookies import SimpleCookie
 
-SESSIONS_FILE = os.path.join(os.path.dirname(__file__), '..', 'sessions.json')
+from cgi_data_store import SESSIONS_FILE, load_json
 
 
-def load_json(path, default):
-    if os.path.exists(path):
-        with open(path, 'r') as f:
-            return json.load(f)
-    return default
-
-
-def save_json(path, data):
-    with open(path, 'w') as f:
-        json.dump(data, f, indent=2)
+def session_expired(session_data):
+    if not isinstance(session_data, dict):
+        return False
+    expires_at = session_data.get('expires_at')
+    if not expires_at:
+        return False
+    try:
+        expire_time = datetime.fromisoformat(expires_at)
+        return datetime.utcnow() > expire_time
+    except (ValueError, TypeError):
+        return False
 
 
 # Get session cookie
@@ -50,6 +50,13 @@ if sid not in sessions:
     exit()
 
 session_data = sessions[sid]
+
+if session_expired(session_data):
+    print("Status: 401 Unauthorized")
+    print("Content-Type: text/plain")
+    print()
+    print("Session expired")
+    exit()
 
 # Handle both old format (plain string) and new format (dict with 'username' key)
 if isinstance(session_data, dict):

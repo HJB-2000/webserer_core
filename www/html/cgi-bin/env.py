@@ -1,24 +1,12 @@
 #!/usr/bin/env python3
 import html
-import json
 import os
 from datetime import datetime
 from http.cookies import SimpleCookie
 
-SESSIONS_FILE = os.path.join(os.path.dirname(__file__), '..', 'sessions.json')
+from cgi_data_store import SESSIONS_FILE, load_json, save_json_atomic
+
 REDACT_KEYS = {"HTTP_COOKIE", "HTTP_AUTHORIZATION", "AUTHORIZATION"}
-
-
-def load_json(path, default):
-    if os.path.exists(path):
-        with open(path, 'r') as f:
-            return json.load(f)
-    return default
-
-
-def save_json(path, data):
-    with open(path, 'w') as f:
-        json.dump(data, f, indent=2)
 
 
 def get_session_user():
@@ -46,7 +34,7 @@ def get_session_user():
                 expire_time = datetime.fromisoformat(expires_at)
                 if datetime.utcnow() > expire_time:
                     del sessions[sid]
-                    save_json(SESSIONS_FILE, sessions)
+                    save_json_atomic(SESSIONS_FILE, sessions)
                     return None
             except (ValueError, TypeError):
                 pass

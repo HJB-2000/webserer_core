@@ -73,8 +73,13 @@ import secrets
 import urllib.parse
 from datetime import datetime
 
-USERS_FILE = os.path.join(os.path.dirname(__file__), '..', 'users.json')
-LOG_FILE = os.path.join(os.path.dirname(__file__), '..', 'user_log.txt')
+from cgi_data_store import (
+    USERS_FILE,
+    USER_LOG_FILE as LOG_FILE,
+    load_json,
+    save_json_atomic,
+    append_log_line,
+)
 
 # ============================================================
 # Security Configuration
@@ -85,20 +90,6 @@ MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_LENGTH = 128
 USERNAME_REGEX = re.compile(r'^[a-zA-Z0-9._-]+$')
 HASH_ITERATIONS = 600000  # PBKDF2 iterations (OWASP 2023 recommendation)
-
-
-def load_json(path, default):
-    """Load and parse a JSON file. Returns default if file doesn't exist."""
-    if os.path.exists(path):
-        with open(path, 'r') as f:
-            return json.load(f)
-    return default
-
-
-def save_json(path, data):
-    """Save data to a JSON file with pretty-print formatting."""
-    with open(path, 'w') as f:
-        json.dump(data, f, indent=2)
 
 
 def redirect(location):
@@ -246,11 +237,10 @@ users[username] = {
     'created_at': datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
     'last_login': None
 }
-save_json(USERS_FILE, users)
+save_json_atomic(USERS_FILE, users)
 
 # Log the signup (never log passwords!)
-with open(LOG_FILE, 'a') as log:
-    log.write(f"SIGNUP: {username} at {datetime.utcnow().isoformat()}\n")
+append_log_line(LOG_FILE, f"SIGNUP: {username} at {datetime.utcnow().isoformat()}")
 
 # Redirect to landing page
 redirect("/index.html")

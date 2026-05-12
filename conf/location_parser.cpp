@@ -5,26 +5,6 @@
 #include <errno.h>
 #include <ctype.h>
 
-bool safe_strtol(const std::string& s, long& out)
-{
-    if (s.empty())
-        return false;
-    
-    for (size_t i = 0; i < s.length(); ++i)
-    {
-        if (!isdigit(static_cast<unsigned char>(s[i])))
-            return false;
-    }
-    
-    errno = 0;
-    out = std::strtol(s.c_str(), NULL, 10);
-    
-    if (errno == ERANGE)
-        return false;
-    
-    return true;
-}
-
 void httpConfig::parsLocation(Location &obj_Location, std::vector<Lexer> &stream_lexems, size_t &i)
 {
     if (i < stream_lexems.size() && stream_lexems[i].get_value() == "location")
