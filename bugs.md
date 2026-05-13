@@ -268,3 +268,15 @@ nginx
 **Test:**
 bash
 curl -vL http://127.0.0.1:8080/redirect/
+
+
+## ADD Cookie attribute Max-age:
+
+Cookie Acts as a persistent identifier (session_id) that the browser 
+automatically attaches to every request, allowing the server to maintain a "state" and identify the logged-in user without re-authenticating.
+
+## Security Attributes:
+Uses HttpOnly to block JavaScript access (mitigating XSS) and Path=/ to ensure the session remains active across all site directories.
+
+#### Max-Age Purpose:
+By adding Max-Age=900, we transitioned from a temporary "Session Cookie" to a persistent one, instructing the browser to strictly enforce a 15-minute lifespan that synchronizes with our server-side expiration logic.
