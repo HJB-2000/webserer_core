@@ -20,6 +20,7 @@ SRCS    = src/main.cpp \
 # ── teammate config-parser sources (Phase 1) ──────────────────
 SRCS   += conf/parsing.cpp \
           conf/LexerConfig.cpp \
+          conf/eventsConfig.cpp \
           conf/serverConfig.cpp \
           conf/locationConfig.cpp \
           conf/httpConfig.cpp \

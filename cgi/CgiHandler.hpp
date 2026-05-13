@@ -57,10 +57,6 @@ class CgiHandler
         bool        validate_env_contract() const;
         void        log_env_once();
 
-        static std::string _trim(const std::string& s);
-        static std::string _toLower(const std::string& s);
-        static std::string _toStrInt(int n);
-        static std::string _toStrSize(size_t n);
         const HttpRequest&   _request;
         const Location&      _location;
         std::string          _script_path;

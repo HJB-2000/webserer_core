@@ -15,8 +15,9 @@ void insert_space(std::stringstream &buff);
 std::vector<std::string> storing_in_vec(std::stringstream &buff);
 
 // Top-level token dispatcher.
-// events { } blocks are silently skipped (core owns that logic).
+// events { } block is parsed and stored in ParserConf.
 // http { } block is parsed into parser.get_http().
 void parsing_lexems(ParserConf& parser, std::vector<Lexer>& stream_lexems);
 
+void check_valid_content(std::stringstream &buff);
 #endif

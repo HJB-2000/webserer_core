@@ -5,30 +5,48 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdexcept>
-#define MAX_SERVER_LIMIT 1073741824LL
 
-static bool is_valid_host(std::string tmp_host)
+#include <string>
+#include <cctype>
+#include <cstdlib> 
+
+static bool is_valid_octet(const std::string& s)
 {
-    int dot = 0;
-    int num = 0;
-    int prev = 0;
-    for(size_t i = 0; i < tmp_host.size(); i++)
+    if (s.empty() || s.length() > 3)
+        return false;
+    if (s[0] == '0' && s.length() > 1)
+        return false;
+
+    for (size_t i = 0; i < s.length(); ++i)
     {
-        if(tmp_host[i] == '.')
+        if (!isdigit(static_cast<unsigned char>(s[i])))
+            return false;
+    }
+    int num = atoi(s.c_str());
+    return num >= 0 && num <= 255;
+}
+
+static bool is_valid_host(const std::string& host)
+{
+    if (host.empty())
+        return false;
+
+    size_t prev = 0;
+    int dots = 0;
+
+    for (size_t i = 0; i < host.size(); ++i)
+    {
+        if (host[i] == '.')
         {
-            std::string host_str = tmp_host.substr(prev, i - prev);
-            if(!is_valid_number(host_str))
+            if (!is_valid_octet(host.substr(prev, i - prev)))
                 return false;
-            num = atoi(host_str.c_str());
-            if(num < 0 || num > 255 || dot++ >= 3)
+            if (++dots > 3) 
                 return false;
             prev = i + 1;
         }
     }
-    num = atoi(tmp_host.substr(prev).c_str());
-    return (num >= 0 && num <= 255 && dot == 3);
+    return is_valid_octet(host.substr(prev)) && dots == 3;
 }
-
 static bool is_existing_directory(const std::string& path)
 {
     struct stat st;
@@ -99,24 +117,52 @@ static void validate_filesystem_directives(const Server &obj_Server, std::vector
 
 void verifying_path_in_locations_inside_server(Server &obj_Server)
 {
-    std::vector<Location> tmp_locations = obj_Server.get_locations();
+    const std::vector<Location>& tmp_locations = obj_Server.get_locations();
     std::set<std::string> unique_paths;
 
     for (size_t i = 0; i < tmp_locations.size(); i++)
     {
         std::string path = tmp_locations[i].getPath();
+
+        // Normalize: strip trailing slash unless the path is exactly "/"
+        // This catches logical duplicates like /uploads vs /uploads/
+        if (path.size() > 1 && path[path.size() - 1] == '/')
+            path.erase(path.size() - 1);
+
         if (unique_paths.find(path) != unique_paths.end())
         {
-            std::cerr << "duplicate path in some location context" << std::endl;
+            std::cerr << "duplicate path in some location context ('" 
+                      << tmp_locations[i].getPath() << "' conflicts with an existing location)" << std::endl;
             throw std::runtime_error("duplicate path in some location context");
         }
         unique_paths.insert(path);
     }
 }
 
+// Validates that every index filename has an extension (contains a '.' after
+// the first character). A bare word like "file" or "index" with no extension
+// is almost certainly a misconfiguration and will cause silent 404s at runtime.
+static void validate_index_filenames(const std::vector<std::string>& index_files,
+                                     std::vector<Lexer>& stream, size_t i,
+                                     const char* context)
+{
+    for (size_t k = 0; k < index_files.size(); ++k)
+    {
+        const std::string& name = index_files[k];
+        // Find the last '.' after position 0
+        size_t dot_pos = name.rfind('.');
+        if (dot_pos == std::string::npos || dot_pos == 0 || dot_pos == name.size() - 1)
+        {
+            report_parse_error(
+                "Invalid index filename '" + name + "': must have a non-empty file extension (e.g. index.html)",
+                stream, i, context);
+        }
+    }
+}
+
 static void validate_locations_of_server(Location &loc, std::vector<Lexer> &stream, size_t i)
 {
-    bool has_ext = !loc.getCGI_extension().empty();
+    bool has_ext = !loc.getCGI_extensions().empty();
     bool has_path = !loc.getCGI_path().empty();
     if (has_ext != has_path)
         report_parse_error("Invalid CGI configuration: cgi_ext and cgi_path must be used together", stream, i, "parsServer/parsLocation");
@@ -138,10 +184,17 @@ static void validate_locations_of_server(Location &loc, std::vector<Lexer> &stre
     if (ret_code != -1 && (ret_code < 300 || ret_code >= 400))
         report_parse_error("Invalid return code: must be 3xx for redirection", stream, i, "parsServer/parsLocation");
 
-    if (loc.getIndex_s().empty())
-        report_parse_error("Missing required directive in location: index", stream, i, "parsServer/parsLocation");
+    // root is always required (inherited from server if not set explicitly)
     if (loc.getRoot().empty())
         report_parse_error("Missing required directive in location: root", stream, i, "parsServer/parsLocation");
+
+    // index is NOT required for redirect-only or CGI-only locations.
+    // A redirect location serves no files. A CGI location has the interpreter handle output.
+    // For every other location that serves static files, index must be present.
+    bool is_redirect = (ret_code != -1);
+    bool is_cgi      = (!loc.getCGI_path().empty() && !loc.getCGI_extensions().empty());
+    if (!is_redirect && !is_cgi && loc.getIndex_s().empty())
+        report_parse_error("Missing required directive in location: index", stream, i, "parsServer/parsLocation");
 }
 
 void Location::check_for_allowed_methods()
@@ -159,99 +212,160 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
 
     if (directive == "listen")
     {
+        if (values.size() != 1)
+            report_parse_error("Syntax Error: directive ", stream, i,
+                "'listen expects a single value' in parseDirective of server");
+
         std::string val = values[0];
         size_t colon_pos = val.find(':');
+
         if (colon_pos != std::string::npos)
         {
+            // Form: host:port  — e.g. 127.0.0.1:8080  *:8080  localhost:8080
             std::string tmp_host = val.substr(0, colon_pos);
             std::string tmp_port = val.substr(colon_pos + 1);
-            if(is_valid_host(tmp_host))
-                server.setHost(val.substr(0, colon_pos));
-            else
-                report_parse_error("Syntax Error: directive ", stream, i, "'invalid host in listen directive' in parseDirective of server");
-            if(is_valid_number(tmp_port))
-            {
-                int port = atoi(tmp_port.c_str());
-                if(port < 1 || port > 65535)
-                    report_parse_error("Syntax Error: directive ", stream, i, "'not valid range for port' in parseDirective of server");
-                server.setPort(port);
-            }
-            else
-                report_parse_error("Syntax Error: directive ", stream, i, "'not valid port' in parseDirective of server");
+
+            // Resolve symbolic host aliases before IPv4 validation
+            if (tmp_host == "*")
+                tmp_host = "0.0.0.0";
+            else if (tmp_host == "localhost")
+                tmp_host = "127.0.0.1";
+
+            if (!is_valid_host(tmp_host))
+                report_parse_error("Syntax Error: directive ", stream, i,
+                    "'invalid host in listen directive — expected IPv4, localhost, or *' in parseDirective of server");
+
+            long port_long;
+            if (!safe_strtol(tmp_port, port_long))
+                report_parse_error("Syntax Error: directive ", stream, i,
+                    "'not valid port' in parseDirective of server");
+
+            int port = static_cast<int>(port_long);
+            if (port < 1 || port > 65535)
+                report_parse_error("Syntax Error: directive ", stream, i,
+                    "'not valid range for port (1-65535)' in parseDirective of server");
+
+            server.setHost(tmp_host);
+            server.setPort(port);
         }
         else
         {
-            if(is_valid_number(val))
+            // No colon — two sub-cases:
+            //   a) pure port number     e.g. listen 9090;  → host defaults to 0.0.0.0
+            //   b) bare IPv4 address    e.g. listen 127.0.0.1;  → port defaults to 9090
+            long port_long;
+            if (safe_strtol(val, port_long))
             {
-                int tmp_port = atoi(val.c_str());
-                if(tmp_port < 1 || tmp_port > 65535)
-                    report_parse_error("Syntax Error: directive ", stream, i, "'not valid range for port' in parseDirective of server");
+                // Sub-case a: plain port number
+                int tmp_port = static_cast<int>(port_long);
+                if (tmp_port < 1 || tmp_port > 65535)
+                    report_parse_error("Syntax Error: directive ", stream, i,
+                        "'not valid range for port (1-65535)' in parseDirective of server");
+                std::string default_host = "0.0.0.0";
+                server.setHost(default_host);
                 server.setPort(tmp_port);
             }
+            else if (is_valid_host(val))
+            {
+                // Sub-case b: bare IPv4 — port defaults to 9090
+                std::string tmp_host = val;
+                server.setHost(tmp_host);
+                int default_port = 9090;
+                server.setPort(default_port);
+            }
             else
-                report_parse_error("Syntax Error: directive ", stream, i, "'not valid port' in parseDirective of server");
+            {
+                report_parse_error("Syntax Error: directive ", stream, i,
+                    "'listen value must be a port, an IPv4 address, or host:port' in parseDirective of server");
+            }
         }
     }
     else if (directive == "root")
     {
+        if (values.size() != 1)
+            report_parse_error("Syntax Error: directive ", stream, i,
+                "'root expects a single value' in parseDirective of server");
         server.setRoot(values[0]);
     }
     else if (directive == "index")
     {
-        for(size_t j = 0; j < values.size(); j++)
+        if (values.empty())
+            report_parse_error("Syntax Error: directive", stream, i,
+                "'index expects at least one value' in parseDirective of Location");
+        for (size_t j = 0; j < values.size(); j++)
+        {
+            if (values[j].empty())
+                report_parse_error("Syntax Error: directive", stream, i,
+                    "'index value cannot be empty' in parseDirective of Location");
             server.setIndex_s(values[j]);
+
+        }
     }
     else if (directive == "server_name")
     {
+        if (values.empty())
+            report_parse_error("Syntax Error: directive ", stream, i,
+                "'server_name expects at least one value' in parseDirective of server");
         server.setServerNames(values);
     }
-    else if(directive == "client_max_body_size")
+    else if (directive == "client_max_body_size")
     {
+        if (values.size() != 1)
+            report_parse_error("Syntax Error: directive ", stream, i,
+                "'client_max_body_size expects a single value' in parseDirective of server");
         long long tmp = parse_cl_mx_bd_sz(values[0]);
-        if(tmp == -1 || tmp > MAX_SERVER_LIMIT)
-            report_parse_error("Syntax Error", stream, i, "Invalid client_max_body_size");
+        if (tmp == -1 || tmp > MAX_CLIENT_BODY_SIZE_LIMIT)
+            report_parse_error("Syntax Error", stream, i,
+                "Invalid client_max_body_size");
         server.setMaxBodySize(tmp);
     }
-    else if(directive == "timeout")
+    else if (directive == "timeout")
     {
-        if(is_valid_number(values[0]))
-        {
-            int tmp = atoi(values[0].c_str());
-            if(tmp < 0 || tmp > 3600)
-                report_parse_error("Syntax Error: directive ", stream, i, "'Invalid range of value of timeout' in parseDirective of server");
-            server.set_timeout_seconds(tmp);
-        }
-        else
-            report_parse_error("Syntax Error: directive ", stream, i, "'Invalid value of timeout' in parseDirective of server");
+        if (values.size() != 1)
+            report_parse_error("Syntax Error: directive ", stream, i,
+                "'timeout expects a single value' in parseDirective of server");
+        long tmp_long;
+        if (!safe_strtol(values[0], tmp_long))
+            report_parse_error("Syntax Error: directive ", stream, i,
+                "'Invalid value of timeout' in parseDirective of server");
+        
+        int tmp = static_cast<int>(tmp_long);
+        if (tmp <= 0 || tmp > 3600)
+            report_parse_error("Syntax Error: directive ", stream, i,
+                "'Invalid range of value of timeout' in parseDirective of server");
+        server.set_timeout_seconds(tmp);
     }
     else if (directive == "error_page")
     {
         if (values.size() < 2)
-            report_parse_error("Syntax Error: directive ", stream, i, "'error_page needs at least a code and a path' in parseDirective of server");
+            report_parse_error("Syntax Error: directive ", stream, i,
+                "'error_page needs at least a code and a path' in parseDirective of server");
         std::string error_path = values.back();
         for (size_t j = 0; j < values.size() - 1; j++)
         {
-            if(is_valid_number(values[j]))
-            {
-                int code = atoi(values[j].c_str());
-                if (code < 300 || code > 599)
-                    report_parse_error("Syntax Error: directive ", stream, i, "'Invalid error code' in parseDirective of server");
-                server.setErrorPage(code, error_path);
-            }
-            else
-                report_parse_error("Syntax Error: directive ", stream, i, "'Invalid error code' in parseDirective of server");
+            long code_long;
+            if (!safe_strtol(values[j], code_long))
+                report_parse_error("Syntax Error: directive ", stream, i,
+                    "'Invalid error code' in parseDirective of server");
+            
+            int code = static_cast<int>(code_long);
+            if (code < 300 || code > 599)
+                report_parse_error("Syntax Error: directive ", stream, i,
+                    "'Invalid error code' in parseDirective of server");
+            server.setErrorPage(code, error_path);
         }
     }
     else if (directive == "allowed_methods")
     {
-        report_parse_error("Syntax Error: directive ", stream, i, "'allowed_methods is only allowed in location context'");
+        report_parse_error("Syntax Error: directive ", stream, i,
+            "'allowed_methods is only allowed in location context'");
     }
     else
     {
-        report_parse_error("Syntax Error: directive ", stream, i, "'unknown server directive' in parseDirective of server");
+        report_parse_error("Syntax Error: directive ", stream, i,
+            "'unknown server directive' in parseDirective of server");
     }
 }
-
 void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexems, size_t &i)
 {
     i++;
@@ -266,7 +380,6 @@ void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexem
     unique_directives.insert("client_max_body_size");
     unique_directives.insert("timeout");
     unique_directives.insert("index");
-    unique_directives.insert("server_name");
 
     while (i < stream_lexems.size() && stream_lexems[i].get_token_type() != "TYPE_RBRACE")
     {
@@ -278,7 +391,6 @@ void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexem
             Location new_loc(obj_Server);
             parsLocation(new_loc, stream_lexems, i);
             new_loc.check_for_allowed_methods();
-            validate_locations_of_server(new_loc, stream_lexems, i);
             obj_Server.addLocation(new_loc);
         }
         else if (type == "TYPE_DIRECTIVE")
@@ -301,13 +413,46 @@ void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexem
         report_parse_error("Missing required directive: listen", stream_lexems, i, "parsServer");
     if (obj_Server.getRoot().empty())
         report_parse_error("Missing required directive: root", stream_lexems, i, "parsServer");
-    if (obj_Server.getServerNames().empty())
-        report_parse_error("Missing required directive: server_name", stream_lexems, i, "parsServer");
     if (obj_Server.getIndex_s().empty())
         report_parse_error("Missing required directive: index", stream_lexems, i, "parsServer");
+    // Validate the server-level index filenames have real extensions
+    validate_index_filenames(obj_Server.getIndex_s(), stream_lexems, i, "parsServer/index");
     if (obj_Server.get_timeout_seconds() <= 0)
         report_parse_error("Missing required directive: timeout", stream_lexems, i, "parsServer");
+    // ---------- Inherit server defaults for every location ----------
+    std::vector<Location>& locs = obj_Server.getLocations();
+    for (size_t idx = 0; idx < locs.size(); ++idx)
+    {
+        Location& loc = locs[idx];
 
+        if (loc.getRoot().empty())
+            loc.setRoot(obj_Server.getRoot());
+        if (loc.getIndex_s().empty())
+            loc.setIndex_s(obj_Server.getIndex_s().front());   // take the first index
+        if (loc.getClientMaxBodySize() == 0)
+            loc.setClientMaxBodySize(static_cast<long long>(obj_Server.getMaxBody()));
+        if (loc.get_error_page_loc().empty())
+        {
+            std::map<int, std::string> serv_errors = obj_Server.getErrorPageMap();
+            for (std::map<int, std::string>::const_iterator it = serv_errors.begin();
+                it != serv_errors.end(); ++it)
+            {
+                loc.set_error_page_loc(it->first, it->second);
+            }
+        }
+    }
+
+    // ---------- Now validate all locations ----------
+    for (size_t idx = 0; idx < locs.size(); ++idx)
+    {
+        // Validate index filenames for locations that actually serve static files
+        bool is_redirect = (locs[idx].getReturnRedirection_code() != -1);
+        bool is_cgi      = (!locs[idx].getCGI_path().empty() && !locs[idx].getCGI_extensions().empty());
+        if (!is_redirect && !is_cgi)
+            validate_index_filenames(locs[idx].getIndex_s(), stream_lexems, i,
+                                     ("parsServer/location[" + locs[idx].getPath() + "]/index").c_str());
+        validate_locations_of_server(locs[idx], stream_lexems, i);
+    } 
     validate_filesystem_directives(obj_Server, stream_lexems, i);
     verifying_path_in_locations_inside_server(obj_Server);
     i++;

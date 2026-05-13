@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include <set>
 #include <stdexcept>
-#define MAX_SERVER_LIMIT_s 1073741824LL
 
 ParserConf::ParserConf() : _exist_http(false), _exist_server(false)
 {
@@ -21,6 +20,11 @@ ParserConf::ParserConf(bool default_conf)
 
 ParserConf::~ParserConf()
 {
+}
+
+void ParserConf::set_events(eventsConfig& obj_events)
+{
+    this->_events = obj_events;
 }
 
 httpConfig& ParserConf::get_http()
@@ -64,16 +68,6 @@ void ParserConf::parsHTTP(std::vector<Lexer> &stream_lexems, size_t &i)
     i++;
 }
 
-bool is_valid_number(const std::string str)
-{
-    for(size_t i = 0; i < str.length(); i++)
-    {
-        if(isdigit(str[i]) == 0)
-            return false;
-    }
-    return true;
-}
-
 void ParserConf::parseDirective(httpConfig &http, const std::string &directive, std::vector<Lexer> &stream, size_t &i)
 {
     std::vector<std::string> values = http.consumeValues(i, stream);
@@ -83,8 +77,11 @@ void ParserConf::parseDirective(httpConfig &http, const std::string &directive, 
     }
     else if(directive == "client_max_body_size")
     {
+        if (values.size() != 1)
+            report_parse_error("Syntax Error: directive ", stream, i,
+                "'client_max_body_size expects a single value' in parseDirective of http");
         long long tmp = parse_cl_mx_bd_sz(values[0]);
-        if(tmp < 0 || tmp > MAX_SERVER_LIMIT_s)
+        if(tmp == -1 || tmp > MAX_CLIENT_BODY_SIZE_LIMIT)
         {
             report_parse_error("Syntax Error", stream, i, "Invalid client_max_body_size");
         }
@@ -93,25 +90,21 @@ void ParserConf::parseDirective(httpConfig &http, const std::string &directive, 
     else if (directive == "error_page")
     {
         if (values.size() < 2)
-        {
-            report_parse_error("Syntax Error: directive ", stream, i, " 'error_page directive needs at least a code and a path.' parseDirective for http");
-        }
+            report_parse_error("Syntax Error: directive ", stream, i,
+                "'error_page needs at least a code and a path' in parseDirective of http");
         std::string error_path = values.back();
         for (size_t j = 0; j < values.size() - 1; j++)
         {
-            if(is_valid_number(values[j]))
-            {
-                int code = atoi(values[j].c_str());
-                if (code < 300 || code > 599)
-                {
-                    report_parse_error("Syntax Error: directive ", stream, i, " 'Invalid error code' parseDirective for http");
-                }
-                http.set_error_page(code, error_path);
-            }
-            else
-            {
-                report_parse_error("Syntax Error: directive ", stream, i, " 'Error: Invalid error code' parseDirective for http");
-            }
+            long code_long;
+            if (!safe_strtol(values[j], code_long))
+                report_parse_error("Syntax Error: directive ", stream, i,
+                    "'Invalid error code' in parseDirective of http");
+            
+            int code = static_cast<int>(code_long);
+            if (code < 300 || code > 599)
+                report_parse_error("Syntax Error: directive ", stream, i,
+                    "'Invalid error code' in parseDirective of http");
+            http.set_error_page(code, error_path);
         }
     }
     else
@@ -124,28 +117,36 @@ bool is_valid_size(const std::string str)
 {
     int dot = 0;
     size_t len = str.length();
-    if(len == 0)
+    if (len == 0)
         return false;
-    for(size_t i = 0; i < len; i++)
+
+    size_t num_end = len;
+    if (isalpha(static_cast<unsigned char>(str[len - 1])))
     {
-        if(i == len - 1 && isalpha(str[i]))
-            continue;
-        if(str[i] == '.')
+        if (len < 2 || !isdigit(static_cast<unsigned char>(str[len - 2])))
+        {
+            return false;
+        }
+        num_end = len - 1;
+    }
+
+    for (size_t i = 0; i < num_end; i++)
+    {
+        if (str[i] == '.')
         {
             dot++;
-            if(dot > 1)
-                return false;
-            if(i == 0)
-                return false;
-            if(i + 1 >= len || (!isdigit(str[i + 1])))
+            if (dot > 1)                return false;
+            if (i == 0)                 return false; // leading dot: ".5M"
+            if (i + 1 >= num_end || !isdigit(static_cast<unsigned char>(str[i + 1])))
                 return false;
             continue;
         }
-        if(isdigit(str[i]) == 0)
+        if (!isdigit(static_cast<unsigned char>(str[i])))
             return false;
     }
     return true;
 }
+ 
 
 #include <climits>
 #include <cerrno>
@@ -170,6 +171,8 @@ long long parse_cl_mx_bd_sz(std::string val)
         case 0:             multiplier = 1;               break;
         default:            return -1;
     }
+    if (multiplier == 1 && value != (long long)value)
+        return -1;
     if (value > (double)LLONG_MAX / multiplier)
         return -1;
 

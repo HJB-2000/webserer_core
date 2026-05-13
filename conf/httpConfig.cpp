@@ -2,8 +2,30 @@
 #include <string>
 #include <iostream>
 #include <cstdlib>
+#include <cerrno>
+#include <cctype>
 
-httpConfig::httpConfig() : _client_max_body_size(0), _exist_location(false)
+bool safe_strtol(const std::string& s, long& out)
+{
+    if (s.empty())
+        return false;
+
+    for (size_t i = 0; i < s.length(); ++i)
+    {
+        if (!std::isdigit(static_cast<unsigned char>(s[i])))
+            return false;
+    }
+
+    errno = 0;
+    out = std::strtol(s.c_str(), NULL, 10);
+
+    if (errno == ERANGE)
+        return false;
+
+    return true;
+}
+
+httpConfig::httpConfig() : _client_max_body_size(), _exist_location(false)
 {
 }
 httpConfig::httpConfig(const httpConfig& obj)
@@ -57,23 +79,38 @@ const std::vector<Server>& httpConfig::get_all_servers() const
     return _all_servers;
 }
 
+std::vector<Server>& httpConfig::get_all_servers()
+{
+    return _all_servers;
+}
+
 std::vector<std::string> httpConfig::consumeValues(size_t &i, std::vector<Lexer> &stream)
 {
     std::vector<std::string> values;
     i++;
+
     while (i < stream.size() && stream[i].get_token_type() == "TYPE_VALUE")
     {
         values.push_back(stream[i].get_value());
         i++;
     }
-    if (i < stream.size() && stream[i].get_token_type() == "TYPE_SEMICOLON")
+
+    if (i < stream.size())
     {
-        i++;
+        if (stream[i].get_token_type() == "TYPE_SEMICOLON")
+        {
+            i++;
+        }
+        else
+        {
+            report_parse_error("Missing semicolon after directive value", stream, i, "consumeValues");
+        }
     }
     else
     {
-        report_parse_error("Expected semicolone after the value", stream, i, "in consumeValues");
+        report_parse_error("Unexpected end of file: expected ';' after value", stream, i - 1, "consumeValues");
     }
+
     return values;
 }
 
