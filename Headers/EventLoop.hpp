@@ -26,34 +26,25 @@
 #include "ConnectionManager.hpp"
 #include "Connection.hpp"
 #include "HttpParser.hpp"
-#include "ResponseHandler.hpp"  // Phase 3
+#include "ResponseHandler.hpp"
 #include "CgiJob.hpp"
 #include "CgiRequestInfo.hpp"
 #include "EventRef.hpp"
-
-// Server + typedef ServerConfig provided by teammate's header.
-// Included by Connection.hpp (already in the chain above).
 
 
 class EventLoop
 {
 public:
 
-    static const int MAX_EVENTS       = 64;    ///< epoll batch size
-    static const int EPOLL_TIMEOUT_MS = 1000;  ///< epoll_wait ceiling (ms)
-
-    // Implemented in EventLoop.cpp
     EventLoop();
     ~EventLoop();
-
+    static const int MAX_EVENTS       = 64;
+    static const int EPOLL_TIMEOUT_MS = 1000;
     void addServerSocket(int server_fd, const ServerConfig* config);
     void run();
-
     void stop();
     static int setNonBlocking(int fd);
-
     ConnectionManager& manager() { return *_manager; }
-
 private:
 
     // ── non-copyable ───────────────────────────────────────
