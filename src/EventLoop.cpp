@@ -88,6 +88,7 @@ void EventLoop::addServerSocket(int server_fd, const ServerConfig* config)
 
 void EventLoop::_registerEventFd(int fd, EventKind kind, uint32_t events)
 {
+    //we have this problem of leaks
     EventRef* ref = new EventRef(kind, fd);
     _event_refs[fd] = ref;
 
@@ -190,9 +191,19 @@ void EventLoop::_closeTimedOutClients()
 
 void EventLoop::_addCgiFd(int result_fd, int client_fd)
 {
-    _registerEventFd(result_fd, EV_CGI, EPOLLIN | EPOLLET | EPOLLHUP | EPOLLERR);
-    std::cerr << "[EventLoop] CGI fd " << result_fd
-              << " registered for client fd " << client_fd << "\n";
+    try {
+        _registerEventFd(result_fd, EV_CGI, EPOLLIN | EPOLLET | EPOLLHUP | EPOLLERR);
+        std::cerr << "[EventLoop] CGI fd " << result_fd
+                  << " registered for client fd " << client_fd << "\n";
+    }
+    catch (const std::exception& e)  
+    {  
+        std::cerr << "[EventLoop] failed to register CGI fd " << result_fd   
+                  << ": " << e.what() << "\n";  
+        ::close(result_fd);  
+        throw;  
+    }  
+
 }
 
 void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
@@ -245,8 +256,16 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
             job->stdin_body   = conn->request().body;
             job->stdin_offset = 0;
             _cgi_stdin_jobs[stdin_fd] = job;
-            _registerEventFd(stdin_fd, EV_CGI_STDIN,
-                             EPOLLOUT | EPOLLET | EPOLLERR | EPOLLHUP);
+            try {
+                _registerEventFd(stdin_fd, EV_CGI_STDIN,
+                                 EPOLLOUT | EPOLLET | EPOLLERR | EPOLLHUP);
+            }
+            /* this is a problem cause without the stdin we are gonna recieve the body*/
+            catch (const std::exception& ex) {
+                std::cerr << "[EventLoop] failed to register CGI stdin fd " << stdin_fd   
+                  << ": " << ex.what() << "\n";  
+                _closeCgiStdin(job); 
+            }
         }
     }
     ::close(result_write_fd);
@@ -577,7 +596,15 @@ void EventLoop::_handleAccept(int server_fd)
         if (client_fd < 0)
             break;
         _setCloexec(client_fd, "client");
-        _registerEventFd(client_fd, EV_CLIENT, EPOLLIN | EPOLLET | EPOLLRDHUP);
+        try {
+            _registerEventFd(client_fd, EV_CLIENT, EPOLLIN | EPOLLET | EPOLLRDHUP);
+        }
+        catch(const std::exception& ex) {
+           std::cerr << "[EventLoop] failed to register client fd " << client_fd   
+                      << ": " << ex.what() << "\n";  
+            _manager->closeConnection(client_fd);  
+            continue; 
+        }
     }
 }
 

@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
 {
     Logger::instance().open("webserv.log");
     std::vector<ServerConfig> servers = API_conf(argc, argv);
-
+try {
     EventLoop            loop;
     std::vector<int>     listen_fds;
 
@@ -103,7 +103,16 @@ int main(int argc, char* argv[])
             return 1;
         }
         listen_fds.push_back(fd);
-        loop.addServerSocket(fd, &servers[i]);
+        try { 
+            loop.addServerSocket(fd, &servers[i]);
+        }
+        catch(const std::exception& ex) { 
+            std::cerr << "[core] fatal: failed to register server socket: " << ex.what() << "\n";  
+            ::close(fd);  
+            listen_fds.pop_back();  
+            Logger::instance().close();  
+            return 1;  
+        }
     }
 
     g_loop = &loop;
@@ -117,4 +126,11 @@ int main(int argc, char* argv[])
     std::cerr << "[core] shutdown complete\n";
     Logger::instance().close();
     return 0;
+    }
+    catch (const std::exception& ex)
+    {
+        std::cerr << "[core] fatal error: " << ex.what() << "\n";  
+        Logger::instance().close();  
+        return 1;
+    }
 }

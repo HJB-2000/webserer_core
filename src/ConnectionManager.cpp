@@ -128,11 +128,13 @@ void ConnectionManager::rearmEpoll(int fd)
         return;
     }
 
-    epoll_event ev = it->second->buildEpollEvent();
-    if (::epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0)
-        throw std::runtime_error(
-            std::string("[ConnectionManager] epoll_ctl MOD failed: ")
-            + std::strerror(errno));
+    epoll_event ev = it->second->buildEpollEvent();  
+    if (::epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0)  
+    {  
+        std::cerr << "[ConnectionManager] epoll_ctl MOD failed for fd " << fd  
+                  << ": " << std::strerror(errno) << "\n";  
+        closeConnection(fd);  
+    };
 }
 
 // ── get ──────────────────────────────────────────────────────
