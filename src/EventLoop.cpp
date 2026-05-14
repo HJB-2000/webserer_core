@@ -662,6 +662,12 @@ void EventLoop::_handleRead(Connection* conn)
             }
 
             // ── Phase 2: HttpParser ──────────────────────────
+            const Location* loc = conn->config()->matchLocation(conn->request().path);  
+            if (loc && loc->getClientMaxBodySize() > 0)  
+                conn->request().max_body_size = loc->getClientMaxBodySize();  
+            else  
+                conn->request().max_body_size = conn->config()->getMaxBody();  // Server default 
+
             _parser.feed(conn->readBuffer(), conn->request());
             // ─────────────────────────────────────────────────
 

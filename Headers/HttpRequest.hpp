@@ -70,6 +70,7 @@ public:
     ParseState  parse_state;
     size_t      content_length;
     bool        chunked;
+    size_t      max_body_size;
 
     // ── parser error tracking ──────────────────────────────
     // HTTP status code that caused the error (400/414/431/505).

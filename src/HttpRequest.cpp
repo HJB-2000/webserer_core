@@ -8,6 +8,7 @@ HttpRequest::HttpRequest()
     : parse_state(PSTATE_IDLE)
     , content_length(0)
     , chunked(false)
+    , max_body_size(0)
     , error_code(0)
     , _chunk_size(0)
     , _chunk_trailing(false)
@@ -29,6 +30,7 @@ void HttpRequest::reset()
     _chunk_size     = 0;
     _chunk_trailing = false;
     _chunk_done     = false;
+    max_body_size   = 0;
 }
 
 std::string HttpRequest::header(const std::string& key) const

@@ -658,7 +658,12 @@ void HttpParser::_parseBody(Buffer& buf, HttpRequest& req)
     size_t needed    = req.content_length - already;
     size_t available = buf.size();
     size_t to_read   = (needed < available) ? needed : available;
-
+    if (req.body.size() + to_read > req.max_body_size)  // ← Add this  
+    {  
+        req.parse_state = PSTATE_ERROR;  
+        req.error_code = 413;  
+        return;  
+    } 
     req.body.append(buf.data(), to_read);
     buf.consume(to_read);
 
