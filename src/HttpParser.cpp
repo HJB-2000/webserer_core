@@ -789,7 +789,12 @@ void HttpParser::_parseChunked(Buffer& buf, HttpRequest& req)
 
         size_t to_read =
             (req._chunk_size < buf.size()) ? req._chunk_size : buf.size();
-
+        if (req.body.size() + to_read > req.max_body_size)  
+        {  
+            req.parse_state = PSTATE_ERROR;  
+            req.error_code = 413;  
+            return;  
+        }  
         req.body.append(buf.data(), to_read);
         buf.consume(to_read);
         req._chunk_size -= to_read;
