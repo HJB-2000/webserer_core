@@ -21,7 +21,28 @@
 #include <signal.h>
 
 // ── stop ─────────────────────────────────────────────────────
-void EventLoop::stop() { _running = false; }
+void EventLoop::stop() {
+    _running = false;
+    for (size_t i = 0; i < _server_fds.size(); ++i) {
+        int fd = _server_fds[i];
+        
+        if (fd >= 0) {
+            epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+            close(fd);
+            if (_event_refs.count(fd) && _event_refs[fd] != NULL) {
+                delete _event_refs[fd];
+                _event_refs[fd] = NULL;
+                _event_refs.erase(fd);
+            }
+            
+        }
+    }
+
+    if (_epoll_fd >= 0) {
+        close(_epoll_fd);
+        _epoll_fd = -1;
+    }
+}
 
 // ── _setCloexec ──────────────────────────────────────────────
 bool EventLoop::_setCloexec(int fd, const char* label)
@@ -89,7 +110,14 @@ void EventLoop::addServerSocket(int server_fd, const ServerConfig* config)
 void EventLoop::_registerEventFd(int fd, EventKind kind, uint32_t events)
 {
     //we have this problem of leaks
-    EventRef* ref = new EventRef(kind, fd);
+    EventRef* ref = NULL;
+    try {
+        ref = new EventRef(kind, fd);
+    }
+    catch (const std::exception& e)
+    {
+        throw ;
+    }
     _event_refs[fd] = ref;
 
     epoll_event ev;
@@ -143,6 +171,7 @@ void EventLoop::_closeClient(int fd)
     _closeCgiJobsForClient(fd);
     _unregisterEventFd(fd);
     _manager->closeConnection(fd);
+    // delete _event_refs[fd];
 }
 
 void EventLoop::_handleClientEvent(int client_fd, uint32_t events)
@@ -232,11 +261,20 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
         _rearmClient(conn->fd());
         return;
     }
-
-    CgiJob* job = new CgiJob(conn->fd(), result_read_fd, conn->writeBuffer().maxSize());
-    _cgi_jobs[result_read_fd] = job;
-    _addCgiFd(result_read_fd, conn->fd());
-
+    CgiJob* job = NULL;
+    try {
+        job = new CgiJob(conn->fd(), result_read_fd, conn->writeBuffer().maxSize());
+        _addCgiFd(result_read_fd, conn->fd());
+        _cgi_jobs[result_read_fd] = job;
+    }
+    catch (const std::exception& ex)
+    {
+        if (job != NULL) {
+            delete job; 
+            job = NULL;
+        }
+        throw;
+    }
     conn->setCgiRunning();
     _rearmClient(conn->fd());
 

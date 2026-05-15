@@ -97,8 +97,17 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
         ::close(client_fd);
         return -1;
     }
+    Connection* conn = new Connection(client_fd, config);   
+    
+    // Connection* conn = NULL;
+    // try {
+    //     conn = new Connection(client_fd, config);   
+    // }
+    // catch (const std::exception& ex)
+    // {
+    //     throw;
+    // }
 
-    Connection* conn = new Connection(client_fd, config);
     std::string client_ip = addrToString(client_addr); // getting the ip_client from the client_addr
     conn->setClientIp(client_ip); // storing the remote ip address of client
     if (_connections.count(client_fd))
@@ -129,6 +138,7 @@ void ConnectionManager::closeConnection(int fd)
 
     ::epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
     _destroy(fd);
+
     std::cerr << "[ConnectionManager] closed fd " << fd << "\n";
 }
 
