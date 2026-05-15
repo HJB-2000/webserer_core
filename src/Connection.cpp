@@ -103,6 +103,9 @@ void Connection::reset()
 {
     _read_buffer.reset();
     _write_buffer.reset();
+     size_t server_default = _config->getMaxBody();  
+    _read_buffer.setMaxSize(server_default);  
+    _write_buffer.setMaxSize(server_default);  
     _request.reset();
     _state             = CSTATE_READING;
     _peer_half_closed  = false;
@@ -185,6 +188,11 @@ epoll_event Connection::buildEpollEvent()
 
 void Connection::updateBufferSizes(size_t new_max)  
 {  
+    // Ensure we don't truncate existing data  
+    if (new_max < _read_buffer.size() || new_max < _write_buffer.size()) {  
+        std::cerr << "[Warning] Cannot reduce buffer size below current content size\n";  
+        return;  
+    }  
     _read_buffer.setMaxSize(new_max);  
     _write_buffer.setMaxSize(new_max);  
 }

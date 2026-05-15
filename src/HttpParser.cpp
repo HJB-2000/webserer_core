@@ -270,18 +270,18 @@ void HttpParser::feed(Connection *conn)
         conn->request().parse_state = PSTATE_REQUEST_LINE;
 
     if (conn->request().parse_state == PSTATE_REQUEST_LINE)
-        _parseRequestLine(conn->readBuffer(), conn->request());
-
-    if (conn->request().parse_state == PSTATE_HEADERS)
     {
-        _parseHeaders(conn->readBuffer(), conn->request());
+        _parseRequestLine(conn->readBuffer(), conn->request());
         const Location* loc = conn->config()->matchLocation(conn->request().path);    
         if (loc && loc->getClientMaxBodySize() > 0)    
             conn->request().max_body_size = loc->getClientMaxBodySize();    
         else    
             conn->request().max_body_size = conn->config()->getMaxBody();  
-        conn->updateBufferSizes(conn->request().max_body_size); 
+        conn->updateBufferSizes(conn->request().max_body_size);
     }
+
+    if (conn->request().parse_state == PSTATE_HEADERS)
+        _parseHeaders(conn->readBuffer(), conn->request()); 
 
     if (conn->request().parse_state == PSTATE_BODY) {
         if (conn->request().chunked)

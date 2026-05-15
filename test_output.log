@@ -1,0 +1,77 @@
+*   Trying 127.0.0.1:8080...
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Connected to 127.0.0.1 (127.0.0.1) port 8080 (#0)
+> GET /cgi-bin/big_body_test.py HTTP/1.1
+> Host: 127.0.0.1:8080
+> User-Agent: curl/7.81.0
+> Accept: */*
+> 
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 413 Payload Too Large
+< Server: webserv/1.0
+< Date: Fri, 15 May 2026 17:11:30 GMT
+< Content-Type: text/html
+< Content-Length: 1622
+< Connection: close
+< 
+{ [1622 bytes data]
+100  1622  100  1622    0     0  27221      0 --:--:-- --:--:-- --:--:-- 27033100  1622  100  1622    0     0  27193      0 --:--:-- --:--:-- --:--:-- 27033
+* Closing connection 0
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>413 - Payload Too Large</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            text-align: center;
+            padding: 50px;
+            margin: 0;
+        }
+        .container {
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 10px;
+            border-left: 4px solid #f59e0b;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 80px;
+            color: #f59e0b;
+            margin: 0;
+        }
+        a {
+            color: #38bdf8;
+            text-decoration: none;
+        }
+        .file-info {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 12px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>413</h1>
+        <h2>Payload Too Large</h2>
+        <p>The file you're trying to upload exceeds the maximum allowed size.</p>
+        <div class="file-info">
+            <strong>🔧 Technical Details:</strong><br>
+            • Maximum allowed size: 10 MB (global), 30 MB for /cgi-bin uploads<br>
+            • Limit is set in webserv config (client_max_body_size)<br>
+            • Try uploading a smaller file
+        </div>
+        <br>
+        <a href="/dashboard/index.html">← Back to Dashboard</a>
+    </div>
+</body>
+</html>
