@@ -242,7 +242,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
 
     // bool ok = startCgi(conn->request(), *conn->config(), *info.location,
     //                    info.script_path, result_write_fd);
-    CgiHandler cgi(conn->request(), *conn->config(), *info.location, info.script_path);
+    CgiHandler cgi(conn->request(), *conn->config(), *info.location, info.script_path, conn->get_clientIp()); // sending the ip_client for the meta-variables.
     bool ok = cgi.startCgi(result_write_fd);
     if (ok)
     {

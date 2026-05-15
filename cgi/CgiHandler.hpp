@@ -27,7 +27,7 @@ enum CgiState {
 class CgiHandler
 {
     public:
-        CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path);
+        CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path, const std::string& client_ip);
         ~CgiHandler();
 
         bool startCgi(int write_end);
@@ -74,6 +74,7 @@ class CgiHandler
         std::vector<std::string>  _meta_env;
         std::vector<char*>        _env_ptrs;
         bool                      _env_logged;
+        std::string _client_ip;
 };
 
 #endif

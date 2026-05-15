@@ -96,6 +96,9 @@ public:
     bool peerHalfClosed() const;
     void updateBufferSizes(size_t new_max);
 
+    // getter and setter for the ip_client
+    const std::string& get_clientIp() const { return _client_ip; }
+    void setClientIp(const std::string& ip) { _client_ip = ip; }
 private:
 
     // ── non-copyable ──────────────────────────────────────
@@ -114,6 +117,8 @@ private:
     ConnectionState     _state;
     time_t              _last_active;
     bool                _peer_half_closed;
+    std::string         _client_ip;
+
 };
 
 #endif // CONNECTION_HPP
