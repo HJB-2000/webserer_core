@@ -149,7 +149,7 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
     env.push_back("SERVER_PROTOCOL="   + request.version);
     env.push_back("GATEWAY_INTERFACE=CGI/1.1");
     env.push_back("SERVER_SOFTWARE=webserv/1.0");
-    env.push_back("REMOTE_ADDR=127.0.0.1");
+    env.push_back("REMOTE_ADDR=" + _client_ip);
     env.push_back("REQUEST_URI=" + request.path +
         (request.query_string.empty() ? "" : "?" + request.query_string));
     env.push_back("DOCUMENT_ROOT=" + server.getRoot());
@@ -190,10 +190,10 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
     return env;
 }
 
-CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path)
+CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path,  const std::string& client_ip)
     : _request(request), _location(location),
       _script_path(script_path), _child_pid(-1), _state(CGI_IDLE),
-      _error_code(0), _env_logged(false)
+      _error_code(0), _env_logged(false), _client_ip(client_ip)
 {
     cgi_in_pipe[0] = -1;
     cgi_in_pipe[1] = -1;

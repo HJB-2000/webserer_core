@@ -260,6 +260,7 @@ bool validate_host(std::string& host_value, uint16_t& port_out)
 void HttpParser::feed(Connection *conn)
 {
     // Nothing to do if already terminal.
+    
     if (conn->request().parse_state == PSTATE_COMPLETE ||
         conn->request().parse_state == PSTATE_ERROR)
         return;

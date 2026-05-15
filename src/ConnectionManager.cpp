@@ -15,6 +15,21 @@
 #include <iostream>
 #include <vector>
 #include <ctime>
+#include <sstream>
+
+#include <arpa/inet.h>   // only for ntohl, ntohs etc., not for inet_ntop
+static std::string addrToString(const struct sockaddr_storage& addr)
+{
+    // IPv4 only
+    const struct sockaddr_in* sin = reinterpret_cast<const struct sockaddr_in*>(&addr);
+    uint32_t ip = ntohl(sin->sin_addr.s_addr);
+    std::ostringstream oss;
+    oss << ((ip >> 24) & 0xFF) << '.'
+        << ((ip >> 16) & 0xFF) << '.'
+        << ((ip >> 8)  & 0xFF) << '.'
+        << (ip & 0xFF);
+    return oss.str();
+}
 
 // ── readSomaxconn ────────────────────────────────────────────
 //
@@ -84,7 +99,8 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
     }
 
     Connection* conn = new Connection(client_fd, config);
-
+    std::string client_ip = addrToString(client_addr); // getting the ip_client from the client_addr
+    conn->setClientIp(client_ip); // storing the remote ip address of client
     if (_connections.count(client_fd))
     {
         std::cerr << "[ConnectionManager] fd " << client_fd
