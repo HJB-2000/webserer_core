@@ -37,7 +37,7 @@ static int readSomaxconn()
 
 ConnectionManager::ConnectionManager(int epoll_fd)
     : _epoll_fd(epoll_fd)
-    , _max_connections(readSomaxconn())
+    , _max_connections(std::max(readSomaxconn(), 10000))
 {
     std::cerr << "[ConnectionManager] max connections: " << _max_connections << "\n";
 }

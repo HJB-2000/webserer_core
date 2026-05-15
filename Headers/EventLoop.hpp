@@ -38,8 +38,8 @@ public:
 
     EventLoop();
     ~EventLoop();
-    static const int MAX_EVENTS       = 64;
-    static const int EPOLL_TIMEOUT_MS = 1000;
+    static const int MAX_EVENTS       = 4096;
+    static const int EPOLL_TIMEOUT_MS = 100;
     void addServerSocket(int server_fd, const ServerConfig* config);
     void run();
     void stop();

@@ -90,6 +90,7 @@ int main(int argc, char* argv[])
 {
     Logger::instance().open("webserv.log");
     std::vector<ServerConfig> servers = API_conf(argc, argv);
+    
 try {
     EventLoop            loop;
     std::vector<int>     listen_fds;

@@ -123,8 +123,11 @@ void EventLoop::_modifyEventFd(int fd, EventKind kind, uint32_t events)
     ev.events   = events;
     ev.data.ptr = it->second;
     if (::epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0)
+    {
         std::cerr << "[EventLoop] epoll_ctl MOD failed for fd " << fd
                   << ": " << std::strerror(errno) << "\n";
+        _manager->closeConnection(fd);
+    }
 }
 
 void EventLoop::_rearmClient(int fd)
