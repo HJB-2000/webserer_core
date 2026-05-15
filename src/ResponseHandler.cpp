@@ -452,7 +452,12 @@ void ResponseHandler::_serveStaticFile(
     int fd = ::open(fs_path.c_str(), O_RDONLY);
     if (fd < 0)
     {
-        _sendErrorInternal(500, req, cfg, wb);
+        if (errno == ENOENT)
+            _sendErrorInternal(404, req, cfg, wb);
+        else if (errno == EACCES || errno == EPERM)
+            _sendErrorInternal(403, req, cfg, wb);
+        else
+            _sendErrorInternal(500, req, cfg, wb);
         return;
     }
 
@@ -500,7 +505,12 @@ void ResponseHandler::_sendDirectoryListing(
     DIR* dir = ::opendir(fs_path.c_str());
     if (!dir)
     {
-        _sendErrorInternal(403, req, cfg, wb);
+        if (errno == ENOENT)
+            _sendErrorInternal(404, req, cfg, wb);
+        else if (errno == EACCES || errno == EPERM)
+            _sendErrorInternal(403, req, cfg, wb);
+        else
+            _sendErrorInternal(500, req, cfg, wb);
         return;
     }
 
@@ -694,12 +704,15 @@ void ResponseHandler::_handleDelete(
 {
     if (::unlink(fs_path.c_str()) < 0)
     {
-        if (errno == EACCES || errno == EPERM)
+        if (errno == ENOENT)
+            _sendErrorInternal(404, req, cfg, wb);
+        else if (errno == EACCES || errno == EPERM)
             _sendErrorInternal(403, req, cfg, wb);
         else
             _sendErrorInternal(500, req, cfg, wb);
         return;
     }
+
 
     // 204 No Content — no body allowed
     std::ostringstream oss;
