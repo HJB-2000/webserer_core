@@ -665,17 +665,13 @@ void EventLoop::_handleRead(Connection* conn)
             }
 
             // ── Phase 2: HttpParser ──────────────────────────
-            const Location* loc = conn->config()->matchLocation(conn->request().path);  
-            if (loc && loc->getClientMaxBodySize() > 0)  
-                conn->request().max_body_size = loc->getClientMaxBodySize();  
-            else  
-                conn->request().max_body_size = conn->config()->getMaxBody();  // Server default 
-
-            _parser.feed(conn->readBuffer(), conn->request());
+            // _parser.feed(conn->readBuffer(), conn->request());
+            _parser.feed(conn);
             // ─────────────────────────────────────────────────
 
             if (conn->request().parse_state == PSTATE_ERROR)
             {
+
                 conn->request().headers["connection"] = "close";
                 std::cerr << "[EventLoop] parse error " << conn->request().error_code
                           << " on fd " << fd << "\n";

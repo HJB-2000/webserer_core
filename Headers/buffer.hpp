@@ -59,6 +59,7 @@ public:
     bool        empty()   const;
     size_t      maxSize() const;
     void        reset();
+    void        setMaxSize(size_t new_max);
 
 private:
     void _compact();

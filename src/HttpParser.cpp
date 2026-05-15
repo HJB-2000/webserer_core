@@ -15,7 +15,7 @@
 // ============================================================
 
 #include "Headers/HttpParser.hpp"
-
+#include "Headers/Connection.hpp"
 #include <cctype>    // std::tolower
 #include <stdint.h>  // uint16_t (C++98 compatible)
 #include <map>
@@ -257,28 +257,36 @@ bool validate_host(std::string& host_value, uint16_t& port_out)
 //  HttpParser::feed
 //  Main entry point — advance parse as far as the buffer allows.
 // ════════════════════════════════════════════════════════════
-void HttpParser::feed(Buffer& buf, HttpRequest& req)
+void HttpParser::feed(Connection *conn)
 {
     // Nothing to do if already terminal.
-    if (req.parse_state == PSTATE_COMPLETE ||
-        req.parse_state == PSTATE_ERROR)
+    if (conn->request().parse_state == PSTATE_COMPLETE ||
+        conn->request().parse_state == PSTATE_ERROR)
         return;
 
     // First byte of a new request kicks us out of IDLE.
-    if (req.parse_state == PSTATE_IDLE)
-        req.parse_state = PSTATE_REQUEST_LINE;
+    if (conn->request().parse_state == PSTATE_IDLE)
+        conn->request().parse_state = PSTATE_REQUEST_LINE;
 
-    if (req.parse_state == PSTATE_REQUEST_LINE)
-        _parseRequestLine(buf, req);
+    if (conn->request().parse_state == PSTATE_REQUEST_LINE)
+        _parseRequestLine(conn->readBuffer(), conn->request());
 
-    if (req.parse_state == PSTATE_HEADERS)
-        _parseHeaders(buf, req);
+    if (conn->request().parse_state == PSTATE_HEADERS)
+    {
+        _parseHeaders(conn->readBuffer(), conn->request());
+        const Location* loc = conn->config()->matchLocation(conn->request().path);    
+        if (loc && loc->getClientMaxBodySize() > 0)    
+            conn->request().max_body_size = loc->getClientMaxBodySize();    
+        else    
+            conn->request().max_body_size = conn->config()->getMaxBody();  
+        conn->updateBufferSizes(conn->request().max_body_size); 
+    }
 
-    if (req.parse_state == PSTATE_BODY) {
-        if (req.chunked)
-            _parseChunked(buf, req);
+    if (conn->request().parse_state == PSTATE_BODY) {
+        if (conn->request().chunked)
+            _parseChunked(conn->readBuffer(), conn->request());
         else
-            _parseBody(buf, req);
+            _parseBody(conn->readBuffer(), conn->request());
     }
 }
 

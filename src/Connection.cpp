@@ -182,3 +182,9 @@ epoll_event Connection::buildEpollEvent()
     }
     return ev;
 }
+
+void Connection::updateBufferSizes(size_t new_max)  
+{  
+    _read_buffer.setMaxSize(new_max);  
+    _write_buffer.setMaxSize(new_max);  
+}

@@ -110,3 +110,8 @@ void Buffer::_ensureCapacity(size_t needed)
     }
     _storage.reserve(cap);
 }
+
+void Buffer::setMaxSize(size_t new_max)  
+{  
+    _cmbs = new_max;  
+}

@@ -6,8 +6,9 @@
 #include <vector>
 #include "serverConfig.hpp"
 #include "LexerConfig.hpp"
-
-#define MAX_CLIENT_BODY_SIZE_LIMIT 1073741824LL
+#include "limits.h"
+// #define MAX_CLIENT_BODY_SIZE_LIMIT 1073741824LL
+#define MAX_CLIENT_BODY_SIZE_LIMIT INT_MAX
 
 class httpConfig
 {

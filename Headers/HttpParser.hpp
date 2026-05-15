@@ -20,6 +20,7 @@
 
 #include "buffer.hpp"
 #include "HttpRequest.hpp"
+#include "Headers/Connection.hpp"
 
 // ────────────────────────────────────────────────────────────
 //  HttpParser
@@ -59,7 +60,7 @@ public:
      *       req.error_code carries the HTTP status code (400/414/431/505)
      *   otherwise                          → partial; wait for more data
      */
-    void feed(Buffer& buf, HttpRequest& req);
+    void feed(Connection *conn);
 
 private:
 

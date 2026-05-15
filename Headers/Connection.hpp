@@ -94,6 +94,7 @@ public:
     // once the buffer fully drains.
     void setPeerHalfClosed();
     bool peerHalfClosed() const;
+    void updateBufferSizes(size_t new_max);
 
 private:
 
