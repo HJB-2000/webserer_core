@@ -413,20 +413,39 @@ void HttpParser::_parseRequestLine(Buffer& buf, HttpRequest& req)
 
             case RL_MAJOR:
                 if (ch == '.')                       { state = RL_FIRST_MINOR; break; }
-                if (ch >= '0' && ch <= '9')          { http_major = http_major * 10 + (ch - '0'); break; }
+                if (ch >= '0' && ch <= '9') {
+                    if (http_major > 9) { 
+                        req.parse_state = PSTATE_ERROR; 
+                        req.error_code = 400;
+                        return;
+                    } 
+                    http_major = http_major * 10 + (ch - '0'); 
+                    break; 
+                }
                 req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
 
             // ── minor version digit(s) ────────────────────────────
             case RL_FIRST_MINOR:
                 if (ch < '0' || ch > '9') {
-                    req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
+                    req.parse_state = PSTATE_ERROR;
+                    req.error_code = 400;
+                    return;
                 }
                 http_minor = ch - '0';
                 state = RL_MINOR;
                 break;
 
             case RL_MINOR:
-                if (ch >= '0' && ch <= '9') { http_minor = http_minor * 10 + (ch - '0'); break; }
+                if (ch >= '0' && ch <= '9') {
+                    if (http_minor > 9)
+                    {
+                        req.parse_state = PSTATE_ERROR;
+                        req.error_code = 400;
+                        return ;
+                    } 
+                    http_minor = http_minor * 10 + (ch - '0'); 
+                    break;
+                }
                 if (ch == '\r')             { state = RL_ALMOST_DONE; break; }
                 if (ch == '\n')             { done = true; break; }
                 if (ch == ' ')             { state = RL_SPACE_AFTER_VERSION; break; }
@@ -747,10 +766,23 @@ void HttpParser::_parseChunked(Buffer& buf, HttpRequest& req)
                 else if (c >= 'A' && c <= 'F') d = static_cast<unsigned int>(c - 'A') + 10;  
                 else {  
                     req.parse_state = PSTATE_ERROR; req.error_code = 400; return;  
-                }  
-                chunk_sz = chunk_sz * 16 + d;  
-                valid    = true;  
-                
+                }
+                const size_t MAX_ALLOWED_CHUNK = 1073741824ULL; 
+                // Check BEFORE math operations
+                if (chunk_sz > (MAX_ALLOWED_CHUNK / 16)) {
+                    req.parse_state = PSTATE_ERROR; 
+                    req.error_code = 413; 
+                    return;  
+                }
+                // Now safe to multiply
+                size_t next_val = chunk_sz * 16 + d;
+                if (next_val > MAX_ALLOWED_CHUNK) {
+                    req.parse_state = PSTATE_ERROR; 
+                    req.error_code = 413; 
+                    return;  
+                }
+                chunk_sz = next_val;
+                valid = true;
             }  
             if (!valid) {  
                 req.parse_state = PSTATE_ERROR; req.error_code = 400; return;  
