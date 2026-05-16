@@ -173,21 +173,7 @@ static bool is_readable(const std::string& path)
 
 void validate_final_config(std::vector<Server>& servers, long long http_default_cmbs)
 {
-    std::set<int> seen_ports;
-    for (size_t s = 0; s < servers.size(); ++s)
-    {
-        int port = servers[s].getPort();
-        
-        if (seen_ports.find(port) != seen_ports.end())
-        {
-            std::cerr << "[fatal] Duplicate port: " << port 
-                      << " is used by multiple server blocks." << std::endl;
-            std::cerr << "        Each server block must listen on a unique port." << std::endl;
-            std::cerr << "        Cannot bind to the same port twice." << std::endl;
-            exit(1);
-        }
-        seen_ports.insert(port);
-    }
+    // removed the check for the same port listening
 
     for (size_t s = 0; s < servers.size(); ++s) 
     {
