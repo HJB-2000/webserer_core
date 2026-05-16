@@ -14,7 +14,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <vector>
-
 static int readSomaxconn()
 {
     int fd = ::open("/proc/sys/net/core/somaxconn", O_RDONLY);
@@ -28,11 +27,18 @@ static int readSomaxconn()
     return (val > 0) ? val : SOMAXCONN;
 }
 
-static EventLoop* g_loop = NULL;
+// static EventLoop* g_loop = NULL;
+// static void sig_handler(int)
+// {
+//     if (g_loop)
+//         g_loop->stop();
+// }
+// ── AFTER ───────────────────────────────────────────────────
+volatile sig_atomic_t g_stop = 0;
+
 static void sig_handler(int)
 {
-    if (g_loop)
-        g_loop->stop();
+    g_stop = 1;   // async-signal-safe: single atomic write, nothing else
 }
 
 static int make_listener(const char* host, int port)
@@ -116,12 +122,18 @@ try {
         }
     }
 
-    g_loop = &loop;
+    // g_loop = &loop;
+    // std::signal(SIGINT,  sig_handler);
+    // std::signal(SIGTERM, sig_handler);
+    // std::signal(SIGPIPE, SIG_IGN);
+    // std::cerr << "[core] server ready — press Ctrl+C to stop\n";
+    // loop.run();
     std::signal(SIGINT,  sig_handler);
     std::signal(SIGTERM, sig_handler);
     std::signal(SIGPIPE, SIG_IGN);
     std::cerr << "[core] server ready — press Ctrl+C to stop\n";
     loop.run();
+
     for (size_t i = 0; i < listen_fds.size(); ++i)
         ::close(listen_fds[i]);
     std::cerr << "[core] shutdown complete\n";

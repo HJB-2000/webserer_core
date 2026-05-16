@@ -20,8 +20,11 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+#include <csignal>
+extern volatile sig_atomic_t g_stop;
 // ── stop ─────────────────────────────────────────────────────
 void EventLoop::stop() {
+    
     _running = false;
     for (size_t i = 0; i < _server_fds.size(); ++i) {
         int fd = _server_fds[i];
@@ -601,6 +604,11 @@ void EventLoop::run()
 
     while (_running)
     {
+        if (g_stop)          // ← check the flag here, in safe main-loop context
+        {
+            stop();          // ← now called safely, not from signal handler
+            break;
+        }
         int n = ::epoll_wait(_epoll_fd, events, MAX_EVENTS, EPOLL_TIMEOUT_MS);
         if (n < 0)
         {
