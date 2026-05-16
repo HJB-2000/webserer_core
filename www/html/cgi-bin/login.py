@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 from http.cookies import SimpleCookie
 
 from cgi_data_store import (
+    session_key,
+    cookie_name,
     SESSIONS_FILE,
     USERS_FILE,
     USER_LOG_FILE as LOG_FILE,
@@ -43,7 +45,7 @@ LOGIN_WINDOW_SECONDS = 300  # 5 minutes
 def create_session(username):
     sid = uuid.uuid4().hex
     sessions = load_json(SESSIONS_FILE, {})
-    sessions[sid] = {
+    sessions[session_key(sid)] = {
         'username': username,
         'created_at': datetime.utcnow().isoformat(),
         'expires_at': (datetime.utcnow() + timedelta(minutes=15)).isoformat(),
@@ -210,16 +212,15 @@ save_json_atomic(USERS_FILE, users)
 # Create session
 sid = create_session(username)
 cookie = SimpleCookie()
-cookie['session_id'] = sid
-cookie['session_id']['path'] = '/'
-cookie['session_id']['httponly'] = True  # Prevent JavaScript access
+cname = cookie_name()
+cookie[cname] = sid
+cookie[cname]['path'] = '/'
+cookie[cname]['httponly'] = True  # Prevent JavaScript access
 #  tell the browser to keep the cookie for 15 minutes
-cookie['session_id']['max-age'] = 900
+cookie[cname]['max-age'] = 900
 
 # Log successful login
 append_log_line(LOG_FILE, f"LOGIN: {username} from {os.environ.get('REMOTE_ADDR', 'unknown')} at {datetime.utcnow().isoformat()}")
 
 # Redirect to dashboard
 redirect("/cgi-bin/dashboard.py", cookie=cookie)
-
-

@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from http.cookies import SimpleCookie
 
-from cgi_data_store import SESSIONS_FILE, load_json
+from cgi_data_store import SESSIONS_FILE, session_key, cookie_name, load_json
 
 
 def session_expired(session_data):
@@ -30,7 +30,7 @@ if not cookie_str:
 
 cookie = SimpleCookie()
 cookie.load(cookie_str)
-sid_morsel = cookie.get('session_id')
+sid_morsel = cookie.get(cookie_name())
 
 if sid_morsel is None:
     print("Status: 401 Unauthorized")
@@ -41,6 +41,7 @@ if sid_morsel is None:
 
 sid = sid_morsel.value
 sessions = load_json(SESSIONS_FILE, {})
+sid = session_key(sid)
 
 if sid not in sessions:
     print("Status: 401 Unauthorized")
