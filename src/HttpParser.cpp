@@ -652,6 +652,12 @@ void HttpParser::_parseHeaders(Buffer& buf, HttpRequest& req)
             if (cl_str[i] < '0' || cl_str[i] > '9') {
                 req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
             }
+            if (cl > SIZE_MAX / 10)
+            {
+                req.parse_state = PSTATE_ERROR;
+                req.error_code = 400;
+                return ;
+            }
             cl = cl * 10 + static_cast<size_t>(cl_str[i] - '0');
         }
         req.content_length = cl;

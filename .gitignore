@@ -20,3 +20,7 @@ www/data/user_log.txt
 !www/data/.gitkeep
 
 *.txt
+
+# Un-ignore my two specific markdown files
+!subject.md 
+!CMBS_bugs.md
