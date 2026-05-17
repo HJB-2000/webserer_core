@@ -47,73 +47,7 @@ static bool is_valid_host(const std::string& host)
     }
     return is_valid_octet(host.substr(prev)) && dots == 3;
 }
-static bool is_existing_directory(const std::string& path)
-{
-    struct stat st;
-    if (stat(path.c_str(), &st) != 0)
-        return false;
-    return S_ISDIR(st.st_mode);
-}
 
-static bool path_exists(const std::string& path)
-{
-    return access(path.c_str(), F_OK) == 0;
-}
-
-static bool is_executable_file(const std::string& path)
-{
-    return access(path.c_str(), F_OK | X_OK) == 0;
-}
-
-static void validate_filesystem_directives(const Server &obj_Server, std::vector<Lexer> &stream, size_t i)
-{
-    std::string root = obj_Server.getRoot();
-    if (!root.empty())
-    {
-        if (path_exists(root))
-        {
-            if (!is_existing_directory(root))
-                report_parse_error("Invalid filesystem directive: root is not a directory", stream, i, "validate_filesystem_directives");
-        }
-        else
-            std::cerr << "[warn] root path does not exist at parse time: " << root << std::endl;
-    }
-
-    std::vector<Location> locs = obj_Server.get_locations();
-    for (size_t k = 0; k < locs.size(); ++k)
-    {
-        std::string loc_root = locs[k].getRoot();
-        if (!loc_root.empty() && path_exists(loc_root))
-        {
-            if (!is_existing_directory(loc_root))
-                report_parse_error("Invalid filesystem directive: location root is not a directory", stream, i, "validate_filesystem_directives");
-        }
-
-        std::string upload = locs[k].getUploadStore();
-        if (!upload.empty())
-        {
-            if (path_exists(upload))
-            {
-                if (!is_existing_directory(upload))
-                    report_parse_error("Invalid filesystem directive: upload_path is not a directory", stream, i, "validate_filesystem_directives");
-            }
-            else
-                std::cerr << "[warn] upload path does not exist at parse time: " << upload << std::endl;
-        }
-
-        std::string cgi = locs[k].getCGI_path();
-        if (!cgi.empty())
-        {
-            if (path_exists(cgi))
-            {
-                if (!is_executable_file(cgi))
-                    report_parse_error("Invalid filesystem directive: cgi_path is not executable", stream, i, "validate_filesystem_directives");
-            }
-            else
-                std::cerr << "[warn] cgi_path does not exist at parse time: " << cgi << std::endl;
-        }
-    }
-}
 
 void verifying_path_in_locations_inside_server(Server &obj_Server)
 {
@@ -131,9 +65,7 @@ void verifying_path_in_locations_inside_server(Server &obj_Server)
 
         if (unique_paths.find(path) != unique_paths.end())
         {
-            std::cerr << "duplicate path in some location context ('" 
-                      << tmp_locations[i].getPath() << "' conflicts with an existing location)" << std::endl;
-            throw std::runtime_error("duplicate path in some location context");
+            throw std::runtime_error("[fatal] duplicate pathin location : " + tmp_locations[i].getPath());
         }
         unique_paths.insert(path);
     }
@@ -158,43 +90,6 @@ static void validate_index_filenames(const std::vector<std::string>& index_files
                 stream, i, context);
         }
     }
-}
-
-static void validate_locations_of_server(Location &loc, std::vector<Lexer> &stream, size_t i)
-{
-    bool has_ext = !loc.getCGI_extensions().empty();
-    bool has_path = !loc.getCGI_path().empty();
-    if (has_ext != has_path)
-        report_parse_error("Invalid CGI configuration: cgi_ext and cgi_path must be used together", stream, i, "parsServer/parsLocation");
-
-    std::string upload = loc.getUploadStore();
-    if (!upload.empty())
-    {
-        std::vector<std::string> methods = loc.getMethods();
-        bool hasPost = false;
-        for (size_t k = 0; k < methods.size(); k++)
-        {
-            if (methods[k] == "POST") { hasPost = true; break; }
-        }
-        if (!hasPost)
-            report_parse_error("Invalid location: upload_path requires POST in allowed_methods", stream, i, "parsServer/parsLocation");
-    }
-
-    int ret_code = loc.getReturnRedirection_code();
-    if (ret_code != -1 && (ret_code < 300 || ret_code >= 400))
-        report_parse_error("Invalid return code: must be 3xx for redirection", stream, i, "parsServer/parsLocation");
-
-    // root is always required (inherited from server if not set explicitly)
-    if (loc.getRoot().empty())
-        report_parse_error("Missing required directive in location: root", stream, i, "parsServer/parsLocation");
-
-    // index is NOT required for redirect-only or CGI-only locations.
-    // A redirect location serves no files. A CGI location has the interpreter handle output.
-    // For every other location that serves static files, index must be present.
-    bool is_redirect = (ret_code != -1);
-    bool is_cgi      = (!loc.getCGI_path().empty() && !loc.getCGI_extensions().empty());
-    if (!is_redirect && !is_cgi && loc.getIndex_s().empty())
-        report_parse_error("Missing required directive in location: index", stream, i, "parsServer/parsLocation");
 }
 
 void Location::check_for_allowed_methods()
@@ -451,9 +346,8 @@ void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexem
         if (!is_redirect && !is_cgi)
             validate_index_filenames(locs[idx].getIndex_s(), stream_lexems, i,
                                      ("parsServer/location[" + locs[idx].getPath() + "]/index").c_str());
-        validate_locations_of_server(locs[idx], stream_lexems, i);
     } 
-    validate_filesystem_directives(obj_Server, stream_lexems, i);
+    // validate_filesystem_directives(obj_Server, stream_lexems, i);
     verifying_path_in_locations_inside_server(obj_Server);
     i++;
 }

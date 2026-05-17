@@ -89,44 +89,52 @@ static int make_listener(const char* host, int port)
 int main(int argc, char* argv[])
 {
     Logger::instance().open("webserv.log");
-    std::vector<ServerConfig> servers = API_conf(argc, argv);
-    
-try {
-    EventLoop            loop;
-    std::vector<int>     listen_fds;
-
-    for (size_t i = 0; i < servers.size(); ++i)
-    {
-        int fd = make_listener(servers[i].getHost().c_str(), servers[i].getPort());
-        if (fd < 0)
-        {
-            std::cerr << "[core] fatal: could not create listener\n";
-            return 1;
-        }
-        listen_fds.push_back(fd);
-        try { 
-            loop.addServerSocket(fd, &servers[i]);
-        }
-        catch(const std::exception& ex) { 
-            std::cerr << "[core] fatal: failed to register server socket: " << ex.what() << "\n";  
-            ::close(fd);  
-            listen_fds.pop_back();  
-            Logger::instance().close();  
-            return 1;  
-        }
+    std::vector<ServerConfig> servers;
+    try {    
+        servers = API_conf(argc, argv);
     }
+    catch (const std::runtime_error& e)
+    {
+        std::cout << "|" << e.what() << "|" << std::endl;
+        return 1;
+    }
+        
+    try {
+        EventLoop            loop;
+        std::vector<int>     listen_fds;
 
-    g_loop = &loop;
-    std::signal(SIGINT,  sig_handler);
-    std::signal(SIGTERM, sig_handler);
-    std::signal(SIGPIPE, SIG_IGN);
-    std::cerr << "[core] server ready — press Ctrl+C to stop\n";
-    loop.run();
-    for (size_t i = 0; i < listen_fds.size(); ++i)
-        ::close(listen_fds[i]);
-    std::cerr << "[core] shutdown complete\n";
-    Logger::instance().close();
-    return 0;
+        for (size_t i = 0; i < servers.size(); ++i)
+        {
+            int fd = make_listener(servers[i].getHost().c_str(), servers[i].getPort());
+            if (fd < 0)
+            {
+                std::cerr << "[core] fatal: could not create listener\n";
+                return 1;
+            }
+            listen_fds.push_back(fd);
+            try { 
+                loop.addServerSocket(fd, &servers[i]);
+            }
+            catch(const std::exception& ex) { 
+                std::cerr << "[core] fatal: failed to register server socket: " << ex.what() << "\n";  
+                ::close(fd);  
+                listen_fds.pop_back();  
+                Logger::instance().close();  
+                return 1;  
+            }
+        }
+
+        g_loop = &loop;
+        std::signal(SIGINT,  sig_handler);
+        std::signal(SIGTERM, sig_handler);
+        std::signal(SIGPIPE, SIG_IGN);
+        std::cerr << "[core] server ready — press Ctrl+C to stop\n";
+        loop.run();
+        for (size_t i = 0; i < listen_fds.size(); ++i)
+            ::close(listen_fds[i]);
+        std::cerr << "[core] shutdown complete\n";
+        Logger::instance().close();
+        return 0;
     }
     catch (const std::exception& ex)
     {

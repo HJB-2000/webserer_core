@@ -20,9 +20,8 @@ void check_valid_content(std::stringstream &buff)
         
         if (c == 9 || c == 10 || c == 13 || (c >= 32 && c <= 126))
             continue;
-        
-        std::cerr << "Invalid character [byte = 0x" << std::hex << static_cast<int>(c)  << "] in config file" << std::endl;
-        exit(1);
+        buff.clear();
+        throw std::runtime_error(std::string("[API_conf] Invalid character ] in config file"));
     }
 }
 
@@ -55,7 +54,7 @@ void remove_comments(std::stringstream &buff)
         out.push_back(str[i]);
     }
     buff.str(out);
-    buff.clear();
+    //
 }
 
 void refactoring_buffer(std::stringstream &buff)
@@ -82,7 +81,8 @@ void refactoring_buffer(std::stringstream &buff)
     if(!out.empty() && out[0] == ' ')
         out.erase(0, 1);
     buff.str(out);
-    buff.clear();
+
+    //
 }
 
 void insert_space(std::stringstream &buff)
@@ -104,7 +104,8 @@ void insert_space(std::stringstream &buff)
         }
     }
     buff.str(out);
-    buff.clear();
+
+    //
 }
 
 std::vector<std::string> storing_in_vec(std::stringstream &buff)
@@ -184,13 +185,11 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
         std::string s_root = server.getRoot();
         if (s_root.empty() || (s_root[0] != '.' && s_root[0] != '/')) 
         {
-            std::cerr << "[fatal] " << server_id << ": Root path must be absolute or relative (./)." << std::endl;
-            exit(1);
+            throw std::runtime_error(std::string("[fatal] " + server_id + " : Root path must be absolute or relative (./)."));
         }
         if (!is_directory(s_root)) 
         {
-            std::cerr << "[fatal] " << server_id << ": Root directory not found: " << s_root << std::endl;
-            exit(1);
+            throw std::runtime_error(std::string("[fatal]" + server_id + " : Root directory not found: " + s_root));
         }
 
         std::map<int, std::string> s_errs = server.getErrorPageMap();
@@ -198,13 +197,11 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
         {
             if (it->first < 300 || it->first > 599) 
             {
-                std::cerr << "[fatal] " << server_id << ": Invalid error code " << it->first << std::endl;
-                exit(1);
+                throw std::runtime_error(std::string("[fatal]" + server_id + ": Invalid error code"));
             }
             if (!is_regular_file(it->second) || !is_readable(it->second)) 
             {
-                std::cerr << "[fatal] " << server_id << ": Error page file not found or unreadable: " << it->second << std::endl;
-                exit(1);
+                throw std::runtime_error(std::string("[fatal]" + server_id + ": Error page file not found or unreadable: " + it->second));
             }
         }
         long long client_max_body_size_server = server.getMaxBody();
@@ -223,8 +220,7 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
             
             if (!is_directory(loc.getRoot())) 
             {
-                std::cerr << "[fatal] " << loc_id << ": Location root not found: " << loc.getRoot() << std::endl;
-                exit(1);
+                throw std::runtime_error(std::string("[fatal]" + server_id + ": Location root not found: " + loc.getRoot()));
             }
             long long client_max_body_size_location = loc.getClientMaxBodySize();
             if (client_max_body_size_location == 0)
@@ -240,8 +236,7 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
             {
                 if (!is_valid_filename(idxs[i])) 
                 {
-                    std::cerr << "[fatal] " << loc_id << ": Invalid index filename: " << idxs[i] << std::endl;
-                    exit(1);
+                    throw std::runtime_error(std::string("[fatal]" + loc_id + ": Invalid index filename: " + idxs[i]));
                 }
             }
 
@@ -249,13 +244,11 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
             {
                 if (loc.getCGI_path().empty() || loc.getCGI_extensions().empty()) 
                 {
-                    std::cerr << "[fatal] " << loc_id << ": CGI requires both path and extension." << std::endl;
-                    exit(1);
+                    throw std::runtime_error(std::string("[fatal]" + loc_id + ": CGI requires both path and extension."));
                 }
                 if (!is_executable(loc.getCGI_path())) 
                 {
-                    std::cerr << "[fatal] " << loc_id << ": CGI binary not executable: " << loc.getCGI_path() << std::endl;
-                    exit(1);
+                    throw std::runtime_error(std::string("[fatal]" + loc_id + ": CGI binary not executable: " + loc.getCGI_path()));
                 }
             }
 
@@ -264,17 +257,31 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
                 std::string up = loc.getUploadStore();
                 if (!is_directory(up) || access(up.c_str(), W_OK) != 0) 
                 {
-                    std::cerr << "[fatal] " << loc_id << ": Upload directory not found or not writable: " << up << std::endl;
-                    exit(1);
+                    throw std::runtime_error(std::string("[fatal]" + loc_id + ": Upload directory not found or not writable: " + up));
                 }
+                std::vector<std::string> methods = loc.getMethods();
+                if(!methods.empty())
+                {
+                    bool has_post = false;
+                    for (size_t k = 0; k < methods.size(); k++)
+                    {
+                        if (methods[k] == "POST") 
+                        {
+                            has_post = true;
+                            break;
+                        }
+                    }
+                    if (!has_post)
+                       throw std::runtime_error(std::string("[fatal]" + loc_id + ": upload_path requires POST in allowed_methods"));
+                }
+                
             }
             std::map<int, std::string> l_errs = loc.get_error_page_loc();
             for (std::map<int, std::string>::const_iterator it = l_errs.begin(); it != l_errs.end(); ++it) 
             {
                 if (!is_regular_file(it->second) || !is_readable(it->second)) 
                 {
-                    std::cerr << "[fatal] " << loc_id << ": Error page file not found: " << it->second << std::endl;
-                    exit(1);
+                    throw std::runtime_error(std::string("[fatal]" + loc_id + ": Error page file not found: " + it->second));
                 }
             }
         }
@@ -320,3 +327,7 @@ void parsing_lexems(ParserConf& parser, std::vector<Lexer>& stream_lexems)
     validate_final_config(parser.get_http().get_all_servers(),
                           parser.get_http().get_cl_mx_bd_sz());
 }
+
+
+
+// # [] 2. Bug 7: Integer Overflow in Content-Length Parsing
