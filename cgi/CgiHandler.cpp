@@ -209,7 +209,7 @@ void CgiHandler::close_fd(int& fd_pipe)
         fd_pipe = -1;
     }
 }
-
+#include <stdio.h>
 bool CgiHandler::startCgi(int write_end)
 {
     std::string cgi_path = _location.getCGI_path();
@@ -220,14 +220,17 @@ bool CgiHandler::startCgi(int write_end)
         return false;
     }
 
-    struct stat sb;
-    if (stat(cgi_path.c_str(), &sb) != 0)
+    // stat() the CGI interpreter — record inode fingerprint for child
+    // verification. Two separate structs so the second stat() does not
+    // overwrite the first (original code reused a single struct stat sb).
+    struct stat sb_cgi;
+    if (stat(cgi_path.c_str(), &sb_cgi) != 0)
     {
         _error_code = 500;
         _state = CGI_ERROR;
         return false;
     }
-    if (!S_ISREG(sb.st_mode))
+    if (!S_ISREG(sb_cgi.st_mode))
     {
         _error_code = 500;
         _state = CGI_ERROR;
@@ -247,13 +250,16 @@ bool CgiHandler::startCgi(int write_end)
         _state = CGI_ERROR;
         return false;
     }
-    if (stat(script_file.c_str(), &sb) != 0)
+
+    // stat() the script — separate struct so sb_cgi is preserved intact
+    struct stat sb_script;
+    if (stat(script_file.c_str(), &sb_script) != 0)
     {
         _error_code = 404;
         _state = CGI_ERROR;
         return false;
     }
-    if (!S_ISREG(sb.st_mode))
+    if (!S_ISREG(sb_script.st_mode))
     {
         _error_code = 403;
         _state = CGI_ERROR;
@@ -266,7 +272,6 @@ bool CgiHandler::startCgi(int write_end)
         return false;
     }
 
-    // Fix #5: validate env contract before forking — hard failure if broken
     if (!validate_env_contract())
     {
         std::cerr << "[cgi] env contract FAILED — aborting CGI launch\n";
@@ -275,8 +280,6 @@ bool CgiHandler::startCgi(int write_end)
         return false;
     }
 
-    // Fix #3: need_stdin whenever the request has a body, regardless of method.
-    // RFC 3875 §4.1.2 — STDIN is used when CONTENT_LENGTH > 0.
     const std::string& body = _request.body;
     bool need_stdin = !body.empty();
 
@@ -305,17 +308,25 @@ bool CgiHandler::startCgi(int write_end)
 
     if (_child_pid == 0)
     {
-        // ── Fix #1: dup2 ALL three fds before closing any originals ──────
-        // Doing them in sequence risks fd aliasing: if write_end == 2, then
-        // dup2(devnull, STDERR_FILENO) would close write_end before we
-        // redirect stdout, corrupting the output pipe.
-        // Safe pattern: dup2 all targets first, then close all originals.
+        // ── TOCTOU Fix: re-verify inodes before execve ───────────────────
+        // Compare st_ino + st_dev against snapshots taken in parent.
+        // If the file was swapped in the fork()→execve() window, the
+        // inode numbers won't match and we abort before executing anything.
+        struct stat verify_cgi;
+        if (stat(cgi_path.c_str(), &verify_cgi) != 0
+            || verify_cgi.st_ino != sb_cgi.st_ino
+            || verify_cgi.st_dev != sb_cgi.st_dev)
+            _exit(127);
 
-        // 1. stdout → write_end (CGI output pipe)
+        struct stat verify_script;
+        if (stat(script_file.c_str(), &verify_script) != 0
+            || verify_script.st_ino != sb_script.st_ino
+            || verify_script.st_dev != sb_script.st_dev)
+            _exit(127);
+
         if (dup2(write_end, STDOUT_FILENO) == -1)
             _exit(1);
 
-        // 2. stderr → /dev/null
         int devnull_w = open("/dev/null", O_WRONLY);
         if (devnull_w < 0)
             _exit(1);
@@ -324,9 +335,8 @@ bool CgiHandler::startCgi(int write_end)
             close(devnull_w);
             _exit(1);
         }
-        close(devnull_w);   // original fd no longer needed
+        close(devnull_w);
 
-        // 3. stdin → cgi_in_pipe[0] or /dev/null
         if (need_stdin)
         {
             if (dup2(cgi_in_pipe[0], STDIN_FILENO) == -1)
@@ -345,28 +355,34 @@ bool CgiHandler::startCgi(int write_end)
             close(devnull_r);
         }
 
-        // All dup2s done — now safe to close originals.
-        // write_end, cgi_in_pipe[0/1] are all either dup'd or unneeded.
         close(write_end);
         close_fd(cgi_in_pipe[0]);
-        // cgi_in_pipe[1] is the write end — child never uses it.
-        // It was opened O_CLOEXEC so execve will close it automatically,
-        // but we close it explicitly here to be safe.
         close_fd(cgi_in_pipe[1]);
+
+        // Resolve absolute path before chdir() changes cwd.
+        // A relative script_file becomes invalid after chdir.
+        std::string abs_script = script_file;
+        if (script_file[0] != '/')
+        {
+            char cwd_buf[4096];
+            if (::getcwd(cwd_buf, sizeof(cwd_buf)) != NULL)
+                abs_script = std::string(cwd_buf) + "/" + script_file;
+        }
 
         std::string script_dir;
         std::string script_arg;
-        std::string::size_type slash = script_file.find_last_of('/');
+        std::string::size_type slash = abs_script.find_last_of('/');
         if (slash != std::string::npos)
         {
-            script_dir = script_file.substr(0, slash);
-            script_arg = script_file.substr(slash + 1);
+            script_dir = abs_script.substr(0, slash);
+            script_arg = abs_script.substr(slash + 1);
         }
         else
         {
             script_dir = ".";
-            script_arg = script_file;
+            script_arg = abs_script;
         }
+
         if (chdir(script_dir.c_str()) != 0)
             _exit(127);
 
@@ -375,7 +391,6 @@ bool CgiHandler::startCgi(int write_end)
         argv[1] = const_cast<char*>(script_arg.c_str());
         argv[2] = NULL;
 
-        // Sanity-check: _env_ptrs must be NULL-terminated
         if (_env_ptrs.empty() || _env_ptrs.back() != NULL)
             _exit(127);
 
@@ -386,9 +401,7 @@ bool CgiHandler::startCgi(int write_end)
     // ── parent ───────────────────────────────────────────────────────────
     if (need_stdin)
     {
-        close_fd(cgi_in_pipe[0]);  // parent never reads from child's stdin
-        // Make the write end non-blocking so EventLoop can drain it
-        // incrementally via EPOLLOUT without blocking the server.
+        close_fd(cgi_in_pipe[0]);
         int flags = fcntl(cgi_in_pipe[1], F_GETFL, 0);
         if (flags != -1)
             fcntl(cgi_in_pipe[1], F_SETFL, flags | O_NONBLOCK);
@@ -398,7 +411,6 @@ bool CgiHandler::startCgi(int write_end)
     _state = CGI_WAITING;
     return true;
 }
-
 CgiHandler::~CgiHandler()
 {
     close_fd(cgi_in_pipe[0]);
