@@ -24,3 +24,4 @@ www/data/user_log.txt
 # Un-ignore my two specific markdown files
 !subject.md 
 !CMBS_bugs.md
+!violation.md 

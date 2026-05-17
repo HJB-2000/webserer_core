@@ -89,35 +89,35 @@ Include a summary table showing the pattern: ENOENT errors are incorrectly treat
    - Impact: Bypass body size limits, memory corruption
    - Fix: Add overflow check: if (cl > SIZE_MAX / 10) { req.parse_state = PSTATE_ERROR; req.error_code = 400; return; }
 
-# [] 3. Bug 8: TOCTOU in File Serving
+# [c] 3. Bug 8: TOCTOU in File Serving
    - Location: src/ResponseHandler.cpp lines 452-465
    - Problem: open() called then fstat(), file could be replaced between operations
    - Severity: MEDIUM
    - Impact: Serve wrong content, crash
    - Fix: Use fstat() immediately after open(), or use openat() with directory fd
 
-# [] 4. Bug 9: Symlink Attack in Autoindex
+# [c] 4. Bug 9: Symlink Attack in Autoindex
    - Location: src/ResponseHandler.cpp lines 534-544
    - Problem: stat() follows symlinks without validation in autoindex
    - Severity: HIGH
    - Impact: Information disclosure, file access
    - Fix: Use lstat() to detect symlinks, or validate path with realpath()
 
-# [] 5. Bug 10: Resource Exhaustion - Unbounded Pending Reap List
+# [x] 5. Bug 10: Resource Exhaustion - Unbounded Pending Reap List
    - Location: src/EventLoop.cpp lines 453-481
    - Problem: _pending_reap vector can grow unbounded with stuck CGI processes
    - Severity: MEDIUM
    - Impact: Memory exhaustion DoS
    - Fix: Add hard limit on _pending_reap size (e.g., 1000 entries)
 
-# [] 6. Bug 11: Missing Error Handling in _modifyEventFd
+# [x] 6. Bug 11: Missing Error Handling in _modifyEventFd
    - Location: src/EventLoop.cpp lines 115-127
    - Problem: epoll_ctl MOD failure only logs, connection hangs indefinitely
    - Severity: MEDIUM
    - Impact: Connection hangs
    - Fix: Close connection on MOD failure
 
-# [] 7. Bug 12: Double Close Risk in CGI stdin_fd
+# [c] 7. Bug 12: Double Close Risk in CGI stdin_fd
    - Location: src/EventLoop.cpp lines 265-278
    - Problem: _closeCgiStdin() called from multiple places, race condition between check and close
    - Severity: LOW
@@ -131,14 +131,14 @@ Include a summary table showing the pattern: ENOENT errors are incorrectly treat
    - Impact: epoll fd leaks to CGI child processes, causing event loop corruption
    - Fix: If FD_CLOEXEC fails, close the fd and throw an exception
 
-# [] 2. Bug 14: Memory Leak on EventRef Allocation Failure
+# [c] 2. Bug 14: Memory Leak on EventRef Allocation Failure
    - Location: src/EventLoop.cpp line 91
    - Problem: If new EventRef throws std::bad_alloc, the fd is not cleaned up
    - Severity: LOW
    - Impact: fd remains open but untracked
    - Fix: Wrap in try-catch or use std::nothrow
 
-# [] 3. Bug 15: result_write_fd Always Closed Even on CGI Failure
+# [c] 3. Bug 15: result_write_fd Always Closed Even on CGI Failure
    - Location: src/EventLoop.cpp line 252
    - Problem: result_write_fd closed unconditionally, even if CGI start fails
    - Severity: MEDIUM
@@ -152,7 +152,7 @@ Include a summary table showing the pattern: ENOENT errors are incorrectly treat
    - Impact: Orphaned fd if epoll_ctl fails
    - Fix: Call _unregisterEventFd first, then erase from map
 
-# [] 5. Bug 17: Hardcoded CGI Timeout
+# [c] 5. Bug 17: Hardcoded CGI Timeout
    - Location: src/EventLoop.cpp line 491
    - Problem: CGI timeout hardcoded to 10 seconds, not configurable
    - Severity: LOW
@@ -166,14 +166,14 @@ Include a summary table showing the pattern: ENOENT errors are incorrectly treat
    - Impact: Bypass limit if buffer corrupted
    - Fix: Add check: if (_head > _storage.size()) { /* error */ }
 
-# [] 7. Bug 19: ConnectionManager::rearmEpoll Throws Instead of Handling Error
+# [c] 7. Bug 19: ConnectionManager::rearmEpoll Throws Instead of Handling Error
    - Location: src/ConnectionManager.cpp lines 132-135
    - Problem: Throws exception on epoll_ctl MOD failure, can crash server
    - Severity: HIGH
    - Impact: Server crash on single connection failure
    - Fix: Replace throw with error logging and close connection
 
-# [] 8. Bug 20: No Try-Catch Around EventLoop Constructor in main
+# [c] 8. Bug 20: No Try-Catch Around EventLoop Constructor in main
    - Location: src/main.cpp line 94
    - Problem: EventLoop constructor can throw, not wrapped in try-catch
    - Severity: HIGH
