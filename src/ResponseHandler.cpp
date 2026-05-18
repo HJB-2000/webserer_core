@@ -33,7 +33,7 @@ static std::string htmlEscape(const std::string& s)
 #include <sys/types.h>   // size_t, pid_t
 #include <dirent.h>      // opendir, readdir, closedir
 #include <fcntl.h>       // open, O_RDONLY, O_WRONLY, O_CREAT, O_TRUNC
-#include <unistd.h>      // read, write, close, unlink, getpid
+#include <unistd.h>      // read, write, close, getpid
 #include <ctime>         // time, gmtime, strftime
 #include <cerrno>        // errno
 #include <cstring>       // strerror

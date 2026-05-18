@@ -22,7 +22,9 @@ static bool is_valid_octet(const std::string& s)
         if (!isdigit(static_cast<unsigned char>(s[i])))
             return false;
     }
-    int num = atoi(s.c_str());
+    long num = 0;
+    if (!safe_strtol(s, num))
+        return false;
     return num >= 0 && num <= 255;
 }
 
