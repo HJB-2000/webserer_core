@@ -2,14 +2,8 @@
 #define CGI_HANDLER_HPP
 
 #include <sys/types.h>
-#include <sys/time.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <signal.h>
 #include <string>
 #include <vector>
-#include <iostream>
-#include <errno.h>
 
 #include "Headers/HttpRequest.hpp"
 #include "conf/serverConfig.hpp"
@@ -34,20 +28,14 @@ class CgiHandler
 
         CgiState           getState()        const;
         int                getErrorCode()    const;
-        pid_t              getChildPid()     const { return _child_pid; }
+        pid_t              getChildPid()     const;
 
-        int  getStdinWriteFd()  const { return cgi_in_pipe[1];  }
-        // int  getStdoutReadFd()  const { return cgi_out_pipe[0]; }
 
         // Transfer ownership of the stdin write fd to the caller.
         // After this call, CgiHandler will no longer close the fd in its
         // destructor — the caller must close it.
-        int  releaseStdinFd()
-        {
-            int fd = cgi_in_pipe[1];
-            cgi_in_pipe[1] = -1;
-            return fd;
-        }
+        int  releaseStdinFd();
+
 
     private:
         void filling_meta_variables(const HttpRequest& request, const Server& config, const Location& location);
@@ -62,12 +50,10 @@ class CgiHandler
         std::string          _script_path;
 
         pid_t   _child_pid;
-        int     cgi_in_pipe[2];
-        // int     cgi_out_pipe[2];   // unused in new contract
+        int     _cgi_in_pipe[2];
 
         CgiState     _state;
 
-        struct timeval  _start_time;
 
         int          _error_code;
 

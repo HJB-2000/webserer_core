@@ -5,6 +5,8 @@
 #include <cerrno>
 #include <cctype>
 
+
+
 bool safe_strtol(const std::string& s, long& out)
 {
     if (s.empty())
@@ -16,12 +18,19 @@ bool safe_strtol(const std::string& s, long& out)
             return false;
     }
 
-    errno = 0;
-    out = std::strtol(s.c_str(), NULL, 10);
+    unsigned long long result = 0;
+    unsigned long long max_long = LONG_MAX;
+    for (size_t i = 0; i < s.length(); ++i)
+    {
+        int digit = s[i] - '0';
 
-    if (errno == ERANGE)
-        return false;
+        if (result > (max_long - digit) / 10)
+            return false;
 
+        result = (result * 10) + digit;
+    }
+
+    out = static_cast<long>(result);
     return true;
 }
 

@@ -1,6 +1,5 @@
 #include "CgiHandler.hpp"
 
-#include <sys/time.h>
 #include <sstream>
 #include <iostream>
 #include <cctype>
@@ -8,7 +7,6 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <sys/epoll.h>
 
 
 bool CgiHandler::isEnvKeyRequired(const std::string& key) const
@@ -76,11 +74,11 @@ bool CgiHandler::validate_env_contract() const
 void CgiHandler::log_env_once()
 {
     if (_env_logged) return;
-    std::cerr << "[cgi][env] generated entries:" << std::endl;
+    std::cerr << "-------[cgi][env] generated entries:-------" << std::endl;
     for (size_t i = 0; i < _meta_env.size(); ++i)
         std::cerr << "  " << _meta_env[i] << std::endl;
-    std::cerr << "[cgi][env] contract check: "
-              << (validate_env_contract() ? "PASS" : "FAIL") << std::endl;
+    std::cerr << "-------[cgi][env] contract check: "
+              << (validate_env_contract() ? "PASS-------" : "FAIL-------") << std::endl;
     _env_logged = true;
 }
 
@@ -195,9 +193,8 @@ CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const L
       _script_path(script_path), _child_pid(-1), _state(CGI_IDLE),
       _error_code(0), _env_logged(false), _client_ip(client_ip)
 {
-    cgi_in_pipe[0] = -1;
-    cgi_in_pipe[1] = -1;
-    gettimeofday(&_start_time, NULL);
+    _cgi_in_pipe[0] = -1;
+    _cgi_in_pipe[1] = -1;
     filling_meta_variables(request, config, location);
 }
 
@@ -209,7 +206,6 @@ void CgiHandler::close_fd(int& fd_pipe)
         fd_pipe = -1;
     }
 }
-#include <stdio.h>
 bool CgiHandler::startCgi(int write_end)
 {
     std::string cgi_path = _location.getCGI_path();
@@ -285,8 +281,21 @@ bool CgiHandler::startCgi(int write_end)
 
     if (need_stdin)
     {
-        if (pipe2(cgi_in_pipe, O_CLOEXEC) == -1)
+        if (::pipe(_cgi_in_pipe) == -1)
         {
+            _error_code = 500;
+            _state = CGI_ERROR;
+            return false;
+        }
+
+        // Set FD_CLOEXEC to guarantee no descriptor leaks into unrelated forks
+        if (::fcntl(_cgi_in_pipe[0], F_SETFD, FD_CLOEXEC) == -1 ||
+            ::fcntl(_cgi_in_pipe[1], F_SETFD, FD_CLOEXEC) == -1)
+        {
+            ::close(_cgi_in_pipe[0]);
+            ::close(_cgi_in_pipe[1]);
+            _cgi_in_pipe[0] = -1;
+            _cgi_in_pipe[1] = -1;
             _error_code = 500;
             _state = CGI_ERROR;
             return false;
@@ -298,8 +307,8 @@ bool CgiHandler::startCgi(int write_end)
     {
         if (need_stdin)
         {
-            close_fd(cgi_in_pipe[0]);
-            close_fd(cgi_in_pipe[1]);
+            close_fd(_cgi_in_pipe[0]);
+            close_fd(_cgi_in_pipe[1]);
         }
         _error_code = 500;
         _state = CGI_ERROR;
@@ -339,7 +348,7 @@ bool CgiHandler::startCgi(int write_end)
 
         if (need_stdin)
         {
-            if (dup2(cgi_in_pipe[0], STDIN_FILENO) == -1)
+            if (dup2(_cgi_in_pipe[0], STDIN_FILENO) == -1)
                 _exit(1);
         }
         else
@@ -356,36 +365,26 @@ bool CgiHandler::startCgi(int write_end)
         }
 
         close(write_end);
-        close_fd(cgi_in_pipe[0]);
-        close_fd(cgi_in_pipe[1]);
-
-        // Resolve absolute path before chdir() changes cwd.
-        // A relative script_file becomes invalid after chdir.
-        std::string abs_script = script_file;
-        if (script_file[0] != '/')
-        {
-            char cwd_buf[4096];
-            if (::getcwd(cwd_buf, sizeof(cwd_buf)) != NULL)
-                abs_script = std::string(cwd_buf) + "/" + script_file;
-        }
+        close_fd(_cgi_in_pipe[0]);
+        close_fd(_cgi_in_pipe[1]);
 
         std::string script_dir;
         std::string script_arg;
-        std::string::size_type slash = abs_script.find_last_of('/');
+        std::string::size_type slash = script_file.find_last_of('/');
         if (slash != std::string::npos)
         {
-            script_dir = abs_script.substr(0, slash);
-            script_arg = abs_script.substr(slash + 1);
+            script_dir = script_file.substr(0, slash);
+            script_arg = script_file.substr(slash + 1);
         }
         else
         {
             script_dir = ".";
-            script_arg = abs_script;
+            script_arg = script_file;
         }
 
         if (chdir(script_dir.c_str()) != 0)
             _exit(127);
-
+        
         char* argv[3];
         argv[0] = const_cast<char*>(cgi_path.c_str());
         argv[1] = const_cast<char*>(script_arg.c_str());
@@ -401,20 +400,19 @@ bool CgiHandler::startCgi(int write_end)
     // ── parent ───────────────────────────────────────────────────────────
     if (need_stdin)
     {
-        close_fd(cgi_in_pipe[0]);
-        int flags = fcntl(cgi_in_pipe[1], F_GETFL, 0);
+        close_fd(_cgi_in_pipe[0]);
+        int flags = fcntl(_cgi_in_pipe[1], F_GETFL, 0);
         if (flags != -1)
-            fcntl(cgi_in_pipe[1], F_SETFL, flags | O_NONBLOCK);
+            fcntl(_cgi_in_pipe[1], F_SETFL, flags | O_NONBLOCK);
     }
 
-    gettimeofday(&_start_time, NULL);
     _state = CGI_WAITING;
     return true;
 }
 CgiHandler::~CgiHandler()
 {
-    close_fd(cgi_in_pipe[0]);
-    close_fd(cgi_in_pipe[1]);
+    close_fd(_cgi_in_pipe[0]);
+    close_fd(_cgi_in_pipe[1]);
 }
 
 CgiState CgiHandler::getState() const
@@ -425,4 +423,16 @@ CgiState CgiHandler::getState() const
 int CgiHandler::getErrorCode() const
 {
     return _error_code;
+}
+
+int CgiHandler::releaseStdinFd()
+{
+    int fd = _cgi_in_pipe[1];
+    _cgi_in_pipe[1] = -1;
+    return fd;
+}
+
+pid_t  CgiHandler::getChildPid() const 
+{
+    return _child_pid; 
 }

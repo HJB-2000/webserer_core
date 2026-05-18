@@ -22,7 +22,9 @@ static bool is_valid_octet(const std::string& s)
         if (!isdigit(static_cast<unsigned char>(s[i])))
             return false;
     }
-    int num = atoi(s.c_str());
+    long num = 0;
+    if (!safe_strtol(s, num))
+        return false;
     return num >= 0 && num <= 255;
 }
 
@@ -209,9 +211,12 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
             report_parse_error("Syntax Error: directive ", stream, i,
                 "'client_max_body_size expects a single value' in parseDirective of server");
         long long tmp = parse_cl_mx_bd_sz(values[0]);
+        
         if (tmp == -1 || tmp > MAX_CLIENT_BODY_SIZE_LIMIT)
+        {
             report_parse_error("Syntax Error", stream, i,
                 "Invalid client_max_body_size");
+            }
         server.setMaxBodySize(tmp);
     }
     else if (directive == "timeout")

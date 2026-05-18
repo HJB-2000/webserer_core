@@ -96,9 +96,10 @@ public:
     bool peerHalfClosed() const;
     void updateBufferSizes(size_t new_max);
 
+
     // getter and setter for the ip_client
-    const std::string& get_clientIp() const { return _client_ip; }
-    void setClientIp(const std::string& ip) { _client_ip = ip; }
+    const std::string& get_clientIp() const;
+    void setClientIp(const std::string& ip);
 private:
 
     // ── non-copyable ──────────────────────────────────────

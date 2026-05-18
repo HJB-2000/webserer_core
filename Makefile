@@ -29,6 +29,30 @@ SRCS   += conf/parsing.cpp \
 
 OBJS    = $(SRCS:.cpp=.o)
 
+# ── headers ─────────────────────────────────
+HEADERS = Headers/API_conf.hpp \
+          Headers/Logger.hpp \
+          Headers/EventLoop.hpp \
+          Headers/CgiStarter.hpp \
+          Headers/CgiRequestInfo.hpp \
+          Headers/ResponseHandler.hpp \
+          Headers/ConnectionManager.hpp \
+          Headers/EventRef.hpp \
+          Headers/HttpRequest.hpp \
+          Headers/ConnectionState.hpp \
+          Headers/CgiJob.hpp \
+          Headers/HttpParser.hpp \
+          Headers/Connection.hpp \
+          Headers/buffer.hpp \
+          cgi/CgiHandler.hpp \
+          conf/serverConfig.hpp \
+          conf/LexerConfig.hpp \
+          conf/parserConf.hpp \
+          conf/locationConfig.hpp \
+          conf/eventsConfig.hpp \
+          conf/parsing.hpp \
+          conf/httpConfig.hpp
+
 # ── targets ───────────────────────────────────────────────────
 
 all: $(NAME)
@@ -36,7 +60,7 @@ all: $(NAME)
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)
 
-%.o: %.cpp
+%.o: %.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:

@@ -196,3 +196,13 @@ void Connection::updateBufferSizes(size_t new_max)
     _read_buffer.setMaxSize(new_max);  
     _write_buffer.setMaxSize(new_max);  
 }
+
+const std::string& Connection::get_clientIp() const
+{
+    return _client_ip; 
+}
+
+void Connection::setClientIp(const std::string& ip) 
+{
+    _client_ip = ip; 
+}

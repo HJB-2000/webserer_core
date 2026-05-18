@@ -3,6 +3,9 @@
 #include <cstdlib>
 #include <set>
 #include <stdexcept>
+#include <climits>
+#include <cerrno>
+
 
 ParserConf::ParserConf() : _exist_http(false), _exist_server(false)
 {
@@ -147,37 +150,99 @@ bool is_valid_size(const std::string str)
     return true;
 }
  
-
-#include <climits>
-#include <cerrno>
-
-long long parse_cl_mx_bd_sz(std::string val)
+static double ft_strtod(const char* str, char** endptr)
 {
-    char* end;
-    if(!is_valid_size(val))
-        return -1;
-
-    errno = 0;
-    double value = strtod(val.c_str(), &end);
-
-    if (errno == ERANGE || value < 0)
-        return -1;
-
-    long long multiplier = 1;
-    switch (*end) {
-        case 'k': case 'K': multiplier = 1024LL;         break;
-        case 'M': case 'm': multiplier = 1024LL * 1024;  break;
-        case 'G': case 'g': multiplier = 1024LL * 1024 * 1024; break;
-        case 0:             multiplier = 1;               break;
-        default:            return -1;
+    if (!str)
+    {
+        if (endptr) 
+            *endptr = NULL;
+        return 0.0;
     }
+
+    size_t i = 0;
+    double sign = 1.0;
+    if (str[i] == '-')
+    {
+        sign = -1.0;
+        i++;
+    }
+    else if (str[i] == '+')
+    {
+        i++;
+    }
+
+    double whole_part = 0.0;
+    bool has_digits = false;
+
+    while (str[i] >= '0' && str[i] <= '9')
+    {
+        whole_part = (whole_part * 10.0) + (str[i] - '0');
+        has_digits = true;
+        i++;
+    }
+
+    double frac_part = 0.0;
+    bool has_frac_digits = false;
+    bool dot_present = false;
+
+    if (str[i] == '.')
+    {
+        dot_present = true;
+        i++;
+        double divisor = 10.0;
+        while (str[i] >= '0' && str[i] <= '9')
+        {
+            frac_part += (str[i] - '0') / divisor;
+            divisor *= 10.0;
+            has_frac_digits = true;
+            i++;
+        }
+    }
+    if ((dot_present && !has_digits) || (dot_present && !has_frac_digits) || (!has_digits && !has_frac_digits))
+    {
+        if (endptr)
+            *endptr = const_cast<char*>(str);
+        return 0.0;
+    }
+
+    if (endptr)
+        *endptr = const_cast<char*>(&str[i]);
+
+    return sign * (whole_part + frac_part);
+}
+
+
+long long parse_cl_mx_bd_sz(std::string token)
+{
+    if (token.empty())
+        return -1;
+
+    char* endptr = NULL;
+    double value = ft_strtod(token.c_str(), &endptr);
+
+    if (endptr == token.c_str())
+        return -1;
+
+    std::string unit = endptr;
+    long long multiplier = 1;
+
+    if (!unit.empty())
+    {
+        if (unit == "K" || unit == "k") multiplier = 1024LL;
+        else if (unit == "M" || unit == "m") multiplier = 1024LL * 1024LL;
+        else if (unit == "G" || unit == "g") multiplier = 1024LL * 1024LL * 1024LL;
+        else return -1;
+    }
+    if (value <= 0.0)
+        return -1;
     if (multiplier == 1 && value != (long long)value)
         return -1;
+
     if (value > (double)LLONG_MAX / multiplier)
         return -1;
-
     return (long long)(value * multiplier);
 }
+
 
 void report_parse_error(const std::string& msg, std::vector<Lexer>& stream, size_t i, const char* where)
 {

@@ -44,7 +44,6 @@ std::vector<ServerConfig> API_conf(int argc, char** argv)
         buff << config_file.rdbuf();
         if (buff.str().empty())
         {
-            // std::cerr << "[API_conf] config file is empty: " << config_path << "\n";
             config_file.close();
             throw std::runtime_error(std::string("[API_conf] config file is empty"));
         }
@@ -78,7 +77,6 @@ std::vector<ServerConfig> API_conf(int argc, char** argv)
     catch (const std::runtime_error& e)
     {
         config_file.close();
-        // std::cerr << "[API_conf] parse error:" << e.what() << "\n";
         throw;
     }
 }

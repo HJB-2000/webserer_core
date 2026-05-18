@@ -29,17 +29,17 @@ static std::string htmlEscape(const std::string& s)
     return out;
 }
 
-#include <sys/stat.h>    // stat, fstat, S_ISREG, S_ISDIR
+#include <sys/stat.h>    // stat, S_ISREG, S_ISDIR
 #include <sys/types.h>   // size_t, pid_t
 #include <dirent.h>      // opendir, readdir, closedir
 #include <fcntl.h>       // open, O_RDONLY, O_WRONLY, O_CREAT, O_TRUNC
-#include <unistd.h>      // read, write, close, unlink, getpid
+#include <unistd.h>      // read, write, close, getpid
 #include <ctime>         // time, gmtime, strftime
 #include <cerrno>        // errno
 #include <cstring>       // strerror
 #include <sstream>       // std::ostringstream
 #include <iostream>      // std::cerr
-
+#include <cstdio>        // std::remove
 
 // ============================================================
 //  Constructor  —  populate MIME table
@@ -462,7 +462,7 @@ void ResponseHandler::_serveStaticFile(
     }
 
     struct stat st;
-    if (::fstat(fd, &st) < 0)
+    if (::stat(fs_path.c_str(), &st) < 0)
     {
         ::close(fd);
         _sendErrorInternal(500, req, cfg, wb);
@@ -688,7 +688,6 @@ void ResponseHandler::_handlePost(
         _appendStr(wb, resp_body);
 }
 
-
 // ============================================================
 //  _handleDelete
 //
@@ -701,8 +700,12 @@ void ResponseHandler::_handleDelete(
     const HttpRequest&  req,
     const ServerConfig& cfg,
     Buffer&             wb)
-{
-    if (::unlink(fs_path.c_str()) < 0)
+{   
+    /*
+        C89/C90 standard (ISO/IEC 9899:1990):
+        4.9.4.1 The remove function
+    */
+    if (std::remove(fs_path.c_str()) != 0)
     {
         if (errno == ENOENT)
             _sendErrorInternal(404, req, cfg, wb);
@@ -910,10 +913,10 @@ std::string ResponseHandler::_getMimeType(const std::string& path) const
 // ============================================================
 std::string ResponseHandler::_httpDate() const
 {
-    time_t     now = ::time(NULL);
-    struct tm* gmt = ::gmtime(&now);
+    time_t     now = std::time(NULL);
+    struct tm* gmt = std::gmtime(&now);
     char       buf[64];
-    ::strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", gmt);
+    std::strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", gmt);
     return std::string(buf);
 }
 
