@@ -10,7 +10,6 @@
 #include "Headers/EventLoop.hpp"
 #include "Headers/HttpParser.hpp"
 #include "Headers/ResponseHandler.hpp"
-#include "Headers/CgiStarter.hpp"
 #include "cgi/CgiHandler.hpp"
 
 #include <cerrno>
@@ -241,8 +240,20 @@ void EventLoop::_addCgiFd(int result_fd, int client_fd)
 void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
 {
     int fds[2];
-    if (::pipe2(fds, O_CLOEXEC) < 0)
+    if (::pipe(fds) < 0)
     {
+        _responder.sendError(500, *conn->config(), conn->writeBuffer());
+        conn->setWriting();
+        _rearmClient(conn->fd());
+        return;
+    }
+
+    // apply the FD_CLOEXEC flag to both file descriptors via fcntl
+    if (::fcntl(fds[0], F_SETFD, FD_CLOEXEC) < 0 || 
+        ::fcntl(fds[1], F_SETFD, FD_CLOEXEC) < 0)
+    {
+        ::close(fds[0]);
+        ::close(fds[1]);
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
         conn->setWriting();
         _rearmClient(conn->fd());
@@ -263,7 +274,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
     }
     CgiJob* job = NULL;
     try {
-        job = new CgiJob(conn->fd(), result_read_fd, conn->writeBuffer().maxSize());
+        job = new CgiJob(conn->fd(), result_read_fd, conn->writeBuffer().maxSize(), conn->config()->get_timeout_seconds());
         _addCgiFd(result_read_fd, conn->fd());
         _cgi_jobs[result_read_fd] = job;
     }
@@ -539,7 +550,7 @@ void EventLoop::_reapPending()
     }
     _pending_reap.swap(remaining);
 }
-
+// need to check
 void EventLoop::_closeTimedOutCgiJobs()
 {
     const time_t now = std::time(NULL);
@@ -548,12 +559,16 @@ void EventLoop::_closeTimedOutCgiJobs()
     for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
          it != _cgi_jobs.end(); ++it)
     {
-        if (now - it->second->start_time > 10)
+        if (now - it->second->start_time > it->second->_timeout_seconds)
+        {
             timed_out.push_back(it->first);
+        }
     }
 
     for (size_t i = 0; i < timed_out.size(); ++i)
+    {
         _failCgiJob(timed_out[i], 504);
+    }
 }
 
 void EventLoop::_dispatch(const epoll_event& ev)

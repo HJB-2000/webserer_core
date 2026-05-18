@@ -191,7 +191,10 @@ std::vector<int> ConnectionManager::getTimedOutFds(time_t default_timeout_second
     {
         Connection*         conn = it->second;
         const ServerConfig* cfg  = conn->config();
-
+        // CGI-running connections are managed by _closeTimedOutCgiJobs()
+        // Don't let the connection timeout race against the CGI timeout
+        if (conn->state() == CSTATE_CGI_RUNNING)
+            continue;
         time_t limit = (cfg != NULL)
             ? static_cast<time_t>(cfg->get_timeout_seconds())
             : default_timeout_seconds;

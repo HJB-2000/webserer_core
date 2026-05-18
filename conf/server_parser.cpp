@@ -209,9 +209,12 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
             report_parse_error("Syntax Error: directive ", stream, i,
                 "'client_max_body_size expects a single value' in parseDirective of server");
         long long tmp = parse_cl_mx_bd_sz(values[0]);
+        
         if (tmp == -1 || tmp > MAX_CLIENT_BODY_SIZE_LIMIT)
+        {
             report_parse_error("Syntax Error", stream, i,
                 "Invalid client_max_body_size");
+            }
         server.setMaxBodySize(tmp);
     }
     else if (directive == "timeout")
