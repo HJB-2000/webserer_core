@@ -12,9 +12,9 @@ SRCS    = src/main.cpp \
           src/HttpRequest.cpp \
           src/ConnectionManager.cpp \
           src/ConnectionState.cpp \
+          src/Logger.cpp \
           src/ResponseHandler.cpp \
           cgi/CgiHandler.cpp
-        #   src/CgiStarter.cpp
 
 # ── teammate config-parser sources (Phase 1) ──────────────────
 SRCS   += conf/parsing.cpp \
@@ -25,7 +25,7 @@ SRCS   += conf/parsing.cpp \
           conf/httpConfig.cpp \
           conf/parserConf.cpp \
           conf/server_parser.cpp \
-          conf/location_parser.cpp
+          conf/location_parser.cpp 
 
 OBJS    = $(SRCS:.cpp=.o)
 

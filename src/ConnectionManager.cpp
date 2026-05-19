@@ -16,7 +16,7 @@
 #include <vector>
 #include <ctime>
 #include <sstream>
-
+#include "Headers/Logger.hpp"
 #include <arpa/inet.h>   // only for ntohl, ntohs etc., not for inet_ntop
 static std::string addrToString(const struct sockaddr_storage& addr)
 {
@@ -29,23 +29,6 @@ static std::string addrToString(const struct sockaddr_storage& addr)
         << ((ip >> 8)  & 0xFF) << '.'
         << (ip & 0xFF);
     return oss.str();
-}
-
-// ── readSomaxconn ────────────────────────────────────────────
-//
-// Reads the kernel's accept-queue hard cap from procfs.
-// Uses only allowed syscalls: open, read, close.
-static int readSomaxconn()
-{
-    int fd = ::open("/proc/sys/net/core/somaxconn", O_RDONLY);
-    if (fd < 0)
-        return SOMAXCONN;
-    char buf[16];
-    std::memset(buf, 0, sizeof(buf));
-    ::read(fd, buf, sizeof(buf) - 1);
-    ::close(fd);
-    int val = std::atoi(buf);
-    return (val > 0) ? val : SOMAXCONN;
 }
 
 // ── ctor / dtor ──────────────────────────────────────────────

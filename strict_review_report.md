@@ -36,25 +36,25 @@ These are **still present** in the codebase and will cause a grade 0 if the eval
 
 | Line(s) | Function | Context |
 |---------|----------|---------|
-| 218, 224, 238 | `gettimeofday()` | `Logger::Stopwatch` — constructor, `elapsed_ms()`, `reset()` |
-| 103, 259 | `::gmtime()` | `TeeStreambuf::_utcTimestamp()` and `Logger::_writeTagged()` |
-| 105, 261 | `::strftime()` | `TeeStreambuf::_utcTimestamp()` and `Logger::_writeTagged()` |
+| 218, 224, 238 | `✅gettimeofday()` | `Logger::Stopwatch` — constructor, `elapsed_ms()`, `reset()` |
+| 103, 259 | `✅::gmtime()` | `TeeStreambuf::_utcTimestamp()` and `Logger::_writeTagged()` |
+| 105, 261 | `✅::strftime()` | `TeeStreambuf::_utcTimestamp()` and `Logger::_writeTagged()` |
 
-**Severity: CRITICAL** — `gettimeofday` is **not** in the allowed list. `gmtime` and `strftime` are called via `::` (global scope, not `std::` namespace). While `std::gmtime`/`std::strftime` are arguably C++ stdlib, the `::` variants are POSIX and strictly speaking may be flagged by a strict evaluator.
+**Severity: CRITICAL** — `✅ gettimeofday` is **not** in the allowed list. `gmtime` and `strftime` are called via `::` (global scope, not `std::` namespace). While `std::gmtime`/`std::strftime` are arguably C++ stdlib, the `::` variants are POSIX and strictly speaking may be flagged by a strict evaluator.
 
-**Fix**: Replace `gettimeofday` in Stopwatch with `std::time(NULL)` (gives second-level precision, which is fine for a log stopwatch). Use `std::gmtime` and `std::strftime` (with `std::` prefix) for the timestamp functions.
+**Fix**: Replace `✅ gettimeofday` in Stopwatch with `std::time(NULL)` (gives second-level precision, which is fine for a log stopwatch). Use `✅std::gmtime` and `✅std::strftime` (with `std::` prefix) for the timestamp functions.
 
 ### MODERATE — Other borderline functions
 
 | File | Line | Function | Risk |
 |------|------|----------|------|
-| `main.cpp` | 27 | `std::atoi(buf)` | C stdlib via `<cstdlib>` — generally safe but `safe_strtol` is available and safer |
-| `ConnectionManager.cpp` | 47 | `std::atoi(buf)` | Same as above — used in `readSomaxconn()` |
+| `✅main.cpp` | 27 | `std::atoi(buf)` | C stdlib via `<cstdlib>` — generally safe but `safe_strtol` is available and safer |
+| `✅ConnectionManager.cpp` | 47 | `std::atoi(buf)` | Same as above — used in `readSomaxconn()` |
 | ✅`server_parser.cpp` | 25 | `atoi(s.c_str())` | Called without `std::` prefix in `is_valid_octet()` — bare POSIX call |
-| `main.cpp` | 58 | `::inet_addr(host)` | **Not in allowed list** — this is a network function not listed in the subject |
+| ✅`main.cpp` | 58 | `::inet_addr(host)` | **Not in allowed list** — this is a network function not listed in the subject |
 | `ResponseHandler.cpp` | 640 | `::getpid()` | **Not in allowed list** — used for upload filename generation |
 
-**`inet_addr` and `getpid` are NOT in the allowed function list.** These are real violations.
+**`✅inet_addr` and `getpid` are NOT in the allowed function list.** These are real violations.
 
 ---
 
@@ -131,13 +131,13 @@ static void sig_handler(int)
 
 **Fix**: Use `volatile sig_atomic_t g_shutdown = 0;` in the signal handler, and check it in the event loop. Only call `stop()` from the main loop context.
 
-### BUG 4: `gmtime()` returns a static pointer — not thread-safe (Severity: LOW)
+### BUG 4: `✅ gmtime()` returns a static pointer — not thread-safe (Severity: LOW)
 
-**File**: `ResponseHandler.cpp:917`, `Logger.hpp:103,259`
+**File**: `✅ ResponseHandler.cpp:917`, `Logger.hpp:103,259`
 
 `std::gmtime()` returns a pointer to a static `struct tm`. If any other code calls `gmtime`/`localtime` between the call and the use of the pointer, the data is silently overwritten. In a single-threaded server this is technically safe, but if you ever add threads (or if the signal handler triggers during `_httpDate()`), this is a **use-after-free**.
 
-**Fix**: Use `gmtime_r()` — but it's not in the allowed list. For safety, copy the result immediately: `struct tm gmt = *std::gmtime(&now);`
+**Fix**: Use `✅ gmtime_r()` — but it's not in the allowed list. For safety, copy the result immediately: `struct tm gmt = *std::gmtime(&now);`
 
 ### BUG 5: `_handleWrite` — `send()` returning 0 causes infinite loop (Severity: LOW)
 
@@ -213,7 +213,7 @@ If `new` throws `std::bad_alloc`, `client_fd` is never closed. The commented-out
 |✅ `ResponseHandler.cpp` | 36 | Comment says `unlink, getpid` but `unlink` was replaced with `std::remove` — stale comment |
 |✅ `server_parser.cpp` | 25 | `atoi()` called without `std::` prefix — use `safe_strtol` for consistency |
 | `ResponseHandler.cpp` | 640 | `::getpid()` — **forbidden function** (see violations section) |
-| `main.cpp` | 58 | `::inet_addr()` — **forbidden function** (see violations section) |
+| `✅ main.cpp` | 58 | `::inet_addr()` — **forbidden function** (see violations section) |
 | `Connection.cpp` | 106 | Extra whitespace before `size_t server_default` |
 
 ---
@@ -222,8 +222,8 @@ If `new` throws `std::bad_alloc`, `client_fd` is never closed. The commented-out
 
 ### Must Fix (will cause grade 0 or server crash):
 
-1. **`gettimeofday` in Logger.hpp** — forbidden function, 3 call sites
-2. **`::inet_addr` in main.cpp** — forbidden function
+1. **`✅ gettimeofday` in Logger.hpp** — forbidden function, 3 call sites
+2. **`✅ ::inet_addr` in main.cpp** — forbidden function
 3. **`::getpid` in ResponseHandler.cpp** — forbidden function
 4. **Uncaught exception from `_startCgi`** — server crash on `std::bad_alloc` or epoll failure during CGI start
 
@@ -232,11 +232,11 @@ If `new` throws `std::bad_alloc`, `client_fd` is never closed. The commented-out
 5. **Signal handler calling non-async-signal-safe functions** — UB on signal during map operation
 6. **`result_write_fd` leak** in `_startCgi` catch block
 7. **`_registerEventFd` EventRef leak** on `epoll_ctl` failure
-8. **`::gmtime`/`::strftime` in Logger.hpp** — use `std::` prefix for safety
+8. **`✅ ::gmtime`/`✅::strftime` in Logger.hpp** — use `std::` prefix for safety
 
 ### Nice to Fix:
 
-9. `atoi` → `safe_strtol` in `✅ server_parser.cpp `, `main.cpp`, `ConnectionManager.cpp`
-10. Copy `gmtime` result immediately to avoid static-pointer issues
+9. `atoi` → `safe_strtol` in `✅ server_parser.cpp `, `✅ main.cpp`, ` ✅ ConnectionManager.cpp`
+10. Copy `✅ gmtime` result immediately to avoid static-pointer issues
 11. Handle `send() == 0` in `_handleWrite`
 12. Check `_setCloexec` return on epoll_fd
