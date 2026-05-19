@@ -1,0 +1,22 @@
+--- a/src/EventLoop.cpp
++++ b/src/EventLoop.cpp
+@@ -1,6 +1,8 @@
+ // EventLoop.cpp
+ 
++#include <cstdlib>   // for getenv (injection flag)
++
+ void EventLoop::_modifyEventFd(int fd, EventKind kind, uint32_t events)
+ {
++    // INJECTION: force epoll_ctl to "fail" for the first CGI rearm
++    // Remove this block after reproducing the bug.
++    static int inject_once = 1;
++    if (inject_once && ::getenv("INJECT_UAF")) {
++        inject_once = 0;
++        std::cerr << "[INJECT] Forcing _modifyEventFd failure to trigger UAF\n";
++        _manager->closeConnection(fd);   // simulate what epoll_ctl failure does
++        return;
++    }
++
+     struct epoll_event ev;
+     ev.events   = events;
+     // ... rest of _modifyEventFd unchanged ...
