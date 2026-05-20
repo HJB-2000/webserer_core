@@ -34,7 +34,7 @@ static std::string htmlEscape(const std::string& s)
 #include <dirent.h>      // opendir, readdir, closedir
 #include <fcntl.h>       // open, O_RDONLY, O_WRONLY, O_CREAT, O_TRUNC
 #include <unistd.h>      // read, write, close, getpid
-#include <ctime>         // time, gmtime, strftime
+#include <ctime>         // std::time, std::gmtime, std::strftime
 #include <cerrno>        // errno
 #include <cstring>       // strerror
 #include <sstream>       // std::ostringstream
@@ -909,7 +909,7 @@ std::string ResponseHandler::_getMimeType(const std::string& path) const
 //
 //  Returns the current UTC time in HTTP-date format:
 //  Mon, 04 Nov 2024 12:00:00 GMT
-//  Uses gmtime() as required by RFC 7231.
+//  Uses std::gmtime() as required by RFC 7231.
 // ============================================================
 std::string ResponseHandler::_httpDate() const
 {

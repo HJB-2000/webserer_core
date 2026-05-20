@@ -1,7 +1,8 @@
 NAME    = webserv
 
 CXX      = c++
-CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -Werror -I. -I conf 
+CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -Werror -fsanitize=undefined  -I. -I conf 
+# CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -fsanitize=undefined -I, -I conf #-fsanitize=address,undefined -I. -I conf
 # ── your sources ──────────────────────────────────────────────
 SRCS    = src/main.cpp \
           src/API_conf.cpp \
@@ -12,9 +13,9 @@ SRCS    = src/main.cpp \
           src/HttpRequest.cpp \
           src/ConnectionManager.cpp \
           src/ConnectionState.cpp \
+          src/Logger.cpp \
           src/ResponseHandler.cpp \
           cgi/CgiHandler.cpp
-        #   src/CgiStarter.cpp
 
 # ── teammate config-parser sources (Phase 1) ──────────────────
 SRCS   += conf/parsing.cpp \
@@ -25,7 +26,7 @@ SRCS   += conf/parsing.cpp \
           conf/httpConfig.cpp \
           conf/parserConf.cpp \
           conf/server_parser.cpp \
-          conf/location_parser.cpp
+          conf/location_parser.cpp 
 
 OBJS    = $(SRCS:.cpp=.o)
 

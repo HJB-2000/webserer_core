@@ -8,12 +8,12 @@ This report identifies all functions used in the codebase that **violate** the "
 | # | Forbidden Function | File | Line(s) | Reason |
 |---|--------------------|------|---------|--------|
 | 1 | `✅ gettimeofday` | `cgi/CgiHandler.cpp` | 157, 263 | Not in allowed list |
-| 2 | `💡gmtime->std::gmtime` | `src/ResponseHandler.cpp` | 914 | Not in allowed list |
-| 3 | `💡strftime->std::strftime`|`src/ResponseHandler.cpp` | 916 | Not in allowed list |
+| 2 | `✅gmtime->std::gmtime` | `src/ResponseHandler.cpp` | 914 | basic C standard library functions from <ctime>|
+| 3 | `✅strftime->std::strftime`|`src/ResponseHandler.cpp` | 916 |basic C standard library functions from <ctime> |
 | 4 | `✅ pipe2` | `cgi/CgiHandler.cpp` | 228 | Only `pipe` is allowed, `pipe2` is distinct |
 | 5 | `✅ pipe2` | `src/EventLoop.cpp` | 167 | Only `pipe` is allowed, `pipe2` is distinct |
 | 6 | `✅ getcwd` | `cgi/CgiHandler.cpp` | 308 | Not in allowed list |
-| 7 | `💡unlink -> remove` | `src/ResponseHandler.cpp` | 809 | Not in allowed list |
+| 7 | `✅ unlink -> remove` | `src/ResponseHandler.cpp` | 809 | Not in allowed list |
 | 8 | `✅fstat` | `src/ResponseHandler.cpp` | 684 | Not in allowed list (only `stat` is listed) |
 | 9 | `✅ strtod` | `conf/parserConf.cpp` | 162 | Not in allowed list |
 | 10 |`✅ strtol` | `conf/httpConfig.cpp` | 25 | Not in allowed list |
@@ -32,11 +32,11 @@ This report identifies all functions used in the codebase that **violate** the "
 - **Line 684**: `fstat(fd, &st);`
   - ✅ **Violation**: `fstat` is not in the allowed list. Only `stat` is permitted.
 - **Line 809**: `unlink(path.c_str());`
-  - 💡 **Violation**: `unlink` is not in the allowed list.
+  - ✅ **Violation**: `unlink` is not in the allowed list.
 - **Line 914**: `tm *timeinfo = gmtime(&rawtime);`
-  - 💡 **Violation**: `gmtime` is not in the allowed list.
+  - ✅ **Violation**: `gmtime` is not in the allowed list.
 - **Line 916**: `strftime(timebuf, sizeof(timebuf), "%a, %d %b %Y %H:%M:%S GMT", timeinfo);`
-  - 💡 **Violation**: `strftime` is not in the allowed list.
+  - ✅ **Violation**: `strftime` is not in the allowed list.
 ### 3. `src/EventLoop.cpp`
 - **Line 167**: `pipe2(_shutdown_fd, O_NONBLOCK);`
   - ✅ **Violation**: `pipe2` is not in the allowed list. Only `pipe` is permitted.

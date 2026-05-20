@@ -26,3 +26,14 @@ www/data/user_log.txt
 !CMBS_bugs.md
 !violation.md 
 !strict_review_report.md
+
+# Bug report and test suite markdown files
+!replit_bugs_report.md
+!bug_tests/README.md
+!bug_tests/bug1_uaf_startcgi/README.md
+!bug_tests/bug2_eventref_leak/README.md
+!bug_tests/bug3_epollout_dropped/README.md
+!bug_tests/bug4_shutdown_leak/README.md
+!bug_tests/bug5_ipv4_cast/README.md
+!bug_tests/bug6_const_cast/README.md
+!bug_tests/bug7_chunked_crlf/README.md

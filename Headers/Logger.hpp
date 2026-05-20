@@ -37,7 +37,6 @@
 #include <sstream>
 #include <string>
 #include <ctime>
-#include <sys/time.h>   // gettimeofday
 
 
 // ────────────────────────────────────────────────────────────
@@ -51,60 +50,14 @@
 class TeeStreambuf : public std::streambuf
 {
 public:
-
-    TeeStreambuf(std::streambuf* orig, std::ofstream& file)
-        : _orig(orig)
-        , _file(file)
-        , _at_line_start(true)
-    {}
+    TeeStreambuf(std::streambuf* orig, std::ofstream& file);
 
 protected:
-
-    virtual int overflow(int c)
-    {
-        if (c == EOF)
-            return c;
-
-        const char ch = static_cast<char>(c);
-
-        // 1. Mirror to terminal
-        _orig->sputc(ch);
-
-        // 2. Write to log file with timestamp on each new line
-        if (_at_line_start)
-        {
-            const std::string ts = _utcTimestamp();
-            _file.write(ts.c_str(), static_cast<std::streamsize>(ts.size()));
-            _at_line_start = false;
-        }
-        _file.put(ch);
-
-        if (c == '\n')
-        {
-            _at_line_start = true;
-            _file.flush();
-        }
-
-        return c;
-    }
-
-    virtual std::streamsize xsputn(const char* s, std::streamsize n)
-    {
-        for (std::streamsize i = 0; i < n; ++i)
-            overflow(static_cast<unsigned char>(s[i]));
-        return n;
-    }
+    virtual int overflow(int c);
+    virtual std::streamsize xsputn(const char* s, std::streamsize n);
 
 private:
-
-    static std::string _utcTimestamp()
-    {
-        time_t     now = ::time(NULL);
-        struct tm* gmt = ::gmtime(&now);
-        char       buf[24];
-        ::strftime(buf, sizeof(buf), "[%Y-%m-%d %H:%M:%S] ", gmt);
-        return std::string(buf);
-    }
+    static std::string _utcTimestamp();
 
     std::streambuf* _orig;
     std::ofstream&  _file;
@@ -121,58 +74,16 @@ public:
 
     // ── Log levels ────────────────────────────────────────────
     enum Level { DEBUG = 0, INFO, WARN, ERROR, PERF, STATE };
-
-    static Logger& instance()
-    {
-        static Logger inst;
-        return inst;
-    }
+    static Logger& instance();
 
     // ── Lifecycle ─────────────────────────────────────────────
 
-    void open(const std::string& path)
-    {
-        _path = path;
-        _file.open(path.c_str(), std::ios::app);
-        if (!_file.is_open())
-        {
-            std::cerr << "[Logger] WARNING: cannot open log file '"
-                      << path << "' — logging to stderr only\n";
-            return;
-        }
-
-        _orig_cerr = std::cerr.rdbuf();
-        _tee       = new TeeStreambuf(_orig_cerr, _file);
-        std::cerr.rdbuf(_tee);
-
-        std::cerr << "========================================"
-                     "========================================\n"
-                  << "[Logger] log session started  —  file: " << path << "\n"
-                  << "========================================"
-                     "========================================\n";
-    }
-
-    void close()
-    {
-        if (!_tee)
-            return;
-
-        std::cerr << "========================================"
-                     "========================================\n"
-                  << "[Logger] log session ended\n"
-                  << "========================================"
-                     "========================================\n\n";
-
-        std::cerr.rdbuf(_orig_cerr);
-        delete _tee;
-        _tee       = NULL;
-        _orig_cerr = NULL;
-        _file.close();
-    }
+    void open(const std::string& path);
+    void close();
 
     // ── Level filter ──────────────────────────────────────────
-    void  setLevel(Level min) { _min_level = min; }
-    Level getLevel() const    { return _min_level; }
+    void  setLevel(Level min);
+    Level getLevel() const;
 
     // ── Tagged log channels ───────────────────────────────────
     //
@@ -180,29 +91,17 @@ public:
     // perf()  — performance data: log file only (no terminal noise)
     // state() — connection/server state transitions: log file only
 
-    void log(Level level, const std::string& msg)
-    {
-        if (level < _min_level)
-            return;
-        // Route through cerr so TeeStreambuf timestamps it.
-        std::cerr << "[" << _levelTag(level) << "] " << msg << "\n";
-    }
+    void log(Level level, const std::string& msg);
 
     // Performance: written directly to the log file only.
     // Use for timing data, throughput metrics, etc.
-    void perf(const std::string& msg)
-    {
-        _writeTagged("PERF ", msg);
-    }
+    void perf(const std::string& msg);
 
     // State transitions: written directly to the log file only.
     // Use for connection FSM transitions, accept/close events, etc.
-    void state(const std::string& msg)
-    {
-        _writeTagged("STATE", msg);
-    }
+    void state(const std::string& msg);
 
-    const std::string& path() const { return _path; }
+    const std::string& path() const;
 
     // ── Stopwatch ─────────────────────────────────────────────
     //
@@ -215,66 +114,34 @@ public:
     class Stopwatch
     {
     public:
-        Stopwatch() { ::gettimeofday(&_start, NULL); }
+        Stopwatch();
 
         // Elapsed milliseconds since construction.
-        double elapsed_ms() const
-        {
-            struct timeval now;
-            ::gettimeofday(&now, NULL);
-            return (now.tv_sec  - _start.tv_sec)  * 1000.0
-                 + (now.tv_usec - _start.tv_usec) / 1000.0;
-        }
+        double elapsed_ms() const;
 
         // Returns "X.XXX ms" ready for embedding in a log message.
-        std::string str() const
-        {
-            std::ostringstream oss;
-            oss << elapsed_ms() << " ms";
-            return oss.str();
-        }
+        std::string str() const;
 
         // Reset to now.
-        void reset() { ::gettimeofday(&_start, NULL); }
+    void reset();
 
     private:
-        struct timeval _start;
+        time_t _start;
     };
 
 private:
 
-    Logger() : _tee(NULL), _orig_cerr(NULL), _min_level(INFO) {}
-    ~Logger() { close(); }
+    Logger();
+    ~Logger();
 
     Logger(const Logger&);
     Logger& operator=(const Logger&);
 
     // Write a PERF/STATE tagged line directly to the log file
     // (bypasses the tee so it does NOT appear on the terminal).
-    void _writeTagged(const char* tag, const std::string& msg)
-    {
-        if (!_file.is_open())
-            return;
-        time_t     now = ::time(NULL);
-        struct tm* gmt = ::gmtime(&now);
-        char       buf[24];
-        ::strftime(buf, sizeof(buf), "[%Y-%m-%d %H:%M:%S] ", gmt);
-        _file << buf << "[" << tag << "] " << msg << "\n";
-        _file.flush();
-    }
+    void _writeTagged(const char* tag, const std::string& msg);
 
-    static const char* _levelTag(Level l)
-    {
-        switch (l) {
-            case DEBUG: return "DEBUG";
-            case INFO:  return "INFO ";
-            case WARN:  return "WARN ";
-            case ERROR: return "ERROR";
-            case PERF:  return "PERF ";
-            case STATE: return "STATE";
-            default:    return "?????";
-        }
-    }
+    static const char* _levelTag(Level l);
 
     std::string     _path;
     std::ofstream   _file;
@@ -282,5 +149,5 @@ private:
     std::streambuf* _orig_cerr;
     Level           _min_level;
 };
-
+int readSomaxconn();
 #endif // LOGGER_HPP
