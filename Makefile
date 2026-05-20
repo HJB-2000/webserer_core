@@ -1,7 +1,8 @@
 NAME    = webserv
 
 CXX      = c++
-CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -Werror -I. -I conf 
+CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -Werror -fsanitize=undefined  -I. -I conf 
+# CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -fsanitize=undefined -I, -I conf #-fsanitize=address,undefined -I. -I conf
 # ── your sources ──────────────────────────────────────────────
 SRCS    = src/main.cpp \
           src/API_conf.cpp \

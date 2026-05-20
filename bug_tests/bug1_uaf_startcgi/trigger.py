@@ -77,7 +77,7 @@ def main():
     parser = argparse.ArgumentParser(description="BUG 1 trigger — UAF in _startCgi")
     parser.add_argument("--host",   default="127.0.0.1")
     parser.add_argument("--port",   type=int, default=5000)
-    parser.add_argument("--rounds", type=int, default=80,
+    parser.add_argument("--rounds", type=int, default=1000,
                         help="Number of race attempts (default 80)")
     args = parser.parse_args()
 

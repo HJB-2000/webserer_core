@@ -5,11 +5,14 @@
 # Starts the server in the background, runs the trigger script,
 # then reports whether the server survived.
 
-PORT=${1:-5000}
-SERVER_BIN="./webserv"
-CONF="conf/confs/replit.conf"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+SERVER_BIN="$ROOT_DIR/webserv"
+CONF="$ROOT_DIR/fahd.conf"
+
+DEFAULT_PORT=$(grep -E "^\s*listen\s+" "$CONF" 2>/dev/null | head -1 | sed -E 's/.*:([0-9]+).*/\1/')
+PORT=${1:-${DEFAULT_PORT:-8080}}
 
 echo "========================================"
 echo " BUG 1 — UAF in _startCgi"
@@ -26,7 +29,7 @@ if [ ! -x "$SERVER_BIN" ]; then
 fi
 
 # Start server
-echo "[*] Starting server on port $PORT..."
+echo "[*] Starting server (config port $PORT)..."
 "$SERVER_BIN" "$CONF" &
 SERVER_PID=$!
 sleep 0.5
