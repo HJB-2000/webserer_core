@@ -4,6 +4,8 @@ a.out
 webserv
 webserv.log
 *.md
+__pycache__/
+*.pyc
 !.github/copilot/*.md
 !bugs.md
 !BUG_REGRESSION_TESTS.md
