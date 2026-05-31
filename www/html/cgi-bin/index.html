@@ -48,12 +48,12 @@
         <div class="grid">
             <button onclick="location.href='/signup.html'">Step 1: Sign Up</button>
             <button onclick="location.href='/login.html'" style="background:#f59e0b;">Step 2: Log In</button>
-            <button onclick="location.href='/cgi-bin/dashboard.py'" style="background:#10b981; color:white;">Step 3: Dashboard</button>
+            <button onclick="location.href='/dashboard/index.html'" style="background:#10b981; color:white;">Step 3: Dashboard</button>
         </div>
         <p style="font-size:0.8em; margin-top:10px; color:#94a3b8;">
             Sign Up → POST /cgi-bin/signup.py (hashes password, saves to JSON)<br>
             Log In → POST /cgi-bin/login.py (verifies PBKDF2 hash, sets cookie)<br>
-            Dashboard → GET /cgi-bin/dashboard.py (reads cookie, returns HTML)
+            Dashboard → GET /dashboard/index.html (session-protected page)
         </p>
     </div>
 

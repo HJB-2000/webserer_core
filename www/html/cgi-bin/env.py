@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from http.cookies import SimpleCookie
 
-from cgi_data_store import SESSIONS_FILE, load_json, save_json_atomic
+from cgi_data_store import SESSIONS_FILE, load_json, save_json_atomic, session_key, cookie_name
 
 REDACT_KEYS = {"HTTP_COOKIE", "HTTP_AUTHORIZATION", "AUTHORIZATION"}
 
@@ -16,11 +16,11 @@ def get_session_user():
 
     cookie = SimpleCookie()
     cookie.load(cookie_str)
-    sid_morsel = cookie.get('session_id')
+    sid_morsel = cookie.get(cookie_name())
     if sid_morsel is None:
         return None
 
-    sid = sid_morsel.value
+    sid = session_key(sid_morsel.value)
     sessions = load_json(SESSIONS_FILE, {})
     if sid not in sessions:
         return None

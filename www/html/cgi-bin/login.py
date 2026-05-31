@@ -149,4 +149,4 @@ cookie[cname]['httponly'] = True
 cookie[cname]['max-age'] = 900
 
 append_log_line(LOG_FILE, f"LOGIN: {username} from {os.environ.get('REMOTE_ADDR', 'unknown')} at {datetime.utcnow().isoformat()}")
-redirect("/cgi-bin/dashboard.py", cookie=cookie)
+redirect("/dashboard/index.html", cookie=cookie)

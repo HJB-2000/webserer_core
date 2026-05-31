@@ -10,7 +10,7 @@
     (async function() {
         try {
             const res = await fetch('/cgi-bin/check_session.py');
-            if (res.ok) window.location.replace('/cgi-bin/dashboard.py');
+            if (res.ok) window.location.replace('/dashboard/index.html');
         } catch (e) {}
     })();
     </script>
@@ -23,8 +23,6 @@
             <div class="buttons">
                 <a href="/signup.html" class="btn signup">Sign Up</a>
                 <a href="/login.html" class="btn login">Log In</a>
-                <a href="/cgi-bin/dashboard.py" class="btn dashboard">Dashboard</a>
-                <a href="/cgi-bin/logout.py" class="btn logout">Log Out</a>
             </div>
             <div class="info-box">
                 <p><strong>Flow:</strong> Sign Up (POST → hash password → save to JSON) → Log In (POST → set cookie) → Dashboard (CGI reads cookie)</p>
@@ -33,12 +31,12 @@
 
         <div class="box">
             <h3>Subject Requirements</h3>
-            <div class="grid">
+            <div class="grid subject-grid">
 
                 <div class="card">
                     <strong>GET — Static file</strong><br><br>
-                    <a href="/style.css">GET /style.css</a><br>
-                    <a href="/new-page.html">GET /new-page.html</a>
+                    <a class="req-btn" href="/style.css">GET /style.css</a><br>
+                    <a class="req-btn" href="/new-page.html">GET /new-page.html</a>
                 </div>
 
                 <div class="card">
@@ -51,73 +49,48 @@
 
                 <div class="card">
                     <strong>DELETE — /uploads/ files</strong><br><br>
-                    <a href="/uploads/">Browse /uploads/ (autoindex ON)</a><br><br>
+                    <a class="req-btn" href="/uploads/">Browse /uploads/ (autoindex ON)</a><br><br>
                     <small>curl -X DELETE http://localhost:5000/uploads/&lt;filename&gt;</small>
                 </div>
 
                 <div class="card">
                     <strong>CGI — .py extension</strong><br><br>
-                    <a href="/cgi-bin/env.py">GET /cgi-bin/env.py — env vars</a><br>
-                    <a href="/cgi-bin/body_lab.py">GET /cgi-bin/body_lab.py — body echo</a><br>
-                    <a href="/cgi-bin/test.py">GET /cgi-bin/test.py — hello CGI</a>
+                    <a class="req-btn" href="/cgi-bin/env.py">GET /cgi-bin/env.py — env vars</a><br>
+                    <a class="req-btn" href="/cgi-bin/body_lab.py">GET /cgi-bin/body_lab.py — body echo</a><br>
+                    <a class="req-btn" href="/cgi-bin/test.py">GET /cgi-bin/test.py — hello CGI</a>
                 </div>
 
                 <div class="card">
                     <strong>Autoindex</strong><br><br>
-                    <a href="/uploads/">/uploads/ → autoindex ON</a><br>
+                    <a class="req-btn" href="/uploads/">/uploads/ → autoindex ON</a><br>
                     <span style="color:#94a3b8; font-size:13px;">/ → autoindex OFF (index.html served)</span>
                 </div>
 
                 <div class="card">
                     <strong>301 Redirect</strong><br><br>
-                    <a href="/redirect/">/redirect/ → 301 → /new-page.html</a>
+                    <a class="req-btn" href="/redirect/">/redirect/ → 301 → /new-page.html</a>
                 </div>
 
                 <div class="card">
                     <strong>Custom Error Pages</strong><br><br>
-                    <a href="/nonexistent-page-404.html">Trigger 404</a><br>
-                    <a href="/cgi-bin/crash.py">Trigger 500</a><br>
-                    <a href="/errors/404.html">View 404 page directly</a>
-                </div>
-
-                <div class="card">
-                    <strong>405 — Method Not Allowed</strong><br><br>
-                    <button onclick="fetch('/admin/',{method:'POST'}).then(r=>alert('POST /admin/ → '+r.status))" style="padding:8px 14px; background:#ef4444; color:white; border:none; border-radius:6px; cursor:pointer;">POST /admin/ → 405</button>
+                    <a class="req-btn" href="/nonexistent-page-404.html">Trigger 404</a><br>
+                    <a class="req-btn" href="/cgi-bin/crash.py">Trigger 500</a><br>
+                    <a class="req-btn" href="/errors/404.html">View 404 page directly</a>
                 </div>
 
                 <div class="card">
                     <strong>413 — Payload Too Large</strong><br><br>
-                    <a href="/test-413.html">413 test page</a><br>
+                    <a class="req-btn" href="/test-413.html">413 test page</a><br>
                     <small style="color:#94a3b8;">Upload &gt;11 MB → 413 error page</small>
                 </div>
 
                 <div class="card">
                     <strong>504 — CGI Timeout</strong><br><br>
-                    <a href="/cgi-bin/sleep_15s.py?seconds=15">15 s sleep → 504</a><br>
-                    <a href="/cgi-bin/infinite.py">Infinite loop → 504</a>
-                </div>
-
-                <div class="card">
-                    <strong>KV Store — GET / POST / DELETE</strong><br><br>
-                    <a href="/dashboard/index.html">Dashboard KV demo</a><br>
-                    <small style="color:#94a3b8;">Requires login</small>
-                </div>
-
-                <div class="card">
-                    <strong>CGI Stress Tests</strong><br><br>
-                    <a href="/dashboard/cgi-tests.html">CGI test page</a><br>
-                    <small style="color:#94a3b8;">Timeout, crash, large body</small>
+                    <a class="req-btn" href="/cgi-bin/sleep_15s.py?seconds=15">15 s sleep → 504</a><br>
+                    <a class="req-btn" href="/cgi-bin/infinite.py">Infinite loop → 504</a>
                 </div>
 
             </div>
-        </div>
-
-        <div class="nav-links">
-            <a href="/cgi-bin/env.py">ENV Dump</a>
-            <a href="/uploads/">Uploads</a>
-            <a href="/dashboard/index.html">Dashboard</a>
-            <a href="/dashboard/cgi-tests.html">CGI Tests</a>
-            <a href="/errors/404.html">Error Pages</a>
         </div>
     </div>
 </body>

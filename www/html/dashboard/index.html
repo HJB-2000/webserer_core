@@ -91,6 +91,15 @@
             <div class="info-box">Files are served from /errors/</div>
         </div>
 
+        <!-- TRIGGER CGI SCRIPTS -->
+        <div class="card">
+            <h3>Trigger CGI Scripts</h3>
+            <a href="/cgi-bin/env.py" class="btn">Open env.py</a>
+            <a href="/cgi-bin/test.py" class="btn btn-muted">Open test.py</a>
+            <a href="/cgi-bin/gettime.py" class="btn btn-success">Open gettime.py</a>
+            <div class="info-box">Each script opens in its own page.</div>
+        </div>
+
         <!-- FILE UPLOAD -->
         <div class="card">
             <h3>File Upload (POST multipart)</h3>
@@ -128,12 +137,6 @@
             <button onclick="refreshStore()" class="btn btn-muted">Refresh store contents</button>
             <div id="storeContents" class="info-box" style="max-height:200px; overflow-y:auto;">Loading...</div>
         </div>
-    </div>
-
-    <div class="nav-links">
-        <a href="/dashboard/cgi-tests.html">CGI Stress Tests</a>
-        <a href="/index.html">Home</a>
-        <a href="/cgi-bin/logout.py">Log Out</a>
     </div>
 
 </div>

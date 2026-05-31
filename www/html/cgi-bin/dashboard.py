@@ -86,7 +86,6 @@ print(f"""<!DOCTYPE html>
         </div>
         <div class="nav-links">
             <a href="/dashboard/index.html">KV Store &amp; Error Tests</a>
-            <a href="/dashboard/cgi-tests.html">CGI Stress Tests</a>
             <a href="/index.html">Home</a>
             <a href="/cgi-bin/logout.py">Log Out</a>
         </div>
