@@ -242,6 +242,8 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
     int fds[2];
     if (::pipe(fds) < 0)
     {
+        std::cout << "---------------------------32-------------------------" << std::endl;
+
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
         conn->setWriting();
         _rearmClient(conn->fd());
@@ -254,6 +256,8 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
     {
         ::close(fds[0]);
         ::close(fds[1]);
+        std::cout << "---------------------------FDCLOSEC 99999-------------------------" << std::endl;
+
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
         conn->setWriting();
         _rearmClient(conn->fd());
@@ -267,6 +271,8 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
     {
         ::close(result_read_fd);
         ::close(result_write_fd);
+        std::cout << "---------------------------25-------------------------" << std::endl;
+
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
         conn->setWriting();
         _rearmClient(conn->fd());
@@ -325,6 +331,8 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
     if (!ok)
     {
         _closeCgiJob(result_read_fd);
+        std::cout << "---------------------------10-------------------------" << std::endl;
+
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
         conn->setWriting();
         _rearmClient(conn->fd());
@@ -431,6 +439,27 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
         _failCgiJob(result_fd, 413);
     }
 }
+// void EventLoop::_finishCgiJob(int result_fd)
+// {
+//     std::map<int, CgiJob*>::iterator jt = _cgi_jobs.find(result_fd);
+//     if (jt == _cgi_jobs.end())
+//         return;
+//     CgiJob* job = jt->second;
+//     Connection* conn = _manager->get(job->client_fd);
+
+//     if (conn)
+//     {
+//         _responder.handleCgiOutput(conn->request(),
+//                                    *conn->config(),
+//                                    job->result_buffer,
+//                                    conn->writeBuffer());
+//         conn->setWriting();
+//         _rearmClient(conn->fd());
+//     }
+
+//     _closeCgiJob(result_fd);
+// }
+
 void EventLoop::_finishCgiJob(int result_fd)
 {
     std::map<int, CgiJob*>::iterator jt = _cgi_jobs.find(result_fd);
@@ -451,6 +480,7 @@ void EventLoop::_finishCgiJob(int result_fd)
 
     _closeCgiJob(result_fd);
 }
+
 void EventLoop::_failCgiJob(int result_fd, int status_code)
 {
     std::map<int, CgiJob*>::iterator jt = _cgi_jobs.find(result_fd);
@@ -725,7 +755,7 @@ void EventLoop::_handleRead(Connection* conn)
             if (conn->request().parse_state == PSTATE_ERROR)
             {
 
-                // conn->request().headers["connection"] = "close";
+                conn->request().headers["connection"] = "close";
                 std::cerr << "[EventLoop] parse error " << conn->request().error_code
                           << " on fd " << fd << "\n";
                 // Phase 3: real error response
@@ -736,6 +766,7 @@ void EventLoop::_handleRead(Connection* conn)
                 _rearmClient(fd);
                 return;  // wait for EPOLLOUT to drain the error response
             }
+/*this is where i am gonna add cgi call */
             if (conn->request().parse_state == PSTATE_COMPLETE)
             {
                 conn->setProcessing();

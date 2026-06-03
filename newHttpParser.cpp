@@ -273,19 +273,11 @@ void HttpParser::feed(Connection *conn)
     {
         _parseRequestLine(conn->readBuffer(), conn->request());
         const Location* loc = conn->config()->matchLocation(conn->request().path);    
-        if (loc && loc->getClientMaxBodySize() > 0)  
-        {
-            std::cout << "----------------------------1----------------------------" << std::endl;
-            std::cout << "conn->request().max_body_size = " <<  conn->request().max_body_size <<"$$$"<< std::endl;
-            std::cout << "loc->getClientMaxBodySize()   = " <<  loc->getClientMaxBodySize()   <<"$$$"<< std::endl;
+        // std::cout << "matchlocation -----------" << loc->getPath() << std::endl;       
+        if (loc && loc->getClientMaxBodySize() > 0)    
             conn->request().max_body_size = loc->getClientMaxBodySize();    
-        }  
-        else
-        {
-            std::cout << "----------------------------2----------------------------" << std::endl;
-
+        else    
             conn->request().max_body_size = conn->config()->getMaxBody();  
-        }    
         conn->updateBufferSizes(conn->request().max_body_size);
     }
 

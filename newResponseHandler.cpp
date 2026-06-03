@@ -129,7 +129,7 @@ static std::string normalizePath(const std::string& path)
 //    5. Directory URI   → index / autoindex / 403
 //    6. stat(fs_path)   → 404 / directory 301
 //    7. CGI extension   → Phase 4 stub
-//    8. GET/HEAD        → serveStaticFile
+//    8. GET             → serveStaticFile
 //       POST            → handlePost
 //       DELETE          → handleDelete
 //       other           → 405
@@ -151,11 +151,7 @@ void ResponseHandler::handle(
 
     // ── 1. Location match ─────────────────────────────────────
     const Location* loc = cfg.matchLocation(req.path);
-    // BUG
-    // // ── 2. Method allowed ─────────────────────────────────────
-    // // HEAD is implicitly allowed whenever GET is (RFC 7231 §4.3.2)
-    // std::string check_method = (req.method == "HEAD") ? "GET" : req.method;
-    // FIX
+
     // ── 2. Method allowed ─────────────────────────────────────
     // HEAD handling disabled → always respond 405
     if (req.method == "HEAD")
@@ -175,8 +171,8 @@ void ResponseHandler::handle(
         }
         else
         {  
-            // No location matched → only allow GET/HEAD by default  
-            if (check_method != "GET") {  
+            // No location matched → only allow GET by default
+            if (check_method != "GET") {
                 _sendErrorInternal(405, req, cfg, wb);  
                 return;  
             }  
@@ -214,8 +210,8 @@ void ResponseHandler::handle(
             return;
         }
 
-        // Only GET/HEAD can serve directory content
-        if (req.method != "GET" /*&& req.method != "HEAD"*/)
+        // Only GET can serve directory content
+        if (req.method != "GET")
         {
             _sendErrorInternal(405, req, cfg, wb);
             return;
@@ -247,7 +243,7 @@ void ResponseHandler::handle(
         }
 
         // No index, no autoindex → 403
-        _sendErrorInternal(403, req, cfg, wb);
+        _sendErrorInternal(404, req, cfg, wb);
         return;
     }
 
@@ -258,15 +254,8 @@ void ResponseHandler::handle(
         _sendErrorInternal(404, req, cfg, wb);
         return;
     }
-    // BUG
-    // // Directory without trailing slash → 301 to path + '/'
-    // if (S_ISDIR(st.st_mode))
-    // {
-    //     _sendRedirect(301, req.path + "/", req, wb);
-    //     return;
-    // }
-    // FIX
-     // Directory without trailing slash → serve as directory (no redirect)
+
+    // Directory without trailing slash → serve as directory (no redirect)
     if (S_ISDIR(st.st_mode))
     {
         // Treat as if a trailing slash was present
@@ -322,6 +311,7 @@ void ResponseHandler::handle(
         _sendErrorInternal(404, req, cfg, wb);
         return;
     }
+
     // ── 7. CGI check (multi-extension matching) ───────────────────────────
     if (loc && !loc->getCGI_extensions().empty())
     {
@@ -339,9 +329,7 @@ void ResponseHandler::handle(
     }
 
     // ── 8. Method dispatch ────────────────────────────────────
-    
-    // Only GET can serve directory content
-    if (req.method == "GET"/* || req.method == "HEAD"*/)
+    if (req.method == "GET")
     {
         _serveStaticFile(req, fs_path, cfg, wb);
     }
@@ -410,7 +398,6 @@ void ResponseHandler::handleCgiOutput(
     Buffer&             wb)
 {
     std::string raw(cgi_output.data(), cgi_output.size());
-
     // Find header/body separator — prefer \r\n\r\n, accept \n\n
     size_t sep       = raw.find("\r\n\r\n");
     size_t body_skip = 4;
@@ -473,6 +460,7 @@ void ResponseHandler::handleCgiOutput(
             extra_headers += key + ": " + val + "\r\n";
         }
     }
+    std::cout << "((((((((((((--------------------))))))))))))handleCgiOutput((((((((((((--------------------))))))))))))" << std::endl;
 
     _writeHeaders(status_code, content_type, body.size(), extra_headers, req, wb);
     if (req.method != "HEAD")
@@ -524,7 +512,11 @@ void ResponseHandler::_serveStaticFile(
         else if (errno == EACCES || errno == EPERM)
             _sendErrorInternal(403, req, cfg, wb);
         else
+        {
+        std::cout << "---------------------------11-------------------------" << std::endl;
+
             _sendErrorInternal(500, req, cfg, wb);
+        }
         return;
     }
 
@@ -532,6 +524,8 @@ void ResponseHandler::_serveStaticFile(
     if (::stat(fs_path.c_str(), &st) < 0)
     {
         ::close(fd);
+        std::cout << "---------------------------12-------------------------" << std::endl;
+
         _sendErrorInternal(500, req, cfg, wb);
         return;
     }
@@ -577,7 +571,11 @@ void ResponseHandler::_sendDirectoryListing(
         else if (errno == EACCES || errno == EPERM)
             _sendErrorInternal(403, req, cfg, wb);
         else
+        {
+        std::cout << "---------------------------13-------------------------" << std::endl;
+
             _sendErrorInternal(500, req, cfg, wb);
+        }
         return;
     }
 
@@ -666,7 +664,7 @@ void ResponseHandler::_sendRedirect(
 
     std::ostringstream extra;
     extra << "Location: " << url << "\r\n";
-
+    std::cout << "((((((((((((--------------------))))))))))))_sendRedirect((((((((((((--------------------))))))))))))" << std::endl;
     _writeHeaders(code, "text/html", body.size(), extra.str(), req, wb);
     if (req.method != "HEAD")
         _appendStr(wb, body);
@@ -729,6 +727,8 @@ void ResponseHandler::_handlePost(
         if (n <= 0)
         {
             ::close(fd);
+        std::cout << "---------------------------14-------------------------" << std::endl;
+
             _sendErrorInternal(500, req, cfg, wb);
             return;
         }
@@ -779,7 +779,11 @@ void ResponseHandler::_handleDelete(
         else if (errno == EACCES || errno == EPERM)
             _sendErrorInternal(403, req, cfg, wb);
         else
+        {
+        std::cout << "---------------------------45-------------------------" << std::endl;
+            
             _sendErrorInternal(500, req, cfg, wb);
+        }
         return;
     }
 
@@ -836,6 +840,8 @@ std::string ResponseHandler::_loadErrorPage(
     int                 code,
     const ServerConfig& cfg) const
 {
+    
+    std::cout << "||||||" << code << "||||||" << std::endl;
     std::map<int,std::string> ep = cfg.getErrorPageMap();
     std::map<int,std::string>::const_iterator it = ep.find(code);
     if (it != ep.end() && !it->second.empty())
@@ -930,7 +936,6 @@ void ResponseHandler::_writeHeaders(
 //     // req.path always starts with '/', so root + req.path is valid
 //     return root + req.path;
 // }
-
 std::string ResponseHandler::_resolveFsPath(
     const HttpRequest&  req,
     const Location*     loc,

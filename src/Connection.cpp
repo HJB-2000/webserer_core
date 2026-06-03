@@ -189,10 +189,13 @@ epoll_event Connection::buildEpollEvent()
 void Connection::updateBufferSizes(size_t new_max)  
 {  
     // Ensure we don't truncate existing data  
-    if (new_max < _read_buffer.size() || new_max < _write_buffer.size()) {  
-        std::cerr << "[Warning] Cannot reduce buffer size below current content size\n";  
-        return;  
-    }  
+    // if (new_max < _read_buffer.size() || new_max < _write_buffer.size()) {
+    //     std::cout << "||||||||||" << new_max << "||||||||||" << std::endl;
+    //     std::cout << "_read_buffer" << _read_buffer.size() << std::endl;  
+    //     std::cout << "_write_buffer" << _write_buffer.size() << std::endl;  
+    //     std::cerr << "[Warning] Cannot reduce buffer size below current content size\n";  
+    //     return;  
+    // }  
     _read_buffer.setMaxSize(new_max);  
     _write_buffer.setMaxSize(new_max);  
 }

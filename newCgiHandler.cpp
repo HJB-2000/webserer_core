@@ -191,11 +191,11 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
         env.push_back("HTTP_" + key + "=" + it->second);
     }
     std::cerr << "-------[cgi][env] generated entries:-------" << std::endl;
-    for (size_t i = 0; i < env.size(); ++i) {
-        std::cerr << "  " << env[i] << std::endl;
-    }
-    std::cerr << "-------[cgi][env] contract check: " 
-            << (env.size() > 0 ? "PASS" : "FAIL") << "-------" << std::endl;
+for (size_t i = 0; i < env.size(); ++i) {
+    std::cerr << "  " << env[i] << std::endl;
+}
+std::cerr << "-------[cgi][env] contract check: " 
+          << (env.size() > 0 ? "PASS" : "FAIL") << "-------" << std::endl;
     return env;
 }
 
@@ -220,8 +220,10 @@ void CgiHandler::close_fd(int& fd_pipe)
 bool CgiHandler::startCgi(int write_end)
 {
     std::string cgi_path = _location.getCGI_path();
+
     if (cgi_path.empty())
     {
+        std::cout << "---------------------------1-------------------------" << std::endl;
         _error_code = 500;
         _state = CGI_ERROR;
         return false;
@@ -233,18 +235,24 @@ bool CgiHandler::startCgi(int write_end)
     struct stat sb_cgi;
     if (stat(cgi_path.c_str(), &sb_cgi) != 0)
     {
+        std::cout << "---------------------------2-------------------------" << std::endl;
+
         _error_code = 500;
         _state = CGI_ERROR;
         return false;
     }
     if (!S_ISREG(sb_cgi.st_mode))
     {
+        std::cout << "---------------------------3-------------------------" << std::endl;
+
         _error_code = 500;
         _state = CGI_ERROR;
         return false;
     }
     if (access(cgi_path.c_str(), X_OK) != 0)
     {
+        std::cout << "---------------------------4-------------------------" << std::endl;
+
         _error_code = 500;
         _state = CGI_ERROR;
         return false;
@@ -253,6 +261,8 @@ bool CgiHandler::startCgi(int write_end)
     std::string script_file = _script_path;
     if (script_file.empty())
     {
+        std::cout << "---------------------------22-------------------------" << std::endl;
+
         _error_code = 404;
         _state = CGI_ERROR;
         return false;
@@ -262,18 +272,24 @@ bool CgiHandler::startCgi(int write_end)
     struct stat sb_script;
     if (stat(script_file.c_str(), &sb_script) != 0)
     {
+        std::cout << "---------------------------23-------------------------" << std::endl;
+
         _error_code = 404;
         _state = CGI_ERROR;
         return false;
     }
     if (!S_ISREG(sb_script.st_mode))
     {
+        std::cout << "---------------------------2222222-------------------------" << std::endl;
+
         _error_code = 403;
         _state = CGI_ERROR;
         return false;
     }
     if (access(script_file.c_str(), R_OK) != 0)
     {
+        std::cout << "---------------------------25-------------------------" << std::endl;
+
         _error_code = 403;
         _state = CGI_ERROR;
         return false;
@@ -282,6 +298,8 @@ bool CgiHandler::startCgi(int write_end)
     if (!validate_env_contract())
     {
         std::cerr << "[cgi] env contract FAILED — aborting CGI launch\n";
+        std::cout << "---------------------------26-------------------------" << std::endl;
+
         _error_code = 500;
         _state = CGI_ERROR;
         return false;
@@ -294,6 +312,8 @@ bool CgiHandler::startCgi(int write_end)
     {
         if (::pipe(_cgi_in_pipe) == -1)
         {
+        std::cout << "---------------------------5-------------------------" << std::endl;
+
             _error_code = 500;
             _state = CGI_ERROR;
             return false;
@@ -309,6 +329,8 @@ bool CgiHandler::startCgi(int write_end)
             _cgi_in_pipe[1] = -1;
             _error_code = 500;
             _state = CGI_ERROR;
+        std::cout << "---------------------------6-------------------------" << std::endl;
+
             return false;
         }
     }
@@ -321,6 +343,8 @@ bool CgiHandler::startCgi(int write_end)
             close_fd(_cgi_in_pipe[0]);
             close_fd(_cgi_in_pipe[1]);
         }
+        std::cout << "---------------------------7-------------------------" << std::endl;
+
         _error_code = 500;
         _state = CGI_ERROR;
         return false;
