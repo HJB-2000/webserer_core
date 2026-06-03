@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webserv - Ultimate Dev Suite</title>
+    <title>webserv — CGI Test Suite</title>
     <style>
-        /* Restoring your original exact aesthetic */
+        * { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -13,185 +13,98 @@
             margin: 0;
             padding: 20px;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        header {
-            text-align: center;
-            padding: 20px;
-            background: #1e293b;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            border: 1px solid #334155;
-        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 20px; background: #1e293b; border-radius: 12px; margin-bottom: 25px; border: 1px solid #334155; }
         header h1 { margin: 0 0 8px 0; color: #38bdf8; }
-        header p { margin: 0; opacity: 0.9; }
-        .status { 
-            display: inline-block; 
-            padding: 4px 12px; 
-            background: #22c55e; 
-            border-radius: 20px; 
-            font-size: 0.85em; 
-            margin-top: 10px;
-        }
-        .box {
-            background: #1e293b;
-            margin: 12px 0;
-            padding: 18px;
-            border-radius: 10px;
-            border-left: 4px solid #38bdf8;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .box:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(56, 189, 248, 0.15);
-        }
+        header p { margin: 0; color: #94a3b8; }
+        .box { background: #1e293b; margin: 12px 0; padding: 18px; border-radius: 10px; border-left: 4px solid #38bdf8; }
         .box h3 { margin-top: 0; color: #7dd3fc; }
-        .box code { 
-            background: #0f172a; 
-            padding: 2px 6px; 
-            border-radius: 4px; 
-            font-size: 0.9em;
-            color: #fbbf24;
-        }
+        .box code { background: #0f172a; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: #fbbf24; }
         a { color: #38bdf8; text-decoration: none; }
         a:hover { text-decoration: underline; }
         button {
-            padding: 10px 20px;
-            background: #38bdf8;
-            color: #0f172a;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background 0.2s;
+            padding: 10px 20px; background: #38bdf8; color: #0f172a;
+            border: none; border-radius: 6px; cursor: pointer; font-weight: 600;
         }
         button:hover { background: #7dd3fc; }
         input[type="text"], input[type="file"] {
-            padding: 10px;
-            margin: 8px 0;
-            width: 100%;
-            box-sizing: border-box;
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 6px;
-            color: #e2e8f0;
+            padding: 10px; margin: 8px 0; width: 100%;
+            background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0;
         }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 12px;
-            margin-top: 15px;
-        }
-        .badge {
-            display: inline-block;
-            padding: 3px 8px;
-            background: #334155;
-            border-radius: 4px;
-            font-size: 0.75em;
-            color: #94a3b8;
-        }
-        footer {
-            text-align: center;
-            padding: 40px 20px;
-            opacity: 0.6;
-            font-size: 0.85em;
-        }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 15px; }
         hr { border: 0; border-top: 1px solid #334155; margin: 20px 0; }
+        .badge { display: inline-block; padding: 3px 8px; background: #334155; border-radius: 4px; font-size: 0.75em; color: #94a3b8; }
     </style>
 </head>
 <body>
-
 <div class="container">
     <header>
-        <h1>🚀 Webserv Ultimate Test Suite</h1>
-        <p>Testing C++98 Epoll Architecture & CGI Logic</p>
-        <span class="status">✓ System Ready</span>
+        <h1>webserv — CGI Test Suite</h1>
+        <p>Accessible at <code>/cgi-bin/</code> — all scripts use the <code>.py</code> CGI extension</p>
     </header>
 
     <div class="box" style="border-left-color: #f59e0b;">
-        <h3>🔐 Session & State</h3>
-        <p>Test CGI User Registration & Cookie Auth</p>
+        <h3>Authentication Flow</h3>
         <div class="grid">
-            <button onclick="window.location.href='/signup.html'" style="background: #38bdf8; color: #0f172a;">Step 1: Sign Up</button>
-            <button onclick="window.location.href='/login.html'" style="background: #f59e0b; color: #fff;">Step 2: Sign In</button>
-            <button onclick="window.location.href='/cgi-bin/dashboard.py'" style="background: #10b981; color: #fff;">Step 3: Dashboard</button>
+            <button onclick="location.href='/signup.html'">Step 1: Sign Up</button>
+            <button onclick="location.href='/login.html'" style="background:#f59e0b;">Step 2: Log In</button>
+            <button onclick="location.href='/dashboard/index.html'" style="background:#10b981; color:white;">Step 3: Dashboard</button>
         </div>
-        <p style="font-size: 0.8em; margin-top: 10px; color: #94a3b8;">
-            Flow: Register → Login (Sets Cookie) → Dashboard (Reads Cookie).
+        <p style="font-size:0.8em; margin-top:10px; color:#94a3b8;">
+            Sign Up → POST /cgi-bin/signup.py (hashes password, saves to JSON)<br>
+            Log In → POST /cgi-bin/login.py (verifies PBKDF2 hash, sets cookie)<br>
+            Dashboard → GET /dashboard/index.html (session-protected page)
         </p>
     </div>
 
     <div class="box">
-        <h3>📤 Method Lab</h3>
+        <h3>Method Lab — GET and POST</h3>
         <div class="grid">
             <form method="GET" action="/cgi-bin/form_handler.py">
-                <p class="badge">GET (Query Params)</p>
+                <p class="badge">GET (query params)</p>
                 <input type="text" name="msg" value="Hello_Webserv">
                 <button type="submit">Send GET</button>
             </form>
             <form method="POST" action="/cgi-bin/form_handler.py">
-                <p class="badge">POST (Standard)</p>
-                <input type="text" name="user" value="dev_user">
-                <button type="submit" style="background:#10b981;">Send POST</button>
+                <p class="badge">POST (form data)</p>
+                <input type="text" name="msg" value="Hello_POST">
+                <button type="submit" style="background:#10b981; color:white;">Send POST</button>
             </form>
         </div>
-        <hr>
-        <p class="badge" style="background:#ef4444; color:white;">DELETE (Method Restriction Test)</p>
-        <p>Try to delete a file in <code>/uploads/</code>:</p>
-        <button onclick="fetch('/uploads/test_file.txt', {method: 'DELETE'}).then(r => alert('Status: ' + r.status))" style="background:#7f1d1d; color:white;">Execute DELETE Request</button>
     </div>
 
     <div class="box" style="border-left-color: #ec4899;">
-        <h3>📥 Upload & Body Limits</h3>
-        <p>Target: <code>/cgi-bin/upload_file.py</code> (multipart/form-data)</p>
+        <h3>File Upload — POST multipart/form-data</h3>
         <form method="POST" action="/cgi-bin/upload_file.py" enctype="multipart/form-data">
             <input type="file" name="file" required>
-            <button type="submit" style="background: #ec4899; color: white;">Upload via CGI</button>
+            <button type="submit" style="background:#ec4899; color:white;">Upload via CGI</button>
         </form>
         <div class="grid" style="margin-top:15px;">
-            <a href="/files/">📂 Autoindex (enabled)</a>
-            <a href="/uploads/">📂 Uploads Dir (autoindex on)</a>
+            <a href="/uploads/">Browse /uploads/ (autoindex ON)</a>
         </div>
     </div>
 
     <div class="box" style="border-left-color: #a855f7;">
-        <h3>⚙️ CGI Stress & Environment</h3>
+        <h3>CGI Environment &amp; Body</h3>
         <div class="grid">
-            <a href="/cgi-bin/env.py">Verify ENV Vars</a>
-            <a href="/cgi-bin/status_418.py">Custom Status (418)</a>
-            <a href="/cgi-bin/sleep_15s.py?seconds=10">Timeout Test (10s)</a>
-            <a href="/cgi-bin/body_lab.py">Body Parsing Lab</a>
+            <a href="/cgi-bin/env.py">ENV vars dump</a>
+            <a href="/cgi-bin/body_lab.py">Body echo</a>
+            <a href="/cgi-bin/test.py">Hello CGI (basic test)</a>
         </div>
-    </div>
-
-    <div class="box" style="border-left-color: #ec4899;">
-        <h3>🌀 DeepSeek – Raw Body Fuzzer</h3>
-        <p>Send a POST with arbitrary binary / unicode / null bytes.</p>
-        <form method="POST" action="/cgi-bin/deepseek.py" enctype="text/plain">
-            <textarea name="payload" rows="4" style="width:100%; background:#0f172a; border:1px solid #334155; color:#e2e8f0; font-family:monospace;">Normal text here...</textarea>
-            <br>
-            <button type="submit" style="background:#ec4899; color:white;">Send as POST (text/plain)</button>
-        </form>
     </div>
 
     <div class="box" style="border-left-color: #64748b;">
-        <h3>⚠️ Routing & Failures</h3>
+        <h3>Routing &amp; Failures</h3>
         <div class="grid">
-            <a href="/redirect">301 Permanent</a>
-            <a href="/temp-redirect">302 Temporary</a>
-            <a href="/not-real-file">Trigger 404</a>
-            <button onclick="fetch('/admin/', {method: 'POST'}).then(r => alert('POST /admin/ -> ' + r.status))">Test 405 on /admin/ (POST)</button>
+            <a href="/redirect/">301 Redirect → /new-page.html</a>
+            <a href="/not-real-file-xyz">Trigger 404</a>
+            <button onclick="fetch('/admin/',{method:'POST'}).then(r=>alert('POST /admin/ → '+r.status))">POST /admin/ → 405</button>
+            <a href="/cgi-bin/crash.py">CGI crash → 500</a>
+            <a href="/cgi-bin/sleep_15s.py?seconds=15">15 s sleep → 504</a>
+            <a href="/cgi-bin/infinite.py">Infinite loop → 504</a>
         </div>
     </div>
 
-    <footer>
-        <p>Webserv Project • Protocol: <code>HTTP/1.1</code> • I/O: <code>epoll</code></p>
-        <p><code>./www/html/index.html</code> updated 2026</p>
-    </footer>
 </div>
-
 </body>
 </html>

@@ -231,6 +231,10 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
                 std::cerr << "[WARN] at [-------location--------] " << loc_id
                           << ": Client_max_body_size missing, inheriting " << inherited << std::endl;
             }
+            else
+            {
+                std::cout <<"[configggggggg] = "<< client_max_body_size_location << std::endl;
+            }
             std::vector<std::string> idxs = loc.getIndex_s();
             for (size_t i = 0; i < idxs.size(); ++i) 
             {

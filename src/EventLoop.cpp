@@ -725,7 +725,7 @@ void EventLoop::_handleRead(Connection* conn)
             if (conn->request().parse_state == PSTATE_ERROR)
             {
 
-                conn->request().headers["connection"] = "close";
+                // conn->request().headers["connection"] = "close";
                 std::cerr << "[EventLoop] parse error " << conn->request().error_code
                           << " on fd " << fd << "\n";
                 // Phase 3: real error response
@@ -736,7 +736,6 @@ void EventLoop::_handleRead(Connection* conn)
                 _rearmClient(fd);
                 return;  // wait for EPOLLOUT to drain the error response
             }
-/*this is where i am gonna add cgi call */
             if (conn->request().parse_state == PSTATE_COMPLETE)
             {
                 conn->setProcessing();

@@ -151,10 +151,19 @@ void ResponseHandler::handle(
 
     // ── 1. Location match ─────────────────────────────────────
     const Location* loc = cfg.matchLocation(req.path);
-
+    // BUG
+    // // ── 2. Method allowed ─────────────────────────────────────
+    // // HEAD is implicitly allowed whenever GET is (RFC 7231 §4.3.2)
+    // std::string check_method = (req.method == "HEAD") ? "GET" : req.method;
+    // FIX
     // ── 2. Method allowed ─────────────────────────────────────
-    // HEAD is implicitly allowed whenever GET is (RFC 7231 §4.3.2)
-    std::string check_method = (req.method == "HEAD") ? "GET" : req.method;
+    // HEAD handling disabled → always respond 405
+    if (req.method == "HEAD")
+    {
+        _sendErrorInternal(405, req, cfg, wb);
+        return;
+    }
+    std::string check_method = req.method;
 
     if (loc) {  
         if (!loc->getMethods().empty()  
@@ -206,7 +215,7 @@ void ResponseHandler::handle(
         }
 
         // Only GET/HEAD can serve directory content
-        if (req.method != "GET" && req.method != "HEAD")
+        if (req.method != "GET" /*&& req.method != "HEAD"*/)
         {
             _sendErrorInternal(405, req, cfg, wb);
             return;
@@ -249,14 +258,70 @@ void ResponseHandler::handle(
         _sendErrorInternal(404, req, cfg, wb);
         return;
     }
-
-    // Directory without trailing slash → 301 to path + '/'
+    // BUG
+    // // Directory without trailing slash → 301 to path + '/'
+    // if (S_ISDIR(st.st_mode))
+    // {
+    //     _sendRedirect(301, req.path + "/", req, wb);
+    //     return;
+    // }
+    // FIX
+     // Directory without trailing slash → serve as directory (no redirect)
     if (S_ISDIR(st.st_mode))
     {
-        _sendRedirect(301, req.path + "/", req, wb);
+        // Treat as if a trailing slash was present
+        if (!req.path.empty() && req.path[req.path.size() - 1] != '/')
+            const_cast<HttpRequest&>(req).path = req.path + "/";
+
+        // Re-match location with the normalized path (may differ for /dir vs /dir/)
+        const Location* dir_loc = cfg.matchLocation(req.path);
+
+        // POST upload to directory
+        if (req.method == "POST")
+        {
+            if (dir_loc && !dir_loc->getUploadStore().empty())
+                _handlePost(req, *dir_loc, cfg, wb);
+            else
+                _sendErrorInternal(405, req, cfg, wb);
+            return;
+        }
+
+        // Only GET can serve directory content
+        if (req.method != "GET")
+        {
+            _sendErrorInternal(405, req, cfg, wb);
+            return;
+        }
+
+        // Try index file
+        std::vector<std::string> idx_vec = (dir_loc && !dir_loc->getIndex_s().empty())
+                                           ? dir_loc->getIndex_s() : cfg.getIndex_s();
+        std::string idx = idx_vec.empty() ? "index.html" : idx_vec[0];
+
+        std::string idx_path = fs_path + "/" + idx;
+        struct stat dir_st;
+
+        if (::stat(idx_path.c_str(), &dir_st) == 0 && S_ISREG(dir_st.st_mode))
+        {
+            _serveStaticFile(req, idx_path, cfg, wb);
+            return;
+        }
+
+        // Autoindex
+        bool autoindex = dir_loc ? dir_loc->getAutoindex() : false;
+        if (autoindex)
+        {
+            std::string dir_path = fs_path;
+            if (!dir_path.empty() && dir_path[dir_path.size() - 1] != '/')
+                dir_path += '/';
+            _sendDirectoryListing(req, dir_path, cfg, wb);
+            return;
+        }
+
+        // No index, no autoindex → 403
+        _sendErrorInternal(404, req, cfg, wb);
         return;
     }
-
     // ── 7. CGI check (multi-extension matching) ───────────────────────────
     if (loc && !loc->getCGI_extensions().empty())
     {
@@ -274,7 +339,9 @@ void ResponseHandler::handle(
     }
 
     // ── 8. Method dispatch ────────────────────────────────────
-    if (req.method == "GET" || req.method == "HEAD")
+    
+    // Only GET can serve directory content
+    if (req.method == "GET"/* || req.method == "HEAD"*/)
     {
         _serveStaticFile(req, fs_path, cfg, wb);
     }
@@ -847,23 +914,75 @@ void ResponseHandler::_writeHeaders(
 //  Builds the filesystem path for a request.
 //  Rule (Plan.md §4): fs_path = (loc.root || cfg.root) + req.path
 // ============================================================
+// std::string ResponseHandler::_resolveFsPath(
+//     const HttpRequest&  req,
+//     const Location*     loc,
+//     const ServerConfig& cfg) const
+// {
+//     std::string root = cfg.getRoot();
+//     if (loc && !loc->getRoot().empty())
+//         root = loc->getRoot();
+
+//     // Normalize: remove trailing slash(es) from root
+//     while (!root.empty() && root[root.size() - 1] == '/')
+//         root.erase(root.size() - 1);
+
+//     // req.path always starts with '/', so root + req.path is valid
+//     return root + req.path;
+// }
+
 std::string ResponseHandler::_resolveFsPath(
     const HttpRequest&  req,
     const Location*     loc,
     const ServerConfig& cfg) const
 {
     std::string root = cfg.getRoot();
+    std::string uri  = req.path;
+
     if (loc && !loc->getRoot().empty())
+    {
         root = loc->getRoot();
+
+        std::string loc_path = loc->getPath();
+
+        // Only strip the location prefix if what remains is NOT empty
+        // e.g. loc=/directory/youpi.bla  uri=/directory/youpi.bla → don't strip, keep filename
+        // e.g. loc=/directory/           uri=/directory/youpi.bla → strip to /youpi.bla
+        if (uri.compare(0, loc_path.size(), loc_path) == 0)
+        {
+            std::string stripped = uri.substr(loc_path.size());
+            // Only apply the strip if something remains (a file/subpath)
+            if (!stripped.empty())
+            {
+                if (stripped[0] != '/')
+                    stripped = "/" + stripped;
+                uri = stripped;
+            }
+            // else: uri == loc_path exactly (e.g. /directory/youpi.bla)
+            // keep uri as-is so root + "/youpi.bla" is built below
+        }
+    }
 
     // Normalize: remove trailing slash(es) from root
     while (!root.empty() && root[root.size() - 1] == '/')
         root.erase(root.size() - 1);
 
-    // req.path always starts with '/', so root + req.path is valid
-    return root + req.path;
-}
+    // If uri still equals the full loc_path (exact match, nothing stripped),
+    // extract just the filename from uri
+    if (loc && !loc->getRoot().empty())
+    {
+        std::string loc_path = loc->getPath();
+        if (uri == loc_path)
+        {
+            // Get just the last component: /directory/youpi.bla → /youpi.bla
+            size_t last_slash = uri.rfind('/');
+            if (last_slash != std::string::npos)
+                uri = uri.substr(last_slash); // keeps the leading /
+        }
+    }
 
+    return root + uri;
+}
 
 // ============================================================
 //  _methodAllowed

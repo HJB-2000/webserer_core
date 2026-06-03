@@ -252,7 +252,7 @@ bool validate_host(std::string& host_value, uint16_t& port_out)
 
 } // anonymous namespace
 
-
+#include <iostream>
 // ════════════════════════════════════════════════════════════
 //  HttpParser::feed
 //  Main entry point — advance parse as far as the buffer allows.
@@ -273,11 +273,15 @@ void HttpParser::feed(Connection *conn)
     {
         _parseRequestLine(conn->readBuffer(), conn->request());
         const Location* loc = conn->config()->matchLocation(conn->request().path);    
-        if (loc && loc->getClientMaxBodySize() > 0)    
+        if (loc && loc->getClientMaxBodySize() > 0)  
+        {
             conn->request().max_body_size = loc->getClientMaxBodySize();    
-        else    
+        }  
+        else
+        {
             conn->request().max_body_size = conn->config()->getMaxBody();  
-        conn->updateBufferSizes(conn->request().max_body_size);
+        }    
+        // Body limit enforced in _parseBody()/_parseChunked(), not Buffer::append()
     }
 
     if (conn->request().parse_state == PSTATE_HEADERS)

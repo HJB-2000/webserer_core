@@ -120,6 +120,24 @@ input {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+.subject-grid .req-btn {
+    display: inline-block;
+    margin: 4px 0;
+    padding: 6px 10px;
+    background: #e2e8f0;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #0f172a;
+    border: 1px solid #cbd5f5;
+    font-size: 13px;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.subject-grid .req-btn:hover {
+    background: #cbd5f5;
+    transform: translateY(-1px);
+}
+
 hr {
     border: 0;
     border-top: 1px solid #e2e8f0;
