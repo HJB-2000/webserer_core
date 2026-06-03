@@ -17,9 +17,10 @@ Buffer::Buffer(size_t client_max_body_size)
     : _cmbs(client_max_body_size)
     , _head(0)
 {
-    size_t initial = _cmbs / 4;
-    if (initial < MIN_INITIAL) initial = MIN_INITIAL;
-    if (initial > MAX_INITIAL) initial = MAX_INITIAL;
+    // Buffer capacity must be sufficient for HTTP headers regardless of body size limit.
+    // Use 64KB as the minimum to handle large headers, then apply body limit in append().
+    size_t initial = 64 * 1024;  // 64KB minimum for headers
+    if (initial > _cmbs && _cmbs > 0) initial = _cmbs;
     _storage.reserve(initial);
 }
 
@@ -84,9 +85,9 @@ void Buffer::reset()
     _storage.clear();
     _head = 0;
 
-    size_t initial = _cmbs / 4;
-    if (initial < MIN_INITIAL) initial = MIN_INITIAL;
-    if (initial > MAX_INITIAL) initial = MAX_INITIAL;
+    // Same logic as constructor: ensure buffer can hold headers
+    size_t initial = 64 * 1024;  // 64KB minimum for headers
+    if (initial > _cmbs && _cmbs > 0) initial = _cmbs;
     _storage.reserve(initial);
 }
 
