@@ -118,10 +118,7 @@ Server::~Server()
 }
 
 std::string Server::getRoot() const         { return _root; }
-size_t      Server::getMaxBody() const      { 
-    std::cout << "_client_max_body_size = " << _client_max_body_size << "----------" <<  std::endl;    
-    return static_cast<size_t>(this->_client_max_body_size); 
-}
+size_t      Server::getMaxBody() const      { return static_cast<size_t>(this->_client_max_body_size); }
 std::string Server::getHost() const         { return _host; }
 int         Server::getPort() const         { return _port; }
 int         Server::get_timeout_seconds() const { return _timeout_seconds; }

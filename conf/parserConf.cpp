@@ -253,17 +253,17 @@ void report_parse_error(const std::string& msg, std::vector<Lexer>& stream, size
     std::cerr << RED << "[Parse error]" << RESET;
     if (where && *where)
         std::cerr << " " << YEL << "(" << where << ")" << RESET;
-    std::cerr << ": " << msg << std::endl;
+    std::cerr << ": " << msg << "\n";
 
     std::cerr << "  at token #" << i;
     if (i < stream.size())
         std::cerr << " [" << stream[i].get_token_type() << "=" << stream[i].get_value() << "]";
-    std::cerr << std::endl;
+    std::cerr << "\n";
 
     if (i > 0)
-        std::cerr << "  prev: #" << (i - 1) << " [" << stream[i - 1].get_token_type() << "=" << stream[i - 1].get_value() << "]" << std::endl;
+        std::cerr << "  prev: #" << (i - 1) << " [" << stream[i - 1].get_token_type() << "=" << stream[i - 1].get_value() << "]" << "\n";
     if (i + 1 < stream.size())
-        std::cerr << "  next: #" << (i + 1) << " [" << stream[i + 1].get_token_type() << "=" << stream[i + 1].get_value() << "]" << std::endl;
+        std::cerr << "  next: #" << (i + 1) << " [" << stream[i + 1].get_token_type() << "=" << stream[i + 1].get_value() << "]" << "\n";
 
     throw std::runtime_error(msg);
 }
@@ -272,7 +272,7 @@ void ParserConf::check_for_blocks()
 {
     if(!get_exist_http() || !get_exist_server())
     {
-        std::cerr << "Missing required http or server block" << std::endl;
+        std::cerr << "Missing required http or server block" << "\n";
         throw std::runtime_error("Missing required top-level blocks");
     }
 }

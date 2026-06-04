@@ -478,6 +478,109 @@ void ResponseHandler::handleCgiOutput(
     if (req.method != "HEAD")
         _appendStr(wb, body);
 }
+
+// void ResponseHandler::handleCgiOutput(
+//     const HttpRequest&  req,
+//     const ServerConfig& cfg,
+//     const Buffer&       cgi_output,
+//     Buffer&             wb)
+// {
+//     const char*  data = cgi_output.data();
+//     const size_t size = cgi_output.size();
+
+//     // Find header/body separator — no copy, scan the raw buffer directly
+//     size_t sep       = std::string::npos;
+//     size_t body_skip = 0;
+
+//     // Search for \r\n\r\n first
+//     if (size >= 4)
+//     {
+//         for (size_t i = 0; i <= size - 4; ++i)
+//         {
+//             if (data[i]=='\r' && data[i+1]=='\n' && data[i+2]=='\r' && data[i+3]=='\n')
+//             {
+//                 sep       = i;
+//                 body_skip = 4;
+//                 break;
+//             }
+//         }
+//     }
+//     // Fall back to \n\n
+//     if (sep == std::string::npos && size >= 2)
+//     {
+//         for (size_t i = 0; i <= size - 2; ++i)
+//         {
+//             if (data[i]=='\n' && data[i+1]=='\n')
+//             {
+//                 sep       = i;
+//                 body_skip = 2;
+//                 break;
+//             }
+//         }
+//     }
+//     if (sep == std::string::npos)
+//     {
+//         std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=" << std::endl;
+//         _sendErrorInternal(502, req, cfg, wb);
+//         std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=" << std::endl;
+//         return;
+//     }
+
+//     // Parse headers — only this small section gets a string copy (~hundreds of bytes)
+//     std::string headers_raw(data, sep);
+
+//     int         status_code  = 200;
+//     std::string content_type = "text/html";
+//     std::string extra_headers;
+
+//     std::istringstream iss(headers_raw);
+//     std::string line;
+//     while (std::getline(iss, line))
+//     {
+//         if (!line.empty() && line[line.size() - 1] == '\r')
+//             line.erase(line.size() - 1);
+//         if (line.empty())
+//             continue;
+
+//         size_t colon = line.find(':');
+//         if (colon == std::string::npos)
+//             continue;
+
+//         std::string key = line.substr(0, colon);
+//         std::string val = line.substr(colon + 1);
+
+//         size_t vs = val.find_first_not_of(" \t");
+//         if (vs != std::string::npos)
+//             val = val.substr(vs);
+
+//         std::string lkey = key;
+//         for (size_t i = 0; i < lkey.size(); ++i)
+//             lkey[i] = static_cast<char>(
+//                 std::tolower(static_cast<unsigned char>(lkey[i])));
+
+//         if (lkey == "status")
+//         {
+//             std::istringstream sc(val);
+//             sc >> status_code;
+//         }
+//         else if (lkey == "content-type")
+//         {
+//             content_type = val;
+//         }
+//         else
+//         {
+//             extra_headers += key + ": " + val + "\r\n";
+//         }
+//     }
+
+//     // Body: pointer + length directly into write buffer — zero copy
+//     const char*  body_data = data + sep + body_skip;
+//     const size_t body_size = size - sep - body_skip;
+
+//     _writeHeaders(status_code, content_type, body_size, extra_headers, req, wb);
+//     if (req.method != "HEAD")
+//         _appendStr(wb, body_data, body_size);
+// }
 bool ResponseHandler::resolveCgiRequest(
     const HttpRequest&  req,
     const ServerConfig& cfg,
@@ -955,8 +1058,7 @@ std::string ResponseHandler::_resolveFsPath(
             if (!stripped.empty())
             {
                 if (stripped[0] != '/')
-                    stripped = '/' + stripped;
-                    // stripped = loc_path + stripped;
+                    stripped = loc_path + stripped;
                 uri = stripped;
             }
             // else: uri == loc_path exactly (e.g. /directory/youpi.bla)

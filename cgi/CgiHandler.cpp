@@ -39,7 +39,7 @@ bool CgiHandler::validate_env_contract() const
         std::string value = line.substr(eq + 1);
         if (isEnvKeyRequired(key) && value.empty())
         {
-            std::cerr << "[cgi][env] EMPTY required key: " << key << std::endl;
+            // std::cerr << "[cgi][env] EMPTY required key: " << key << std::endl;
             ok = false;
         }
     }
@@ -64,7 +64,7 @@ bool CgiHandler::validate_env_contract() const
         }
         if (!found)
         {
-            std::cerr << "[cgi][env] MISSING required key: " << required[r] << std::endl;
+            // std::cerr << "[cgi][env] MISSING required key: " << required[r] << std::endl;
             ok = false;
         }
     }
@@ -74,11 +74,11 @@ bool CgiHandler::validate_env_contract() const
 void CgiHandler::log_env_once()
 {
     if (_env_logged) return;
-    std::cerr << "-------[cgi][env] generated entries:-------" << std::endl;
-    for (size_t i = 0; i < _meta_env.size(); ++i)
-        std::cerr << "  " << _meta_env[i] << std::endl;
-    std::cerr << "-------[cgi][env] contract check: "
-              << (validate_env_contract() ? "PASS-------" : "FAIL-------") << std::endl;
+    // std::cerr << "-------[cgi][env] generated entries:-------" << std::endl;
+    // for (size_t i = 0; i < _meta_env.size(); ++i)
+    //     std::cerr << "  " << _meta_env[i] << std::endl;
+    // std::cerr << "-------[cgi][env] contract check: "
+    //           << (validate_env_contract() ? "PASS-------" : "FAIL-------") << std::endl;
     _env_logged = true;
 }
 
@@ -190,12 +190,12 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
         }
         env.push_back("HTTP_" + key + "=" + it->second);
     }
-    std::cerr << "-------[cgi][env] generated entries:-------" << std::endl;
-    for (size_t i = 0; i < env.size(); ++i) {
-        std::cerr << "  " << env[i] << std::endl;
-    }
-    std::cerr << "-------[cgi][env] contract check: " 
-            << (env.size() > 0 ? "PASS" : "FAIL") << "-------" << std::endl;
+    // std::cerr << "-------[cgi][env] generated entries:-------" << std::endl;
+    // for (size_t i = 0; i < env.size(); ++i) {
+    //     std::cerr << "  " << env[i] << std::endl;
+    // }
+    // std::cerr << "-------[cgi][env] contract check: " 
+    //         << (env.size() > 0 ? "PASS" : "FAIL") << "-------" << std::endl;
     return env;
 }
 
@@ -226,6 +226,7 @@ bool CgiHandler::startCgi(int write_end)
         _state = CGI_ERROR;
         return false;
     }
+    // std::cout << "||||||||||||" << cgi_path << "||||||||||||" << std::endl;
 
     // stat() the CGI interpreter — record inode fingerprint for child
     // verification. Two separate structs so the second stat() does not
