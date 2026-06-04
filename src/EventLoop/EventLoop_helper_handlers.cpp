@@ -94,7 +94,7 @@ void EventLoop::_handleRead(Connection* conn)
                 _rearmClient(fd);
                 return;
             }
-
+            break;
             // PS_IDLE / PS_HEADERS / PS_BODY → partial, keep reading
         }
     }

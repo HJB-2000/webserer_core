@@ -1,4 +1,5 @@
 #include "Headers/EventLoop.hpp"
+#include "netinet/tcp.h"
 
 int readSomaxconn()
 {
@@ -32,11 +33,28 @@ int make_listener(const char* host, int port)
         return -1;
     }
 
-    int reuse = 1;
+    int reuse, reuseport, nodaly = 1;
+    int timeout_seconds = 30;
+
     if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
         std::cerr << "[core] setsockopt SO_REUSEADDR warning: "
                   << std::strerror(errno) << "\n";
+    if (::setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &reuseport, sizeof(reuseport)) < 0) 
+        std::cerr << "[core] setsockopt SO_REUSEPORT failed: " << std::strerror(errno) << "\n";
 
+    if (::setsockopt(fd, IPPROTO_IP, TCP_NODELAY, &nodaly, sizeof(nodaly)))
+        std::cerr << "[core] setsockopt  warning: "
+                  << std::strerror(errno) << "\n";
+    if (::setsockopt(fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &timeout_seconds, sizeof(timeout_seconds)) < 0)
+        std::cerr << "[core] setsockopt TCP_DEFER_ACCEPT failed: "
+                  << std::strerror(errno) << "\n";
+    int buf_size = 1024 * 1024;
+    if (::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size)) < 0) {
+        std::cerr << "[core] setsockopt SO_RCVBUF warning\n";
+    }
+    if (::setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size)) < 0) {
+        std::cerr << "[core] setsockopt SO_SNDBUF warning\n";
+    }
     struct sockaddr_in addr;
     std::memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
