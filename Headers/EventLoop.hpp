@@ -22,6 +22,17 @@
 #include <fcntl.h>
 #include <vector>
 #include <map>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <cstring>
+#include <cerrno>
+#include <csignal>
+#include <cstdlib>
+#include <iostream>
+#include <netdb.h>
+#include <stdexcept>
+#include <sys/wait.h>
+#include <signal.h>
 
 #include "ConnectionManager.hpp"
 #include "Connection.hpp"
@@ -118,5 +129,7 @@ private:
     void _modifyEventFd(int fd, EventKind kind, uint32_t events);
     void _unregisterEventFd(int fd);
 };
+
+int make_listener(const char* host, int port);
 
 #endif // EVENT_LOOP_HPP

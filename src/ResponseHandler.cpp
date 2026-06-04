@@ -955,7 +955,7 @@ std::string ResponseHandler::_resolveFsPath(
             if (!stripped.empty())
             {
                 if (stripped[0] != '/')
-                    stripped = "/" + stripped;
+                    stripped = loc_path + stripped;
                 uri = stripped;
             }
             // else: uri == loc_path exactly (e.g. /directory/youpi.bla)
