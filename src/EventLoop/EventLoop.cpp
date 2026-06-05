@@ -166,9 +166,12 @@ void EventLoop::run()
                       << std::strerror(errno) << "\n";
             break;
         }
-
+        // it was removed for some tests  i put it back
         for (int i = 0; i < n; ++i)
+        {
             _dispatch(events[i]);
+            _rearmClient(events[i].data.fd);
+        }
 
         for (size_t i = 0; i < _stale_refs.size(); ++i)
             delete _stale_refs[i];
