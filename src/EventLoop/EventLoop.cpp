@@ -166,7 +166,7 @@ void EventLoop::run()
                       << std::strerror(errno) << "\n";
             break;
         }
-
+        // it was removed for some tests  i put it back
         for (int i = 0; i < n; ++i)
         {
             _dispatch(events[i]);

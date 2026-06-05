@@ -84,21 +84,21 @@ void ParserConf::parseDirective(eventsConfig &events, const std::string &directi
     if(values.empty())
     {
         std::cerr << "[WARN] events: directive '" << directive
-                  << "' has no values" << std::endl;
+                  << "' has no values" << "\n";
         return;
     }
     if(directive == "worker_connections")
     {
         if (values.size() != 1)
         {
-            std::cerr << "[WARN] events: worker_connections expects a single value" << std::endl;
+            std::cerr << "[WARN] events: worker_connections expects a single value" << "\n";
             return;
         }
         long tmp = 0;
         if (!safe_strtol(values[0], tmp) || tmp <= 0)
         {
             std::cerr << "[WARN] events: invalid worker_connections value '"
-                      << values[0] << "'" << std::endl;
+                      << values[0] << "'" << "\n";
             return;
         }
         events.set_worker_connections(static_cast<int>(tmp));
@@ -107,17 +107,17 @@ void ParserConf::parseDirective(eventsConfig &events, const std::string &directi
     {
         if (values.size() != 1)
         {
-            std::cerr << "[WARN] events: event_model expects a single value" << std::endl;
+            std::cerr << "[WARN] events: event_model expects a single value" << "\n";
             return;
         }
         if(values[0] == "select" || values[0] == "poll" || values[0] == "epoll" || values[0] == "kqueue")
             events.set_event_model(values[0]);
         else
-            std::cerr << "[WARN] events: unsupported event_model '" << values[0] << "'" << std::endl;
+            std::cerr << "[WARN] events: unsupported event_model '" << values[0] << "'" << "\n";
     }
     else
     {
-        std::cerr << "[WARN] events: unknown directive '" << directive << "'" << std::endl;
+        std::cerr << "[WARN] events: unknown directive '" << directive << "'" << "\n";
     }
 }
 
@@ -151,7 +151,7 @@ void ParserConf::parseEvents(eventsConfig &obj_events, std::vector<Lexer> &strea
             {
                 if (seen_directives.find(val) != seen_directives.end())
                 {
-                    std::cerr << "[WARN] events: duplicate directive '" << val << "'" << std::endl;
+                    std::cerr << "[WARN] events: duplicate directive '" << val << "'" << "\n";
                 }
                 seen_directives.insert(val);
             }
@@ -164,7 +164,7 @@ void ParserConf::parseEvents(eventsConfig &obj_events, std::vector<Lexer> &strea
         else
         {
             std::cerr << "[WARN] events: unexpected token '" << stream_lexems[i].get_value()
-                      << "'" << std::endl;
+                      << "'" << "\n";
             i++;
         }
     }
@@ -177,7 +177,7 @@ void ParserConf::parseEvents(eventsConfig &obj_events, std::vector<Lexer> &strea
             std::cerr << " worker_connections";
         if (!saw_model)
             std::cerr << " event_model";
-        std::cerr << std::endl;
+        std::cerr << "\n";
     }
     i++;
 }
