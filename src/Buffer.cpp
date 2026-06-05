@@ -14,7 +14,7 @@ BodyLimitException::BodyLimitException(const std::string& msg)
 // ── Buffer ──────────────────────────────────────────────────
 
 Buffer::Buffer(size_t client_max_body_size)
-    : _cmbs(client_max_body_size)
+    : _cmbs(client_max_body_size == 0 ? (size_t)-1 : client_max_body_size)
     , _head(0)
 {
     // Buffer capacity must be sufficient for HTTP headers regardless of body size limit.
@@ -104,6 +104,7 @@ void Buffer::_compact()
 void Buffer::_ensureCapacity(size_t needed)
 {
     size_t cap = _storage.capacity();
+    if (cap == 0) cap = 1;  // ADD THIS
     while (cap < needed)
     {
         cap *= 2;

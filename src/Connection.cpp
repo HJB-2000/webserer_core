@@ -65,6 +65,8 @@ ssize_t Connection::recv()
     if (n > 0)
     {
         // May throw BufferOverflowException → caller catches → 413
+        // if (_read_buffer.empty())
+        //     _read_buffer.reset();
         _read_buffer.append(tmp, static_cast<size_t>(n));
         _touchActive();
     }

@@ -78,7 +78,7 @@ void EventLoop::_handleRead(Connection* conn)
             if (conn->request().parse_state == PSTATE_COMPLETE)
             {
                 conn->setProcessing();
-
+                conn->readBuffer().reset();
                 CgiRequestInfo cgi;
                 if (_responder.resolveCgiRequest(conn->request(), *conn->config(), cgi))
                 {
@@ -94,7 +94,6 @@ void EventLoop::_handleRead(Connection* conn)
                 _rearmClient(fd);
                 return;
             }
-            break; // restored
             // PS_IDLE / PS_HEADERS / PS_BODY → partial, keep reading
         }
     }
@@ -195,10 +194,10 @@ void EventLoop::_handleCgiStdinEvent(int stdin_fd, uint32_t events)
         return;
     }
 
-    while (job->stdin_offset < job->stdin_body.size())
+    while (job->stdin_offset < (*job->stdin_body).size())
     {
-        const char*  data = job->stdin_body.data() + job->stdin_offset;
-        const size_t left = job->stdin_body.size() - job->stdin_offset;
+        const char*  data = (*job->stdin_body).data() + job->stdin_offset;
+        const size_t left = (*job->stdin_body).size() - job->stdin_offset;
         ssize_t n = ::write(stdin_fd, data, left);
         if (n > 0)
         {
@@ -216,4 +215,9 @@ void EventLoop::_handleCgiStdinEvent(int stdin_fd, uint32_t events)
 
     // Body fully written — close write end to signal EOF to the child.
     _closeCgiStdin(job);
+    Connection* conn = _manager->get(job->client_fd);
+    if (conn) {
+        std::string().swap(conn->request().body);   // free 100MB
+        conn->readBuffer().reset();                  // free other 100MB
+    }
 }

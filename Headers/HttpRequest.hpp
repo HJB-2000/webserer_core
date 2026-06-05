@@ -52,7 +52,8 @@ enum ParseState
 class HttpRequest
 {
 public:
-
+    int body_fd;      // tmpfile fd, -1 if none
+    size_t body_size; // actual byte count written
     // ── request-line fields ────────────────────────────────
     std::string method;
     std::string path;

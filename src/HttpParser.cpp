@@ -21,6 +21,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <stdlib.h> 
 
 // ── anonymous namespace: file-local helpers ──────────────────
 namespace {
@@ -696,16 +697,31 @@ void HttpParser::_parseBody(Buffer& buf, HttpRequest& req)
     size_t needed    = req.content_length - already;
     size_t available = buf.size();
     size_t to_read   = (needed < available) ? needed : available;
-    if (req.body.size() + to_read > req.max_body_size)  // ← Add this  
+    if (req.body_size + to_read > req.max_body_size)  // ← Add this  
     {  
         req.parse_state = PSTATE_ERROR;  
         req.error_code = 413;  
         return;  
     } 
-    req.body.append(buf.data(), to_read);
-    buf.consume(to_read);
+    // req.body.append(buf.data(), to_read);
+    // buf.consume(to_read);
 
-    if (req.body.size() == req.content_length)
+    // if (req.body.size() == req.content_length)
+    //     req.parse_state = PSTATE_COMPLETE;
+    if (req.body_fd < 0) {
+    char tmp[] = "/tmp/cgi_body_XXXXXX";
+    req.body_fd = mkstemp(tmp);
+    if (req.body_fd < 0) {
+        req.parse_state = PSTATE_ERROR;
+        req.error_code = 500;
+        return;
+    }
+    ::unlink(tmp);
+    }
+    ::write(req.body_fd, buf.data(), to_read);
+    req.body_size += to_read;
+    buf.consume(to_read);
+    if (req.body_size == req.content_length)
         req.parse_state = PSTATE_COMPLETE;
 }
 
@@ -831,13 +847,24 @@ void HttpParser::_parseChunked(Buffer& buf, HttpRequest& req)
 
         size_t to_read =
             (req._chunk_size < buf.size()) ? req._chunk_size : buf.size();
-        if (req.body.size() + to_read > req.max_body_size)  
+        if (req.body_size + to_read > req.max_body_size) 
         {  
             req.parse_state = PSTATE_ERROR;  
             req.error_code = 413;  
             return;  
         }  
-        req.body.append(buf.data(), to_read);
+        if (req.body_fd < 0) {
+        char tmp[] = "/tmp/cgi_body_XXXXXX";
+        req.body_fd = mkstemp(tmp);
+        if (req.body_fd < 0) {
+            req.parse_state = PSTATE_ERROR;
+            req.error_code = 500;
+            return;
+        }
+        ::unlink(tmp);
+        }
+        ::write(req.body_fd, buf.data(), to_read);
+        req.body_size += to_read;
         buf.consume(to_read);
         req._chunk_size -= to_read;
 

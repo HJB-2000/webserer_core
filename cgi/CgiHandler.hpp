@@ -29,7 +29,7 @@ class CgiHandler
         CgiState           getState()        const;
         int                getErrorCode()    const;
         pid_t              getChildPid()     const;
-
+        int _body_fd;
 
         // Transfer ownership of the stdin write fd to the caller.
         // After this call, CgiHandler will no longer close the fd in its

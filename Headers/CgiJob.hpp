@@ -17,7 +17,7 @@ struct CgiJob
     int         _timeout_seconds; // to check based on config file
     // Non-blocking stdin write state (only used when the request has a body)
     int         stdin_fd;
-    std::string stdin_body;
+    const std::string* stdin_body;;
     size_t      stdin_offset;
 
     CgiJob(int cfd, int rfd, size_t max_size, int timeout)

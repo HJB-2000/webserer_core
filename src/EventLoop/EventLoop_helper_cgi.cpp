@@ -69,6 +69,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
         throw;
     }
     conn->setCgiRunning();
+    conn->readBuffer().reset();
     _rearmClient(conn->fd());
 
     // bool ok = startCgi(conn->request(), *conn->config(), *info.location,
@@ -87,7 +88,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
         {
             _setCloexec(stdin_fd, "cgi-stdin");
             job->stdin_fd     = stdin_fd;
-            job->stdin_body   = conn->request().body;
+            job->stdin_body   = &conn->request().body;
             job->stdin_offset = 0;
             _cgi_stdin_jobs[stdin_fd] = job;
             try {
@@ -125,7 +126,7 @@ void EventLoop::_closeCgiStdin(CgiJob* job)
 
     job->stdin_fd     = -1;
     job->stdin_offset = 0;
-    job->stdin_body.clear();
+    job->stdin_body = NULL;
 }
 
 // Wrapped the read loop in a try/catch block to return a clean 413 instead of crashing.
@@ -150,6 +151,8 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
             ssize_t n = ::read(result_fd, buf, sizeof(buf));
             if (n > 0)
             {
+                if (job->result_buffer.size() + static_cast<size_t>(n) > job->result_buffer.maxSize())
+                    throw BodyLimitException("CGI response too large");
                 job->result_buffer.append(buf, static_cast<size_t>(n));
                 continue;
             }

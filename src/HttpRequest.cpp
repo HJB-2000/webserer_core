@@ -2,10 +2,13 @@
 //  HttpRequest.cpp — HttpRequest implementations
 // ============================================================
 #include "Headers/HttpRequest.hpp"
+#include <unistd.h>
 #include <cctype>
 
 HttpRequest::HttpRequest()
-    : parse_state(PSTATE_IDLE)
+    :body_fd(-1)
+    ,body_size(0)
+    ,parse_state(PSTATE_IDLE)
     , content_length(0)
     , chunked(false)
     , max_body_size(0)
@@ -17,6 +20,9 @@ HttpRequest::HttpRequest()
 
 void HttpRequest::reset()
 {
+    if (body_fd >= 0) { ::close(body_fd); body_fd = -1; }
+    body_size = 0;
+    body.clear(); // keep field, always empty now
     method.clear();
     path.clear();
     query_string.clear();
