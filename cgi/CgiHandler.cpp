@@ -314,6 +314,16 @@ bool CgiHandler::startCgi(int write_end)
         }
     }
 
+    // Convert paths to absolute before fork to ensure they're valid
+    // after chdir() in child process
+    char resolved_path[1024];
+    if (realpath(cgi_path.c_str(), resolved_path) != NULL)
+        cgi_path = resolved_path;
+
+    char resolved_script[1024];
+    if (realpath(script_file.c_str(), resolved_script) != NULL)
+        script_file = resolved_script;
+
     _child_pid = fork();
     if (_child_pid < 0)
     {
