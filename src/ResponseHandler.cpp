@@ -402,6 +402,9 @@ void ResponseHandler::sendError(
 //    <body>
 //
 //  Returns 502 if the header/body separator is missing.
+//
+//  OPTIMIZATION: Process buffer directly without creating large
+//  string copies. This prevents memory from growing rapidly under load.
 // ============================================================
 void ResponseHandler::handleCgiOutput(
     const HttpRequest&  req,
@@ -409,15 +412,44 @@ void ResponseHandler::handleCgiOutput(
     const Buffer&       cgi_output,
     Buffer&             wb)
 {
-    std::string raw(cgi_output.data(), cgi_output.size());
+    const char*  data = cgi_output.data();
+    const size_t size = cgi_output.size();
 
-    // Find header/body separator — prefer \r\n\r\n, accept \n\n
-    size_t sep       = raw.find("\r\n\r\n");
-    size_t body_skip = 4;
-    if (sep == std::string::npos)
+    if (size == 0)
     {
-        sep       = raw.find("\n\n");
-        body_skip = 2;
+        _sendErrorInternal(502, req, cfg, wb);
+        return;
+    }
+
+    // Find header/body separator — no copy, scan the raw buffer directly
+    size_t sep       = std::string::npos;
+    size_t body_skip = 0;
+
+    // Search for \r\n\r\n first
+    if (size >= 4)
+    {
+        for (size_t i = 0; i <= size - 4; ++i)
+        {
+            if (data[i]=='\r' && data[i+1]=='\n' && data[i+2]=='\r' && data[i+3]=='\n')
+            {
+                sep       = i;
+                body_skip = 4;
+                break;
+            }
+        }
+    }
+    // Fall back to \n\n
+    if (sep == std::string::npos && size >= 2)
+    {
+        for (size_t i = 0; i <= size - 2; ++i)
+        {
+            if (data[i]=='\n' && data[i+1]=='\n')
+            {
+                sep       = i;
+                body_skip = 2;
+                break;
+            }
+        }
     }
     if (sep == std::string::npos)
     {
@@ -425,58 +457,87 @@ void ResponseHandler::handleCgiOutput(
         return;
     }
 
-    std::string headers_raw = raw.substr(0, sep);
-    std::string body        = raw.substr(sep + body_skip);
-
-    // Parse CGI headers
+    // Parse CGI headers directly from the buffer
     int         status_code   = 200;
     std::string content_type  = "text/html";
     std::string extra_headers;
 
-    std::istringstream iss(headers_raw);
-    std::string line;
-    while (std::getline(iss, line))
+    size_t line_start = 0;
+    while (line_start < sep)
     {
-        if (!line.empty() && line[line.size() - 1] == '\r')
-            line.erase(line.size() - 1);
-        if (line.empty())
-            continue;
+        // Find end of line
+        size_t line_end = line_start;
+        while (line_end < sep && data[line_end] != '\r' && data[line_end] != '\n')
+            ++line_end;
 
-        size_t colon = line.find(':');
-        if (colon == std::string::npos)
-            continue;
+        // Extract line (without \r or \n)
+        size_t line_len = line_end - line_start;
+        if (line_len > 0 && data[line_start + line_len - 1] == '\r')
+            --line_len;
 
-        std::string key = line.substr(0, colon);
-        std::string val = line.substr(colon + 1);
-
-        size_t vs = val.find_first_not_of(" \t");
-        if (vs != std::string::npos)
-            val = val.substr(vs);
-
-        // Lowercase key for comparison only
-        std::string lkey = key;
-        for (size_t i = 0; i < lkey.size(); ++i)
-            lkey[i] = static_cast<char>(
-                std::tolower(static_cast<unsigned char>(lkey[i])));
-
-        if (lkey == "status")
+        if (line_len == 0)
         {
-            std::istringstream sc(val);
-            sc >> status_code;
+            // Empty line marks end of headers
+            line_start = line_end + ((line_end < sep && data[line_end] == '\r') ? 1 : 0)
+                       + ((line_end + 1 < sep && data[line_end + 1] == '\n') ? 1 : 0);
+            break;
         }
-        else if (lkey == "content-type")
+
+        // Find colon separator
+        size_t colon = line_start;
+        while (colon < line_start + line_len && data[colon] != ':')
+            ++colon;
+
+        if (colon < line_start + line_len)
         {
-            content_type = val;
+            // Extract key
+            std::string key;
+            key.reserve(line_len);
+            for (size_t i = line_start; i < colon; ++i)
+                key.push_back(data[i]);
+
+            // Extract value
+            std::string val;
+            size_t val_start = colon + 1;
+            while (val_start < line_start + line_len && (data[val_start] == ' ' || data[val_start] == '\t'))
+                ++val_start;
+            val.reserve(line_len);
+            for (size_t i = val_start; i < line_start + line_len; ++i)
+                val.push_back(data[i]);
+
+            // Lowercase key for comparison
+            for (size_t i = 0; i < key.size(); ++i)
+                key[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(key[i])));
+
+            if (key == "status")
+            {
+                std::istringstream sc(val);
+                sc >> status_code;
+            }
+            else if (key == "content-type")
+            {
+                content_type = val;
+            }
+            else
+            {
+                extra_headers += key + ": " + val + "\r\n";
+            }
         }
-        else
-        {
-            extra_headers += key + ": " + val + "\r\n";
-        }
+
+        // Move to next line
+        line_start = line_end;
+        if (line_start < sep && data[line_start] == '\r') ++line_start;
+        if (line_start < sep && data[line_start] == '\n') ++line_start;
     }
 
-    _writeHeaders(status_code, content_type, body.size(), extra_headers, req, wb);
-    if (req.method != "HEAD")
-        _appendStr(wb, body);
+    size_t body_size = size - sep - body_skip;
+    _writeHeaders(status_code, content_type, body_size, extra_headers, req, wb);
+
+    if (req.method != "HEAD" && body_size > 0)
+    {
+        // Write body directly from buffer without copying
+        _appendStr(wb, data + sep + body_skip, body_size);
+    }
 }
 
 // void ResponseHandler::handleCgiOutput(
