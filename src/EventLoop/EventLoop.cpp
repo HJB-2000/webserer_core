@@ -6,6 +6,7 @@
 #include "Headers/CgiJob.hpp"
 #include <sys/wait.h>
 #include <signal.h>
+#include <unistd.h>
 
 
 
@@ -64,7 +65,21 @@ EventLoop::~EventLoop()
         delete _stale_refs[i];
     _stale_refs.clear();
 
-    // Clean up pending reaps
+    // Clean up pending reaps - try to reap all remaining zombies
+    for (size_t i = 0; i < _pending_reap.size(); ++i)
+    {
+        pid_t pid = _pending_reap[i].first;
+        int status;
+        // Try to reap, using WNOHANG to not block
+        pid_t ret = waitpid(pid, &status, WNOHANG);
+        if (ret == 0)
+        {
+            // Still running after WNOHANG, send SIGKILL and try again
+            kill(pid, SIGKILL);
+            usleep(10000);  // Wait 10ms
+            waitpid(pid, &status, 0);  // Wait for it to die
+        }
+    }
     _pending_reap.clear();
 
     // Close server fds

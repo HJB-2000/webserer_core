@@ -194,6 +194,13 @@ void EventLoop::_handleCgiStdinEvent(int stdin_fd, uint32_t events)
         return;
     }
 
+    // Check if stdin_body is still valid (not already closed)
+    if (job->stdin_body == NULL)
+    {
+        _closeCgiStdin(job);
+        return;
+    }
+
     while (job->stdin_offset < (*job->stdin_body).size())
     {
         const char*  data = (*job->stdin_body).data() + job->stdin_offset;
