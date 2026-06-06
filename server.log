@@ -1,0 +1,19 @@
+================================================================================
+[Logger] log session started  —  file: webserv.log
+================================================================================
+[ConnectionManager] max connections: 10000
+[core] listen backlog set to 1024
+[core] listening on 0.0.0.0:5500 (fd 5)
+[EventLoop] listening on fd 5
+[core] server ready — press Ctrl+C to stop
+[EventLoop] starting
+[ConnectionManager] accepted fd 6
+[EventLoop] CGI fd 7 registered for client fd 6
+[EventLoop] CGI fd 8 registered for client fd 6
+[ConnectionManager] closed fd 6
+[EventLoop] stopped
+[core] shutdown complete
+================================================================================
+[Logger] log session ended
+================================================================================
+
