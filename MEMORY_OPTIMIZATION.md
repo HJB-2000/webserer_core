@@ -176,9 +176,11 @@ To reduce memory below 2GB, architectural changes would be needed:
 3. `Headers/CgiJob.hpp` - Buffer size limit
 4. `src/Connection.cpp` - Buffer size limits, reset behavior, body_fd cleanup
 5. `src/Buffer.cpp` - Memory release on reset
-6. `src/EventLoop/EventLoop.cpp` - Shutdown leak fix
+6. `src/EventLoop/EventLoop.cpp` - Shutdown leak fix, signal safety
 7. `src/make_listener.cpp` - Initialize setsockopt variables
 8. `src/main.cpp` - Remove double close of server fds
+9. `src/EventLoop/EventLoop_helper.cpp` - Clean stop with _stopped flag
+10. `Headers/EventLoop.hpp` - volatile sig_atomic_t for signal safety
 
 ## Valgrind Errors Fixed
 
@@ -235,6 +237,22 @@ This fixes:
 This fixes:
 - "fd already closed" error for server socket
 - FD leaks at exit (6 CGI pipes still open)
+
+### 5. Signal Handler Race Condition
+**Files:** `Headers/EventLoop.hpp`, `src/EventLoop/EventLoop.cpp`, `src/EventLoop/EventLoop_helper.cpp`, `src/EventLoop/EventLoop_helper_cgi.cpp`
+
+**Problem:** When SIGINT arrives, stop() closes all pipes immediately, but the event loop may still have pending events to process. This causes:
+- `_handleCgiEvent` tries to read from closed pipes
+- `_closeCgiJob` tries to close already-closed fds
+- "fd already closed" errors
+
+**Fix:**
+- Changed `_running` to `volatile sig_atomic_t` for signal safety
+- Added `_stopped` flag to prevent new event processing
+- `stop()` sets `_stopped` and closes epoll to prevent new events
+- `_dispatch()` checks `_stopped` before processing events
+- `_handleCgiEvent()` checks `_stopped` before processing
+- `_closeCgiJob()` only closes fds if epoll_fd is still valid
 
 ## Shutdown Memory Leaks
 
