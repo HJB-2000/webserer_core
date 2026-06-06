@@ -51,6 +51,8 @@ void EventLoop::stop() {
     _stopped = true;  // Signal to stop processing events immediately
     
     // Close all server fds and mark them as closed
+    // Don't delete EventRefs here - just mark them invalid
+    // The destructor will handle deletion
     for (size_t i = 0; i < _server_fds.size(); ++i) {
         int fd = _server_fds[i];
         if (fd >= 0) {
@@ -58,12 +60,21 @@ void EventLoop::stop() {
             ::close(fd);
             // Mark as closed to prevent double-close in destructor
             _server_fds[i] = -1;
+            // Mark EventRef as invalid but don't delete it
+            // (EventRefs may still be referenced by pending events)
             if (_event_refs.count(fd) && _event_refs[fd] != NULL) {
-                delete _event_refs[fd];
-                _event_refs[fd] = NULL;
-                _event_refs.erase(fd);
+                _event_refs[fd]->kind = EV_INVALID;
+                // Don't delete here - destructor will clean up
             }
         }
+    }
+
+    // Mark all CGI-related EventRefs as invalid too
+    for (std::map<int, EventRef*>::iterator it = _event_refs.begin();
+         it != _event_refs.end(); ++it)
+    {
+        if (it->second && it->second->kind != EV_INVALID)
+            it->second->kind = EV_INVALID;
     }
 
     // Close epoll fd to prevent more events
@@ -71,9 +82,6 @@ void EventLoop::stop() {
         ::close(_epoll_fd);
         _epoll_fd = -1;
     }
-    
-    // Note: CGI pipes and cleanup are handled by the destructor
-    // Don't close them here to avoid race conditions with pending events
 }
 
 

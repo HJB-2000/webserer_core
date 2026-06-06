@@ -29,28 +29,40 @@ EventLoop::EventLoop()
 
 EventLoop::~EventLoop()
 {
-    // Clean up all CGI jobs to prevent memory leaks
+    // Clean up all CGI stdin jobs first
+    for (std::map<int, CgiJob*>::iterator sit = _cgi_stdin_jobs.begin();
+         sit != _cgi_stdin_jobs.end(); ++sit)
+    {
+        if (sit->first >= 0)
+            ::close(sit->first);
+    }
+    _cgi_stdin_jobs.clear();
+
+    // Clean up all CGI jobs - close result_fd and kill child processes
     for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
          it != _cgi_jobs.end(); ++it)
     {
         CgiJob* job = it->second;
+        
+        // Close the CGI result fd (read end of pipe)
+        if (it->first >= 0)
+            ::close(it->first);
+        
+        // Kill and reap child process
         if (job->child_pid > 0)
         {
             kill(job->child_pid, SIGKILL);
             int status;
             waitpid(job->child_pid, &status, 0);
         }
+        
         // Close stdin fd if still open
         if (job->stdin_fd >= 0)
             ::close(job->stdin_fd);
-        // Unregister stdin event if exists
-        std::map<int, CgiJob*>::iterator sit = _cgi_stdin_jobs.find(job->stdin_fd);
-        if (sit != _cgi_stdin_jobs.end())
-            _cgi_stdin_jobs.erase(sit);
+            
         delete job;
     }
     _cgi_jobs.clear();
-    _cgi_stdin_jobs.clear();
 
     // Clean up all event refs
     for (std::map<int, EventRef*>::iterator it = _event_refs.begin();
