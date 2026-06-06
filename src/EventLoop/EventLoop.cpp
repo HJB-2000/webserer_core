@@ -3,6 +3,9 @@
 #include "Headers/EventLoop.hpp"
 #include "Headers/HttpParser.hpp"
 #include "Headers/ResponseHandler.hpp"
+#include "Headers/CgiJob.hpp"
+#include <sys/wait.h>
+#include <signal.h>
 
 
 
@@ -25,6 +28,50 @@ EventLoop::EventLoop()
 
 EventLoop::~EventLoop()
 {
+    // Clean up all CGI jobs to prevent memory leaks
+    for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
+         it != _cgi_jobs.end(); ++it)
+    {
+        CgiJob* job = it->second;
+        if (job->child_pid > 0)
+        {
+            kill(job->child_pid, SIGKILL);
+            int status;
+            waitpid(job->child_pid, &status, 0);
+        }
+        // Close stdin fd if still open
+        if (job->stdin_fd >= 0)
+            ::close(job->stdin_fd);
+        // Unregister stdin event if exists
+        std::map<int, CgiJob*>::iterator sit = _cgi_stdin_jobs.find(job->stdin_fd);
+        if (sit != _cgi_stdin_jobs.end())
+            _cgi_stdin_jobs.erase(sit);
+        delete job;
+    }
+    _cgi_jobs.clear();
+    _cgi_stdin_jobs.clear();
+
+    // Clean up all event refs
+    for (std::map<int, EventRef*>::iterator it = _event_refs.begin();
+         it != _event_refs.end(); ++it)
+    {
+        delete it->second;
+    }
+    _event_refs.clear();
+
+    // Clean up stale refs
+    for (size_t i = 0; i < _stale_refs.size(); ++i)
+        delete _stale_refs[i];
+    _stale_refs.clear();
+
+    // Clean up pending reaps
+    _pending_reap.clear();
+
+    // Close server fds
+    for (size_t i = 0; i < _server_fds.size(); ++i)
+        ::close(_server_fds[i]);
+    _server_fds.clear();
+
     delete _manager;
     if (_epoll_fd >= 0)
         ::close(_epoll_fd);

@@ -1,8 +1,17 @@
 NAME    = webserv
 
 CXX      = c++
-CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -Werror -I. -I conf 
-# CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -fsanitize=undefined -I, -I conf #-fsanitize=address,undefined -I. -I conf
+CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -Werror -I. -I conf
+
+# Sanitizer flags (enable with: make SANITIZE=1)
+# For address sanitizer: make SANITIZE=1
+# For undefined behavior sanitizer: make SANITIZE=1 UBSAN=1
+ifdef SANITIZE
+	CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer
+endif
+ifdef UBSAN
+	CXXFLAGS += -fsanitize=undefined
+endif
 # ── your sources ──────────────────────────────────────────────
 SRCS    = src/main.cpp \
           src/make_listener.cpp \
