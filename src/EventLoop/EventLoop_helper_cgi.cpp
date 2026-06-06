@@ -108,6 +108,14 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
     if (!ok)
     {
         _closeCgiJob(result_read_fd);
+        // FIX: Free the request body to prevent memory leak when CGI fails to start
+        std::string().swap(const_cast<HttpRequest&>(conn->request()).body);
+        conn->readBuffer().reset();
+        if (conn->request().body_fd >= 0)
+        {
+            ::close(conn->request().body_fd);
+            const_cast<HttpRequest&>(conn->request()).body_fd = -1;
+        }
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
         conn->setWriting();
         _rearmClient(conn->fd());
@@ -189,6 +197,15 @@ void EventLoop::_finishCgiJob(int result_fd)
                                    job->result_buffer,
                                    conn->writeBuffer());
         conn->setWriting();
+        // FIX: Free the request body to prevent memory leak
+        std::string().swap(const_cast<HttpRequest&>(conn->request()).body);
+        conn->readBuffer().reset();
+        // Close body_fd if it was opened for large POST bodies
+        if (conn->request().body_fd >= 0)
+        {
+            ::close(conn->request().body_fd);
+            const_cast<HttpRequest&>(conn->request()).body_fd = -1;
+        }
         _rearmClient(conn->fd());
     }
 
@@ -207,6 +224,15 @@ void EventLoop::_failCgiJob(int result_fd, int status_code)
     {
         _responder.sendError(status_code, *conn->config(), conn->writeBuffer());
         conn->setWriting();
+        // FIX: Free the request body to prevent memory leak
+        std::string().swap(const_cast<HttpRequest&>(conn->request()).body);
+        conn->readBuffer().reset();
+        // Close body_fd if it was opened for large POST bodies
+        if (conn->request().body_fd >= 0)
+        {
+            ::close(conn->request().body_fd);
+            const_cast<HttpRequest&>(conn->request()).body_fd = -1;
+        }
         _rearmClient(conn->fd());
     }
 
@@ -248,6 +274,7 @@ void EventLoop::_closeCgiJob(int result_fd)
 
 void EventLoop::_closeCgiJobsForClient(int client_fd)
 {
+    Connection* conn = _manager->get(client_fd);
     std::vector<int> to_close;
     for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
          it != _cgi_jobs.end(); ++it)
@@ -258,6 +285,18 @@ void EventLoop::_closeCgiJobsForClient(int client_fd)
 
     for (size_t i = 0; i < to_close.size(); ++i)
         _closeCgiJob(to_close[i]);
+
+    // FIX: Free the request body when client disconnects during CGI processing
+    if (conn)
+    {
+        std::string().swap(const_cast<HttpRequest&>(conn->request()).body);
+        conn->readBuffer().reset();
+        if (conn->request().body_fd >= 0)
+        {
+            ::close(conn->request().body_fd);
+            const_cast<HttpRequest&>(conn->request()).body_fd = -1;
+        }
+    }
 }
 
 
