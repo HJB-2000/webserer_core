@@ -17,7 +17,7 @@ static bool resolve_path(const std::string& path,
                          std::string& resolved)
 {
     // If path is absolute (starts with '/'), use it directly
-    if (!path.empty() && path[0] == '/')
+    if (!path.empty())
     {
         struct stat sb;
         if (stat(path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
@@ -61,7 +61,6 @@ static bool resolve_path(const std::string& path,
             return true;
         }
     }
-    
     return false;
 }
 
@@ -275,247 +274,6 @@ void CgiHandler::close_fd(int& fd_pipe)
         fd_pipe = -1;
     }
 }
-// bool CgiHandler::startCgi(int write_end)
-// {
-//     std::string cgi_path = _location.getCGI_path();
-//     if (cgi_path.empty())
-//     {
-//         _error_code = 500;
-//         _state = CGI_ERROR;
-//         return false;
-//     }
-//     // std::cout << "||||||||||||" << cgi_path << "||||||||||||" << std::endl;
-
-//     // stat() the CGI interpreter — record inode fingerprint for child
-//     // verification. Two separate structs so the second stat() does not
-//     // overwrite the first (original code reused a single struct stat sb).
-//     struct stat sb_cgi;
-//     if (stat(cgi_path.c_str(), &sb_cgi) != 0)
-//     {
-//         _error_code = 500;
-//         _state = CGI_ERROR;
-//         return false;
-//     }
-//     if (!S_ISREG(sb_cgi.st_mode))
-//     {
-//         _error_code = 500;
-//         _state = CGI_ERROR;
-//         return false;
-//     }
-//     if (access(cgi_path.c_str(), X_OK) != 0)
-//     {
-//         _error_code = 500;
-//         _state = CGI_ERROR;
-//         return false;
-//     }
-
-//     std::string script_file = _script_path;
-//     if (script_file.empty())
-//     {
-//         _error_code = 404;
-//         _state = CGI_ERROR;
-//         return false;
-//     }
-
-//     // stat() the script — separate struct so sb_cgi is preserved intact
-//     struct stat sb_script;
-//     if (stat(script_file.c_str(), &sb_script) != 0)
-//     {
-//         _error_code = 404;
-//         _state = CGI_ERROR;
-//         return false;
-//     }
-//     if (!S_ISREG(sb_script.st_mode))
-//     {
-//         _error_code = 403;
-//         _state = CGI_ERROR;
-//         return false;
-//     }
-//     if (access(script_file.c_str(), R_OK) != 0)
-//     {
-//         _error_code = 403;
-//         _state = CGI_ERROR;
-//         return false;
-//     }
-
-//     if (!validate_env_contract())
-//     {
-//         std::cerr << "[cgi] env contract FAILED — aborting CGI launch\n";
-//         _error_code = 500;
-//         _state = CGI_ERROR;
-//         return false;
-//     }
-
-//     const std::string& body = _request.body;
-//     bool need_stdin = !body.empty();
-
-//     if (need_stdin)
-//     {
-//         if (::pipe(_cgi_in_pipe) == -1)
-//         {
-//             _error_code = 500;
-//             _state = CGI_ERROR;
-//             return false;
-//         }
-
-//         // Set FD_CLOEXEC to guarantee no descriptor leaks into unrelated forks
-//         if (::fcntl(_cgi_in_pipe[0], F_SETFD, FD_CLOEXEC) == -1 ||
-//             ::fcntl(_cgi_in_pipe[1], F_SETFD, FD_CLOEXEC) == -1)
-//         {
-//             ::close(_cgi_in_pipe[0]);
-//             ::close(_cgi_in_pipe[1]);
-//             _cgi_in_pipe[0] = -1;
-//             _cgi_in_pipe[1] = -1;
-//             _error_code = 500;
-//             _state = CGI_ERROR;
-//             return false;
-//         }
-//     }
-
-//     // Convert paths to absolute before fork to ensure they're valid
-//     // after chdir() in child process
-//     char resolved_path[1024];
-//     if (realpath(cgi_path.c_str(), resolved_path) != NULL)
-//         cgi_path = resolved_path;
-
-//     char resolved_script[1024];
-//     if (realpath(script_file.c_str(), resolved_script) != NULL)
-//         script_file = resolved_script;
-
-//     _child_pid = fork();
-//     if (_child_pid < 0)
-//     {
-//         if (need_stdin)
-//         {
-//             close_fd(_cgi_in_pipe[0]);
-//             close_fd(_cgi_in_pipe[1]);
-//         }
-//         _error_code = 500;
-//         _state = CGI_ERROR;
-//         return false;
-//     }
-
-//     if (_child_pid == 0)
-//     {
-//         // ── TOCTOU Fix: re-verify inodes before execve ───────────────────
-//         // Compare st_ino + st_dev against snapshots taken in parent.
-//         // If the file was swapped in the fork()→execve() window, the
-//         // inode numbers won't match and we abort before executing anything.
-//         struct stat verify_cgi;
-//         if (stat(cgi_path.c_str(), &verify_cgi) != 0
-//             || verify_cgi.st_ino != sb_cgi.st_ino
-//             || verify_cgi.st_dev != sb_cgi.st_dev)
-//             _exit(127);
-
-//         struct stat verify_script;
-//         if (stat(script_file.c_str(), &verify_script) != 0
-//             || verify_script.st_ino != sb_script.st_ino
-//             || verify_script.st_dev != sb_script.st_dev)
-//             _exit(127);
-
-//         if (dup2(write_end, STDOUT_FILENO) == -1)
-//             _exit(1);
-
-//         int devnull_w = open("/dev/null", O_WRONLY);
-//         if (devnull_w < 0)
-//             _exit(1);
-//         if (dup2(devnull_w, STDERR_FILENO) == -1)
-//         {
-//             close(devnull_w);
-//             _exit(1);
-//         }
-//         close(devnull_w);
-
-//         if (need_stdin)
-//         {
-//             if (dup2(_cgi_in_pipe[0], STDIN_FILENO) == -1)
-//                 _exit(1);
-//         }
-//         else
-//         {
-//             int devnull_r = open("/dev/null", O_RDONLY);
-//             if (devnull_r < 0)
-//                 _exit(1);
-//             if (dup2(devnull_r, STDIN_FILENO) == -1)
-//             {
-//                 close(devnull_r);
-//                 _exit(1);
-//             }
-//             close(devnull_r);
-//         }
-
-//         close(write_end);
-//         close_fd(_cgi_in_pipe[0]);
-//         close_fd(_cgi_in_pipe[1]);
-
-//         std::string script_dir;
-//         std::string script_arg;
-//         std::string::size_type slash = script_file.find_last_of('/');
-//         if (slash != std::string::npos)
-//         {
-//             script_dir = script_file.substr(0, slash);
-//             script_arg = script_file.substr(slash + 1);
-//         }
-//         else
-//         {
-//             script_dir = ".";
-//             script_arg = script_file;
-//         }
-
-//         if (chdir(script_dir.c_str()) != 0)
-//             _exit(127);
-        
-//         char* argv[3];
-//         argv[0] = const_cast<char*>(cgi_path.c_str());
-//         argv[1] = const_cast<char*>(script_arg.c_str());
-//         argv[2] = NULL;
-
-//         if (_env_ptrs.empty() || _env_ptrs.back() != NULL)
-//             _exit(127);
-
-//         execve(cgi_path.c_str(), argv, &_env_ptrs[0]);
-//         _exit(127);
-//     }
-
-//     // ── parent ───────────────────────────────────────────────────────────
-//     if (need_stdin)
-//     {
-//         close_fd(_cgi_in_pipe[0]);
-//         int flags = fcntl(_cgi_in_pipe[1], F_GETFL, 0);
-//         if (flags != -1)
-//             fcntl(_cgi_in_pipe[1], F_SETFL, flags | O_NONBLOCK);
-//     }
-
-//     _state = CGI_WAITING;
-//     return true;
-// }
-// CgiHandler::~CgiHandler()
-// {
-//     close_fd(_cgi_in_pipe[0]);
-//     close_fd(_cgi_in_pipe[1]);
-// }
-
-// CgiState CgiHandler::getState() const
-// {
-//     return _state;
-// }
-
-// int CgiHandler::getErrorCode() const
-// {
-//     return _error_code;
-// }
-
-// int CgiHandler::releaseStdinFd()
-// {
-//     int fd = _cgi_in_pipe[1];
-//     _cgi_in_pipe[1] = -1;
-//     return fd;
-// }
-
-// pid_t  CgiHandler::getChildPid() const 
-// {
-//     return _child_pid; 
-// }
 
 bool CgiHandler::startCgi(int write_end)
 {
@@ -527,7 +285,11 @@ bool CgiHandler::startCgi(int write_end)
     std::string loc_root = _location.getRoot();
     std::string srv_root = _server.getRoot();
     if (!resolve_path(cgi_path, loc_root, srv_root, resolved_cgi))
-    { _error_code = 500; _state = CGI_ERROR; return false; }
+    {
+        _error_code = 500;
+        _state = CGI_ERROR;
+        return false; 
+    }
     cgi_path = resolved_cgi;
 
     struct stat sb_cgi;
@@ -537,12 +299,11 @@ bool CgiHandler::startCgi(int write_end)
 
     std::string script_file = _script_path;
     if (script_file.empty()) { _error_code = 404; _state = CGI_ERROR; return false; }
-
     // Resolve script_file - try location root first, then server root
-    std::string resolved_script;
-    if (!resolve_path(script_file, loc_root, srv_root, resolved_script))
-    { _error_code = 404; _state = CGI_ERROR; return false; }
-    script_file = resolved_script;
+    // std::string resolved_script;
+    // if (!resolve_path(script_file, loc_root, srv_root, resolved_script))
+    // { _error_code = 404; _state = CGI_ERROR; return false; }
+    // script_file = resolved_script;
 
     struct stat sb_script;
     if (stat(script_file.c_str(), &sb_script) != 0)
