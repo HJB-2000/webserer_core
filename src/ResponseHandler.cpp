@@ -844,6 +844,14 @@ void ResponseHandler::_sendRedirect(
 //  filename.  Responds 201 Created with Location header.
 //
 //  CGI uploads are handled upstream (Phase 4 stub).
+//
+//  BUG FIX (V-07): POST body data is stored in req.body_fd (a temporary file
+//  created by HttpParser::_parseBody() using mkstemp()), NOT in req.body.
+//  The original code incorrectly read from req.body which is always empty,
+//  causing every uploaded file to be 0 bytes.
+//
+//  FIX: Read from req.body_fd instead of req.body. Seek to the beginning
+//  of the temp file and stream the content to the upload file.
 // ============================================================
 void ResponseHandler::_handlePost(
     const HttpRequest&  req,
@@ -883,21 +891,59 @@ void ResponseHandler::_handlePost(
         return;
     }
 
-    const std::string& body_data = req.body;
-    size_t             written   = 0;
-    while (written < body_data.size())
+    // BUG FIX: Read from req.body_fd instead of req.body
+    // The HttpParser stores POST body data in a temp file (body_fd) using mkstemp(),
+    // not in the req.body string field which is never populated for large bodies.
+    // 
+    // Note: We need to cast away const to access body_fd since the request is passed
+    // as const reference. This is safe because we're only reading from the fd.
+    int body_fd = const_cast<HttpRequest&>(req).body_fd;
+    
+    if (body_fd < 0)
     {
-        ssize_t n = ::write(fd,
-                            body_data.c_str() + written,
-                            body_data.size()  - written);
-        if (n <= 0)
+        // No body data to upload (0 bytes)
+        std::cerr << "[ResponseHandler] POST upload: no body_fd, file will be empty\n";
+        ::close(fd);
+        // Still create the file but report warning
+    }
+    else
+    {
+        // Seek to the beginning of the temp file
+        if (lseek(body_fd, 0, SEEK_SET) < 0)
         {
+            std::cerr << "[ResponseHandler] POST upload lseek failed: "
+                      << std::strerror(errno) << "\n";
             ::close(fd);
             _sendErrorInternal(500, req, cfg, wb);
             return;
         }
-        written += static_cast<size_t>(n);
+
+        // Stream content from body_fd to upload file
+        char    buf[8192];
+        ssize_t bytes_read;
+        while ((bytes_read = ::read(body_fd, buf, sizeof(buf))) > 0)
+        {
+            ssize_t bytes_written = ::write(fd, buf, static_cast<size_t>(bytes_read));
+            if (bytes_written < 0)
+            {
+                std::cerr << "[ResponseHandler] POST upload write failed: "
+                          << std::strerror(errno) << "\n";
+                ::close(fd);
+                _sendErrorInternal(500, req, cfg, wb);
+                return;
+            }
+        }
+
+        if (bytes_read < 0)
+        {
+            std::cerr << "[ResponseHandler] POST upload read failed: "
+                      << std::strerror(errno) << "\n";
+            ::close(fd);
+            _sendErrorInternal(500, req, cfg, wb);
+            return;
+        }
     }
+
     ::close(fd);
 
     // 201 Created
