@@ -209,6 +209,8 @@ void EventLoop::_finishCgiJob(int result_fd)
         _rearmClient(conn->fd());
     }
 
+    // FIX: Reset result_buffer to free memory before deleting the job
+    job->result_buffer.reset();
     _closeCgiJob(result_fd);
 }
 

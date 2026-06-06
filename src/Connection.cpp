@@ -14,6 +14,7 @@
 
 #include <cstring>   // memset (for epoll_event)
 #include <iostream>  // std::cerr (debug logging)
+#include <algorithm> // std::min
 
 // ── Constructor ─────────────────────────────────────────────
 //
@@ -21,11 +22,16 @@
 // so the 413 ceiling is enforced from the very first byte.
 // last_active is stamped at construction so timeout tracking begins
 // the moment the connection is accepted, not on first data.
+//
+// OPTIMIZATION: Limit write buffer to prevent memory exhaustion from
+// large responses. 100MB is sufficient for most use cases.
+static const size_t RESPONSE_BUFFER_LIMIT = 100 * 1024 * 1024;  // 100MB
+
 Connection::Connection(int fd, const ServerConfig* config)
     : _fd(fd)
     , _config(config)
     , _read_buffer(config->getMaxBody())
-    , _write_buffer(config->getMaxBody())
+    , _write_buffer(std::min(config->getMaxBody(), RESPONSE_BUFFER_LIMIT))
     , _request()
     , _state(CSTATE_READING)
     , _last_active(std::time(NULL))

@@ -6,6 +6,10 @@
 #include <sys/types.h>
 #include "buffer.hpp"
 
+// Limit result buffer to prevent memory exhaustion from large CGI outputs
+// A 100MB response is sufficient for most use cases
+static const size_t CGI_RESULT_BUFFER_LIMIT = 100 * 1024 * 1024;  // 100MB
+
 
 struct CgiJob
 {
@@ -20,11 +24,11 @@ struct CgiJob
     const std::string* stdin_body;;
     size_t      stdin_offset;
 
-    CgiJob(int cfd, int rfd, size_t max_size, int timeout)
+    CgiJob(int cfd, int rfd, size_t /*max_size*/, int timeout)
     :       client_fd(cfd)
     ,       result_fd(rfd)
     ,       child_pid(-1)
-    ,       result_buffer(max_size)
+    ,       result_buffer(CGI_RESULT_BUFFER_LIMIT)  // Use fixed limit instead of max_size
     ,       start_time(std::time(NULL))
     ,       _timeout_seconds(timeout)
     ,       stdin_fd(-1)

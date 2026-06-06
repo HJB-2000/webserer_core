@@ -1,0 +1,154 @@
+Welcome in this little webserver tester.
+Passing the test here is the minimum before going to an evaluation.
+
+press enter to continue
+THIS TEST IS NOT MEANT TO BE THE ONLY TEST IN THE EVALUATION!!!
+	
+press enter to continue
+Before starting please follow the next few steps (files content can be anything and will be shown to you by the test):
+- Download the cgi_test executable on the host
+- Create a directory YoupiBanane with:
+	- A file name youpi.bad_extension
+	- A file name youpi.bla
+	- A sub directory called nop
+		- A file name youpi.bad_extension in nop
+		- A file name other.pouic in nop
+	- A sub directory called Yeah
+		- A file name not_happy.bad_extension in Yeah
+press enter to continue
+Setup the configuration file as follow:
+- / must answer to GET request ONLY
+- Any file with .bla as extension must answer to POST request by calling the cgi_test executable
+- /post_body must answer anything to POST request with a maxBody of 100
+- /directory/ must answer to GET request and the root of it would be the repository YoupiBanane and if no file are requested, it should search for youpi.bad_extension files
+
+press enter to continue
+Before starting please verify that the server is launched
+press enter to continue
+
+Test GET http://localhost:5500/
+content returned: <!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Index of /</title>
+<style>body{font-family:monospace;padding:1em}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:4px 12px}tr:nth-child(even){background:#f2f2f2}a{text-decoration:none}a:hover{text-decoration:underline}</style></head>
+<body>
+<h1>Index of /</h1>
+<hr>
+<table>
+<tr><th>Name</th><th>Size</th></tr>
+<tr><td><a href="/Makefile">Makefile</a></td><td>2646</td></tr>
+<tr><td><a href="/check_challenge.cpp">check_challenge.cpp</a></td><td>108</td></tr>
+<tr><td><a href="/.git/">.git/</a></td><td>-</td></tr>
+<tr><td><a href="/.gitignore">.gitignore</a></td><td>792</td></tr>
+<tr><td><a href="/webser_subject.pdf">webser_subject.pdf</a></td><td>1351956</td></tr>
+<tr><td><a href="/.github/">.github/</a></td><td>-</td></tr>
+<tr><td><a href="/webserv.log">webserv.log</a></td><td>4161</td></tr>
+<tr><td><a href="/webserv">webserv</a></td><td>3292832</td></tr>
+<tr><td><a href="/.vscode/">.vscode/</a></td><td>-</td></tr>
+<tr><td><a href="/bug_tests/">bug_tests/</a></td><td>-</td></tr>
+<tr><td><a href="/www/">www/</a></td><td>-</td></tr>
+<tr><td><a href="/server_main_dir/">server_main_dir/</a></td><td>-</td></tr>
+<tr><td><a href="/tester">tester</a></td><td>6947771</td></tr>
+<tr><td><a href="/YoupiBanane/">YoupiBanane/</a></td><td>-</td></tr>
+<tr><td><a href="/cgi_test">cgi_test</a></td><td>3997089</td></tr>
+<tr><td><a href="/test_output.log">test_output.log</a></td><td>1258</td></tr>
+<tr><td><a href="/.replit">.replit</a></td><td>735</td></tr>
+<tr><td><a href="/siege_havy_tests">siege_havy_tests</a></td><td>756</td></tr>
+<tr><td><a href="/directory/">directory/</a></td><td>-</td></tr>
+<tr><td><a href="/post_body/">post_body/</a></td><td>-</td></tr>
+<tr><td><a href="/server.log">server.log</a></td><td>462</td></tr>
+<tr><td><a href="/youpi.conf">youpi.conf</a></td><td>1073</td></tr>
+<tr><td><a href="/src/">src/</a></td><td>-</td></tr>
+<tr><td><a href="/MDs/">MDs/</a></td><td>-</td></tr>
+<tr><td><a href="/fahd.conf">fahd.conf</a></td><td>2382</td></tr>
+<tr><td><a href="/conf/">conf/</a></td><td>-</td></tr>
+<tr><td><a href="/cgi/">cgi/</a></td><td>-</td></tr>
+<tr><td><a href="/large_test.bla">large_test.bla</a></td><td>104857600</td></tr>
+<tr><td><a href="/Headers/">Headers/</a></td><td>-</td></tr>
+</table>
+<hr>
+</body>
+</html>
+
+
+Test POST http://localhost:5500/ with a size of 0
+
+Test HEAD http://localhost:5500/
+
+Test GET http://localhost:5500/directory
+content returned: Directory index placeholder
+
+
+Test GET http://localhost:5500/directory/youpi.bad_extension
+content returned: Directory index placeholder
+
+
+Test GET http://localhost:5500/directory/youpi.bla
+content returned: 
+
+Test GET Expected 404 on http://localhost:5500/directory/oulalala
+content returned: <!DOCTYPE html>
+<html>
+<head><title>404 Not Found</title></head>
+<body>
+<h1>404 Not Found</h1>
+<hr><p>webserv/1.0</p>
+</body>
+</html>
+
+
+Test GET http://localhost:5500/directory/nop
+content returned: 
+
+Test GET http://localhost:5500/directory/nop/
+content returned: 
+
+Test GET http://localhost:5500/directory/nop/other.pouic
+content returned: 
+
+Test GET Expected 404 on http://localhost:5500/directory/nop/other.pouac
+content returned: <!DOCTYPE html>
+<html>
+<head><title>404 Not Found</title></head>
+<body>
+<h1>404 Not Found</h1>
+<hr><p>webserv/1.0</p>
+</body>
+</html>
+
+
+Test GET Expected 404 on http://localhost:5500/directory/Yeah
+content returned: <!DOCTYPE html>
+<html>
+<head><title>404 Not Found</title></head>
+<body>
+<h1>404 Not Found</h1>
+<hr><p>webserv/1.0</p>
+</body>
+</html>
+
+
+Test GET http://localhost:5500/directory/Yeah/not_happy.bad_extension
+content returned: 
+
+Test POST http://localhost:5500/directory/youpi.bla with a size of 100000000
+
+Test POST http://localhost:5500/directory/youpla.bla with a size of 100000000
+
+Test POST http://localhost:5500/directory/youpi.bla with a size of 100000 with special headers
+
+Test POST http://localhost:5500/post_body with a size of 0
+
+Test POST http://localhost:5500/post_body with a size of 100
+
+Test POST http://localhost:5500/post_body with a size of 200
+
+Test POST http://localhost:5500/post_body with a size of 101
+
+Test multiple workers(5) doing multiple times(15): GET on /
+
+Test multiple workers(20) doing multiple times(5000): GET on /
+
+Test multiple workers(128) doing multiple times(50): GET on /directory/nop
+
+Test multiple workers(20) doing multiple times(5): Post on /directory/youpi.bla with size 100000000
