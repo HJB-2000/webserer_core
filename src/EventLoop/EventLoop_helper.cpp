@@ -48,6 +48,7 @@ void EventLoop::addServerSocket(int server_fd, const ServerConfig* config)
 
 void EventLoop::stop() {
     _running = false;
+    _stopped = true;  // Signal to stop processing events immediately
     
     // Close all server fds and mark them as closed
     for (size_t i = 0; i < _server_fds.size(); ++i) {
@@ -65,32 +66,14 @@ void EventLoop::stop() {
         }
     }
 
-    // Close all CGI result pipe fds (read end) to prevent leaks
-    for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
-         it != _cgi_jobs.end(); ++it)
-    {
-        int fd = it->first;
-        if (fd >= 0) {
-            ::epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-            ::close(fd);
-        }
-    }
-
-    // Close all CGI stdin pipe fds (write end) to prevent leaks
-    for (std::map<int, CgiJob*>::iterator it = _cgi_stdin_jobs.begin();
-         it != _cgi_stdin_jobs.end(); ++it)
-    {
-        int fd = it->first;
-        if (fd >= 0) {
-            ::epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-            ::close(fd);
-        }
-    }
-
+    // Close epoll fd to prevent more events
     if (_epoll_fd >= 0) {
         ::close(_epoll_fd);
         _epoll_fd = -1;
     }
+    
+    // Note: CGI pipes and cleanup are handled by the destructor
+    // Don't close them here to avoid race conditions with pending events
 }
 
 

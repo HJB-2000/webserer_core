@@ -140,6 +140,10 @@ void EventLoop::_closeCgiStdin(CgiJob* job)
 // Wrapped the read loop in a try/catch block to return a clean 413 instead of crashing.
 void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
 {
+    // Don't process if stop() was called
+    if (_stopped)
+        return;
+        
     std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
     if (it == _cgi_jobs.end())
         return;
@@ -172,12 +176,18 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 return;
 
+            // If stop() was called, don't try to send error
+            if (_stopped)
+                return;
+                
             _failCgiJob(result_fd, 502);
             return;
         }
     }
     catch (const BodyLimitException&)
     {
+        if (_stopped)
+            return;
         _failCgiJob(result_fd, 413);
     }
 }
@@ -268,8 +278,14 @@ void EventLoop::_closeCgiJob(int result_fd)
         }
     }
 
-    _unregisterEventFd(result_fd);
-    ::close(result_fd);
+    // Only unregister if epoll_fd is still valid (not stopped)
+    if (_epoll_fd >= 0)
+        _unregisterEventFd(result_fd);
+    
+    // Only close if fd is valid (not already closed by stop())
+    if (result_fd >= 0)
+        ::close(result_fd);
+        
     delete it->second;
     _cgi_jobs.erase(it);
 }

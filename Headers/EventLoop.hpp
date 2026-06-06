@@ -75,7 +75,8 @@ private:
     // ── members ────────────────────────────────────────────
     int                              _epoll_fd;
     ConnectionManager*               _manager;
-    bool                             _running;
+    volatile sig_atomic_t            _running;   // atomic for signal safety
+    volatile sig_atomic_t            _stopped;   // set true when stop() called
     std::vector<int>                 _server_fds;
     std::vector<const ServerConfig*> _server_configs;
     std::map<int, CgiJob*>   _cgi_jobs;

@@ -13,6 +13,7 @@ EventLoop::EventLoop()
     : _epoll_fd(-1)
     , _manager(NULL)
     , _running(false)
+    , _stopped(false)
 {
     _epoll_fd = ::epoll_create(1);
     if (_epoll_fd < 0)
@@ -194,6 +195,10 @@ void EventLoop::_dispatch(const epoll_event& ev)
     EventRef* ref = static_cast<EventRef*>(ev.data.ptr);
     if (!ref || ref->kind == EV_INVALID)
         return;
+        
+    // Don't dispatch events if stop() was called
+    if (_stopped)
+        return;
 
     if (ref->kind == EV_SERVER)
     {
@@ -238,7 +243,11 @@ void EventLoop::run()
                       << std::strerror(errno) << "\n";
             break;
         }
-        // it was removed for some tests  i put it back
+        
+        // If stop() was called, don't process more events
+        if (_stopped)
+            break;
+            
         for (int i = 0; i < n; ++i)
             _dispatch(events[i]);
 
