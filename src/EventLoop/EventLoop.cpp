@@ -86,14 +86,20 @@ EventLoop::~EventLoop()
     }
     _pending_reap.clear();
 
-    // Close server fds
-    for (size_t i = 0; i < _server_fds.size(); ++i)
-        ::close(_server_fds[i]);
+    // Close server fds (only if not already closed by stop())
+    for (size_t i = 0; i < _server_fds.size(); ++i) {
+        if (_server_fds[i] >= 0) {
+            ::close(_server_fds[i]);
+            _server_fds[i] = -1;
+        }
+    }
     _server_fds.clear();
 
     delete _manager;
-    if (_epoll_fd >= 0)
+    if (_epoll_fd >= 0) {
         ::close(_epoll_fd);
+        _epoll_fd = -1;
+    }
 }
 
 void EventLoop::_unregisterEventFd(int fd)

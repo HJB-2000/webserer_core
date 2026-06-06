@@ -48,23 +48,47 @@ void EventLoop::addServerSocket(int server_fd, const ServerConfig* config)
 
 void EventLoop::stop() {
     _running = false;
+    
+    // Close all server fds and mark them as closed
     for (size_t i = 0; i < _server_fds.size(); ++i) {
         int fd = _server_fds[i];
-        
         if (fd >= 0) {
-            epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-            close(fd);
+            ::epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+            ::close(fd);
+            // Mark as closed to prevent double-close in destructor
+            _server_fds[i] = -1;
             if (_event_refs.count(fd) && _event_refs[fd] != NULL) {
                 delete _event_refs[fd];
                 _event_refs[fd] = NULL;
                 _event_refs.erase(fd);
             }
-            
+        }
+    }
+
+    // Close all CGI result pipe fds (read end) to prevent leaks
+    for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
+         it != _cgi_jobs.end(); ++it)
+    {
+        int fd = it->first;
+        if (fd >= 0) {
+            ::epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+            ::close(fd);
+        }
+    }
+
+    // Close all CGI stdin pipe fds (write end) to prevent leaks
+    for (std::map<int, CgiJob*>::iterator it = _cgi_stdin_jobs.begin();
+         it != _cgi_stdin_jobs.end(); ++it)
+    {
+        int fd = it->first;
+        if (fd >= 0) {
+            ::epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+            ::close(fd);
         }
     }
 
     if (_epoll_fd >= 0) {
-        close(_epoll_fd);
+        ::close(_epoll_fd);
         _epoll_fd = -1;
     }
 }
