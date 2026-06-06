@@ -176,9 +176,28 @@ To reduce memory below 2GB, architectural changes would be needed:
 3. `Headers/CgiJob.hpp` - Buffer size limit
 4. `src/Connection.cpp` - Buffer size limits and reset behavior
 5. `src/Buffer.cpp` - Memory release on reset
+6. `src/EventLoop/EventLoop.cpp` - Shutdown leak fix
+
+## Shutdown Memory Leaks
+
+When the server receives SIGINT during CGI processing, memory leaks occurred because the destructor was not properly cleaning up resources.
+
+### Root Cause
+The `EventLoop::~EventLoop()` destructor was only deleting the ConnectionManager, leaving CGI jobs, event refs, and child processes unfreed.
+
+### Fix Applied
+**File:** `src/EventLoop/EventLoop.cpp`
+
+Added comprehensive cleanup in the destructor:
+- Kill and reap all child CGI processes
+- Close all stdin file descriptors
+- Delete all CgiJob objects
+- Delete all EventRef objects
+- Clear all containers and close server fds
 
 ## Testing
 
+### Valgrind Massif
 Run Valgrind Massif to verify memory usage:
 ```bash
 valgrind --tool=massif ./webserv youpi.conf
@@ -189,3 +208,19 @@ ms_print massif.out.* | less
 ```
 
 Peak memory should stabilize around 2GB under heavy load instead of growing indefinitely.
+
+### Address Sanitizer
+Run with address sanitizer to detect memory leaks:
+```bash
+# Build with sanitizer
+make SANITIZE=1
+
+# Run server
+./webserv youpi.conf
+
+# In another terminal, run the tester
+./tester http://localhost:5500
+
+# Send SIGINT during testing to check for shutdown leaks
+# No "LeakSanitizer" errors should appear
+```
