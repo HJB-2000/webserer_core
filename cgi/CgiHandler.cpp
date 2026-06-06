@@ -8,6 +8,63 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+// Helper: resolve a potentially-relative path to an absolute path
+// Returns true if file exists and is accessible, false otherwise
+// Tries base paths in order: location_root, server_root, then returns false
+static bool resolve_path(const std::string& path, 
+                         const std::string& location_root,
+                         const std::string& server_root,
+                         std::string& resolved)
+{
+    // If path is absolute (starts with '/'), use it directly
+    if (!path.empty() && path[0] == '/')
+    {
+        struct stat sb;
+        if (stat(path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
+        {
+            resolved = path;
+            return true;
+        }
+        return false;
+    }
+    
+    // Try location root first
+    if (!location_root.empty())
+    {
+        std::string candidate = location_root;
+        // Ensure trailing slash for concatenation
+        if (!candidate.empty() && candidate[candidate.length()-1] != '/')
+            candidate += '/';
+        candidate += path;
+        
+        struct stat sb;
+        if (stat(candidate.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
+        {
+            resolved = candidate;
+            return true;
+        }
+    }
+    
+    // Try server root as fallback
+    if (!server_root.empty())
+    {
+        std::string candidate = server_root;
+        // Ensure trailing slash for concatenation
+        if (!candidate.empty() && candidate[candidate.length()-1] != '/')
+            candidate += '/';
+        candidate += path;
+        
+        struct stat sb;
+        if (stat(candidate.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
+        {
+            resolved = candidate;
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 
 bool CgiHandler::isEnvKeyRequired(const std::string& key) const
 {
@@ -200,7 +257,7 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
 }
 
 CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path,  const std::string& client_ip)
-    : _request(request), _location(location),
+    : _request(request), _server(config), _location(location),
       _script_path(script_path), _child_pid(-1), _state(CGI_IDLE),
       _error_code(0), _env_logged(false), _client_ip(client_ip)
 {
@@ -465,6 +522,14 @@ bool CgiHandler::startCgi(int write_end)
     std::string cgi_path = _location.getCGI_path();
     if (cgi_path.empty()) { _error_code = 500; _state = CGI_ERROR; return false; }
 
+    // Resolve cgi_path - try location root first, then server root
+    std::string resolved_cgi;
+    std::string loc_root = _location.getRoot();
+    std::string srv_root = _server.getRoot();
+    if (!resolve_path(cgi_path, loc_root, srv_root, resolved_cgi))
+    { _error_code = 500; _state = CGI_ERROR; return false; }
+    cgi_path = resolved_cgi;
+
     struct stat sb_cgi;
     if (stat(cgi_path.c_str(), &sb_cgi) != 0 || !S_ISREG(sb_cgi.st_mode) ||
         access(cgi_path.c_str(), X_OK) != 0)
@@ -472,6 +537,12 @@ bool CgiHandler::startCgi(int write_end)
 
     std::string script_file = _script_path;
     if (script_file.empty()) { _error_code = 404; _state = CGI_ERROR; return false; }
+
+    // Resolve script_file - try location root first, then server root
+    std::string resolved_script;
+    if (!resolve_path(script_file, loc_root, srv_root, resolved_script))
+    { _error_code = 404; _state = CGI_ERROR; return false; }
+    script_file = resolved_script;
 
     struct stat sb_script;
     if (stat(script_file.c_str(), &sb_script) != 0)
@@ -484,13 +555,6 @@ bool CgiHandler::startCgi(int write_end)
 
     // FILE BACKEND: use body_fd from request, no pipe needed
     bool need_stdin = (_request.body_fd >= 0);
-
-    char resolved_path[1024];
-    if (realpath(cgi_path.c_str(), resolved_path) != NULL)
-        cgi_path = resolved_path;
-    char resolved_script[1024];
-    if (realpath(script_file.c_str(), resolved_script) != NULL)
-        script_file = resolved_script;
 
     _child_pid = fork();
     if (_child_pid < 0) { _error_code = 500; _state = CGI_ERROR; return false; }

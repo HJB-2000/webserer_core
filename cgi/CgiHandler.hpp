@@ -46,6 +46,7 @@ class CgiHandler
         void        log_env_once();
 
         const HttpRequest&   _request;
+        const Server&        _server;
         const Location&      _location;
         std::string          _script_path;
 
