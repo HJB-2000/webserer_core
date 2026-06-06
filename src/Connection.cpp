@@ -52,6 +52,12 @@ Connection::~Connection()
         ::close(_fd);
         _fd = -1;
     }
+    // Close body_fd if it was opened for large POST bodies
+    if (_request.body_fd >= 0)
+    {
+        ::close(_request.body_fd);
+        _request.body_fd = -1;
+    }
 }
 
 // ── recv ─────────────────────────────────────────────────────

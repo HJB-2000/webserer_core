@@ -289,15 +289,11 @@ void EventLoop::_closeCgiJobsForClient(int client_fd)
         _closeCgiJob(to_close[i]);
 
     // FIX: Free the request body when client disconnects during CGI processing
+    // Note: body_fd is closed by Connection destructor, so don't close it here
     if (conn)
     {
         std::string().swap(const_cast<HttpRequest&>(conn->request()).body);
         conn->readBuffer().reset();
-        if (conn->request().body_fd >= 0)
-        {
-            ::close(conn->request().body_fd);
-            const_cast<HttpRequest&>(conn->request()).body_fd = -1;
-        }
     }
 }
 
