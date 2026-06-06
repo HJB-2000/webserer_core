@@ -54,8 +54,8 @@ int main(int argc, char* argv[])
         std::signal(SIGPIPE, SIG_IGN);
         std::cerr << "[core] server ready — press Ctrl+C to stop\n";
         loop.run();
-        for (size_t i = 0; i < listen_fds.size(); ++i)
-            ::close(listen_fds[i]);
+        // Note: stop() already closes all server fds, so don't close them here
+        // Otherwise valgrind reports "fd already closed" errors
         std::cerr << "[core] shutdown complete\n";
         Logger::instance().close();
         return 0;
