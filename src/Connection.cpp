@@ -111,9 +111,11 @@ void Connection::reset()
 {
     _read_buffer.reset();
     _write_buffer.reset();
-     size_t server_default = _config->getMaxBody();  
-    _read_buffer.setMaxSize(server_default);  
-    _write_buffer.setMaxSize(server_default);  
+    // Keep buffer limits at RESPONSE_BUFFER_LIMIT (100MB) to prevent
+    // memory from growing under heavy load
+    size_t server_default = _config->getMaxBody();
+    _read_buffer.setMaxSize(server_default);
+    _write_buffer.setMaxSize(std::min(server_default, RESPONSE_BUFFER_LIMIT));
     _request.reset();
     _state             = CSTATE_READING;
     _peer_half_closed  = false;

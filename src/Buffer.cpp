@@ -82,13 +82,18 @@ size_t Buffer::maxSize() const
 
 void Buffer::reset()
 {
-    _storage.clear();
     _head = 0;
 
-    // Same logic as constructor: ensure buffer can hold headers
-    size_t initial = 64 * 1024;  // 64KB minimum for headers
+    // Use a smaller initial capacity to prevent memory from growing
+    // under heavy load. 16KB is sufficient for most HTTP responses.
+    size_t initial = 16 * 1024;  // 16KB minimum (reduced from 64KB)
     if (initial > _cmbs && _cmbs > 0) initial = _cmbs;
-    _storage.reserve(initial);
+
+    // Swap with an empty vector to truly release memory
+    // This is the only way to actually free the allocated capacity
+    std::vector<char> empty;
+    empty.reserve(initial);
+    _storage.swap(empty);
 }
 
 void Buffer::_compact()
