@@ -174,7 +174,7 @@ To reduce memory below 2GB, architectural changes would be needed:
 1. `src/EventLoop/EventLoop_helper_cgi.cpp` - CGI job memory cleanup
 2. `src/ResponseHandler.cpp` - Direct buffer processing
 3. `Headers/CgiJob.hpp` - Buffer size limit
-4. `src/Connection.cpp` - Buffer size limits and reset behavior
+4. `src/Connection.cpp` - Buffer size limits, reset behavior, body_fd cleanup
 5. `src/Buffer.cpp` - Memory release on reset
 6. `src/EventLoop/EventLoop.cpp` - Shutdown leak fix
 7. `src/make_listener.cpp` - Initialize setsockopt variables
@@ -204,6 +204,21 @@ int nodaly = 1;
 **Problem:** `stop()` already closes all server fds, but main.cpp was trying to close them again, causing "fd already closed" errors.
 
 **Fix:** Removed the redundant loop that closed server fds in main.cpp since `stop()` handles this.
+
+### 3. Double Close and FD Leak for body_fd
+**Files:** `src/Connection.cpp`, `src/EventLoop/EventLoop_helper_cgi.cpp`
+
+**Problem:** 
+- `body_fd` was being closed in `_closeCgiJobsForClient`, but Connection destructor also tried to close it, causing double close
+- Some body_fd were never closed at all, leaving temp files open
+
+**Fix:**
+- Added body_fd cleanup in Connection destructor
+- Removed redundant body_fd close from `_closeCgiJobsForClient`
+
+This fixes:
+- Valgrind "fd already closed" error for /tmp/cgi_body_* files
+- FD leaks at exit (temp files still open)
 
 ## Shutdown Memory Leaks
 
