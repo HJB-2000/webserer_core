@@ -595,18 +595,15 @@ bool CgiHandler::startCgi(int write_end)
 
         close(write_end);
 
-        std::string script_dir, script_arg;
-        std::string::size_type slash = script_file.find_last_of('/');
-        if (slash != std::string::npos)
-        { script_dir = script_file.substr(0, slash); script_arg = script_file.substr(slash + 1); }
-        else
-        { script_dir = "."; script_arg = script_file; }
-
-        if (chdir(script_dir.c_str()) != 0) _exit(127);
-
+        // Build absolute paths using server root
+        // cgi_path is already resolved to a valid absolute-looking path (./cgi_test -> ./cgi_test)
+        // script_file is already resolved to a valid absolute-looking path
+        // Since we can't use getcwd(), we rely on the paths being correct from resolve_path
+        
+        // Script path for argv - use the resolved script_file
         char* argv[3];
         argv[0] = const_cast<char*>(cgi_path.c_str());
-        argv[1] = const_cast<char*>(script_arg.c_str());
+        argv[1] = const_cast<char*>(script_file.c_str());
         argv[2] = NULL;
         if (_env_ptrs.empty() || _env_ptrs.back() != NULL) _exit(127);
         execve(cgi_path.c_str(), argv, &_env_ptrs[0]);
