@@ -220,6 +220,22 @@ This fixes:
 - Valgrind "fd already closed" error for /tmp/cgi_body_* files
 - FD leaks at exit (temp files still open)
 
+### 4. Server FD Double Close and CGI Pipe Leaks
+**Files:** `src/EventLoop/EventLoop_helper.cpp`, `src/EventLoop/EventLoop.cpp`
+
+**Problem:**
+- Server fd (5) was closed in `stop()`, but destructor tried to close it again
+- CGI pipes were not closed when server stopped, causing FD leaks
+
+**Fix:**
+- `stop()` now marks server fds as closed (-1) to prevent double-close
+- `stop()` now closes all CGI result and stdin pipe fds
+- Destructor checks if fds are >= 0 before closing
+
+This fixes:
+- "fd already closed" error for server socket
+- FD leaks at exit (6 CGI pipes still open)
+
 ## Shutdown Memory Leaks
 
 When the server receives SIGINT during CGI processing, memory leaks occurred because the destructor was not properly cleaning up resources.
