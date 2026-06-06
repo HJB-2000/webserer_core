@@ -177,6 +177,33 @@ To reduce memory below 2GB, architectural changes would be needed:
 4. `src/Connection.cpp` - Buffer size limits and reset behavior
 5. `src/Buffer.cpp` - Memory release on reset
 6. `src/EventLoop/EventLoop.cpp` - Shutdown leak fix
+7. `src/make_listener.cpp` - Initialize setsockopt variables
+8. `src/main.cpp` - Remove double close of server fds
+
+## Valgrind Errors Fixed
+
+### 1. Uninitialized Memory in setsockopt
+**File:** `src/make_listener.cpp`
+
+**Problem:** Variables `reuse`, `reuseport`, and `nodaly` were passed to `setsockopt()` without initialization.
+
+**Fix:**
+```cpp
+// Before (uninitialized)
+int reuse, reuseport, nodaly = 1;
+
+// After (initialized)
+int reuse = 1;
+int reuseport = 1;
+int nodaly = 1;
+```
+
+### 2. Double Close of Server File Descriptors
+**File:** `src/main.cpp`
+
+**Problem:** `stop()` already closes all server fds, but main.cpp was trying to close them again, causing "fd already closed" errors.
+
+**Fix:** Removed the redundant loop that closed server fds in main.cpp since `stop()` handles this.
 
 ## Shutdown Memory Leaks
 
@@ -224,3 +251,19 @@ make SANITIZE=1
 # Send SIGINT during testing to check for shutdown leaks
 # No "LeakSanitizer" errors should appear
 ```
+
+### Valgrind
+Run comprehensive checks for memory errors and leaks:
+```bash
+# Run valgrind with all checks enabled
+valgrind --leak-check=full --show-leak-kinds=all --track-fds=all --track-origins=yes ./webserv youpi.conf
+
+# Or use the alias (if configured)
+va
+```
+
+Expected results after fixes:
+- No "uninitialised byte(s)" errors
+- No "fd already closed" errors  
+- No memory leaks reported
+- All heap blocks freed at exit
