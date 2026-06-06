@@ -6,7 +6,6 @@
 #include "Headers/CgiJob.hpp"
 #include <sys/wait.h>
 #include <signal.h>
-#include <unistd.h>
 
 
 
@@ -74,10 +73,15 @@ EventLoop::~EventLoop()
         pid_t ret = waitpid(pid, &status, WNOHANG);
         if (ret == 0)
         {
-            // Still running after WNOHANG, send SIGKILL and try again
+            // Still running after WNOHANG, send SIGKILL
             kill(pid, SIGKILL);
-            usleep(10000);  // Wait 10ms
-            waitpid(pid, &status, 0);  // Wait for it to die
+            // Try to reap a few times in a non-blocking way
+            for (int j = 0; j < 10; ++j)
+            {
+                ret = waitpid(pid, &status, WNOHANG);
+                if (ret != 0)
+                    break;  // Successfully reaped or error
+            }
         }
     }
     _pending_reap.clear();
