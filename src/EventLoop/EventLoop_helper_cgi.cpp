@@ -74,6 +74,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
     // bool ok = startCgi(conn->request(), *conn->config(), *info.location,
     //                    info.script_path, result_write_fd);
     CgiHandler cgi(conn->request(), *conn->config(), *info.location, info.script_path, conn->get_clientIp()); // sending the ip_client for the meta-variables.
+    
     bool ok = cgi.startCgi(result_write_fd);
     if (ok)
     {
@@ -88,6 +89,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
             _setCloexec(stdin_fd, "cgi-stdin");
             job->stdin_fd     = stdin_fd;
             job->stdin_body   = conn->request().body;
+            conn->request().body.clear();
             job->stdin_offset = 0;
             _cgi_stdin_jobs[stdin_fd] = job;
             try {

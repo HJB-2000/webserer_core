@@ -75,6 +75,7 @@ void EventLoop::_handleRead(Connection* conn)
                 _rearmClient(fd);
                 return;  // wait for EPOLLOUT to drain the error response
             }
+            
             if (conn->request().parse_state == PSTATE_COMPLETE)
             {
                 conn->setProcessing();
@@ -82,6 +83,7 @@ void EventLoop::_handleRead(Connection* conn)
                 CgiRequestInfo cgi;
                 if (_responder.resolveCgiRequest(conn->request(), *conn->config(), cgi))
                 {
+                    // std::cout << conn->request().body << std::endl;
                     _startCgi(conn, cgi);
                     return;
                 }
@@ -94,7 +96,6 @@ void EventLoop::_handleRead(Connection* conn)
                 _rearmClient(fd);
                 return;
             }
-            break; // restored
             // PS_IDLE / PS_HEADERS / PS_BODY → partial, keep reading
         }
     }

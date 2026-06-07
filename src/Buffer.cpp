@@ -90,6 +90,11 @@ void Buffer::reset()
     if (initial > _cmbs && _cmbs > 0) initial = _cmbs;
     _storage.reserve(initial);
 }
+void Buffer::earase()
+{
+    std::vector<char> empty;
+    _storage.swap(empty);
+}
 
 void Buffer::_compact()
 {
@@ -115,4 +120,64 @@ void Buffer::_ensureCapacity(size_t needed)
 void Buffer::setMaxSize(size_t new_max)  
 {  
     _cmbs = new_max;  
+}
+
+#include <iostream>
+#include <iomanip>
+#include <cctype>
+void Buffer::debug_dump() const {
+    // 1. Calculate relative metrics based on vector state
+    size_t active_data_size = _storage.size() - _head;
+    size_t uncompacted_waste = _head;
+    size_t vector_capacity = _storage.capacity();
+
+    std::cout << "==================================================\n";
+    std::cout << "               BUFFER METADATA DUMP               \n";
+    std::cout << "==================================================\n";
+    std::cout << "Client Max Body Size (_cmbs): " << _cmbs << " bytes\n";
+    std::cout << "Vector Element Count (size):  " << _storage.size() << " bytes\n";
+    std::cout << "Vector Total Capacity:         " << vector_capacity << " bytes\n";
+    std::cout << "Read Head Cursor (_head):     " << _head << "\n";
+    std::cout << "Active Readable Data Size:    " << active_data_size << " bytes\n";
+    std::cout << "Uncompacted Waste Space:      " << uncompacted_waste << " bytes\n";
+    std::cout << "--------------------------------------------------\n";
+    std::cout << "               STORAGE DATA MEMORY MAP            \n";
+    std::cout << "--------------------------------------------------\n";
+
+    if (_storage.empty()) {
+        std::cout << "[ Empty Storage Vector ]\n";
+        std::cout << "==================================================\n\n";
+        return;
+    }
+
+    // 2. Print out a hex & ASCII view of the raw vector memory
+    // This allows you to inspect what is in the "waste" zone vs "active" zone.
+    for (size_t i = 0; i < _storage.size(); ++i) {
+        // Tag individual bytes for extreme clarity
+        if (i == _head) {
+            std::cout << " [HEAD->]";
+        }
+
+        // Print Index Label every 8 bytes for readability
+        if (i % 8 == 0) {
+            std::cout << "\n[" << std::setw(4) << std::setfill('0') << i << "] ";
+        }
+
+        unsigned char byte = static_cast<unsigned char>(_storage[i]);
+        
+        // Print Hexadecimal value
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+
+        // Print character representation if printable, otherwise a dot
+        std::cout << "(";
+        if (std::isprint(byte)) {
+            std::cout << _storage[i];
+        } else {
+            std::cout << ".";
+        }
+        std::cout << ")  ";
+    }
+    
+    std::cout << std::dec << "\n"; // Reset stream back to decimal
+    std::cout << "==================================================\n\n";
 }

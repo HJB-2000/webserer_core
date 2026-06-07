@@ -1,0 +1,2078 @@
+desc: --stacks=yes --max-snapshots=200 --time-unit=B
+cmd: ./webserv youpi.conf
+time_unit: B
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=129196008
+mem_heap_B=522902
+mem_heap_extra_B=1922
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=2
+#-----------
+time=258377256
+mem_heap_B=522902
+mem_heap_extra_B=1922
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=3
+#-----------
+time=361080360
+mem_heap_B=522902
+mem_heap_extra_B=1922
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=4
+#-----------
+time=486328440
+mem_heap_B=572246
+mem_heap_extra_B=1970
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=5
+#-----------
+time=670873080
+mem_heap_B=572246
+mem_heap_extra_B=1970
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=6
+#-----------
+time=756459000
+mem_heap_B=572246
+mem_heap_extra_B=1970
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=7
+#-----------
+time=901665912
+mem_heap_B=637974
+mem_heap_extra_B=2026
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=8
+#-----------
+time=1072837752
+mem_heap_B=637974
+mem_heap_extra_B=2026
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=9
+#-----------
+time=1158423672
+mem_heap_B=637974
+mem_heap_extra_B=2026
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=10
+#-----------
+time=1292903496
+mem_heap_B=720117
+mem_heap_extra_B=2099
+mem_stacks_B=50480
+heap_tree=detailed
+n6: 720117 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 524288 0x40BAC0: allocate (new_allocator.h:127)
+  n1: 524288 0x40BAC0: allocate (alloc_traits.h:133)
+   n1: 524288 0x40BAC0: _M_allocate (stl_vector.h:346)
+    n1: 524288 0x40BAC0: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 524288 0x40BAC0: reserve (vector.tcc:85)
+      n3: 524288 0x40BAC0: Buffer::Buffer(unsigned long) (Buffer.cpp:24)
+       n1: 327680 0x407D67: Connection::Connection(int, Server const*) (Connection.cpp:34)
+        n2: 327680 0x40CA5F: ConnectionManager::addConnection(int, Server const*) (ConnectionManager.cpp:83)
+         n1: 262144 0x41AE57: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 262144 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 262144 0x405613: main (main.cpp:96)
+         n1: 65536 0x41AE9E: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 65536 0x405613: main (main.cpp:96)
+       n1: 196608 0x41C4A2: CgiJob (CgiJob.hpp:31)
+        n1: 196608 0x41C4A2: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:59)
+         n1: 196608 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+          n1: 196608 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 196608 0x405613: main (main.cpp:96)
+       n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 72704 0x4912939: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n1: 72704 0x400647D: call_init.part.0 (dl-init.c:70)
+   n1: 72704 0x4006567: call_init (dl-init.c:33)
+    n1: 72704 0x4006567: _dl_init (dl-init.c:117)
+     n1: 72704 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+      n1: 72704 0x1: ???
+       n1: 72704 0x1FFEFFDE0A: ???
+        n0: 72704 0x1FFEFFDE14: ???
+ n1: 65536 0x40BFB7: allocate (new_allocator.h:127)
+  n1: 65536 0x40BFB7: allocate (alloc_traits.h:133)
+   n1: 65536 0x40BFB7: _M_allocate (stl_vector.h:346)
+    n1: 65536 0x40BFB7: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 65536 0x40BFB7: reserve (vector.tcc:85)
+      n2: 65536 0x40BFB7: Buffer::reset() (Buffer.cpp:95)
+       n1: 49152 0x41C50B: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:72)
+        n1: 49152 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+         n1: 49152 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 49152 0x405613: main (main.cpp:96)
+       n1: 16384 0x41B07F: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:81)
+        n1: 16384 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+         n0: 16384 0x405613: main (main.cpp:96)
+ n1: 32768 0x40BF30: allocate (new_allocator.h:127)
+  n1: 32768 0x40BF30: allocate (alloc_traits.h:133)
+   n1: 32768 0x40BF30: _M_allocate (stl_vector.h:346)
+    n1: 32768 0x40BF30: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 32768 0x40BF30: reserve (vector.tcc:85)
+      n1: 32768 0x40BF30: reset (Buffer.cpp:95)
+       n2: 32768 0x40BF30: Buffer::consume(unsigned long) (Buffer.cpp:53)
+        n1: 32768 0x409430: HttpParser::_parseHeaders(Buffer&, HttpRequest&) (HttpParser.cpp:583)
+         n1: 32768 0x408511: HttpParser::feed(Connection*) (HttpParser.cpp:289)
+          n1: 32768 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+           n1: 32768 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+            n0: 32768 0x405613: main (main.cpp:96)
+        n0: 0 in 1 place, below massif's threshold (1.00%)
+ n0: 16629 in 92 places, all below massif's threshold (1.00%)
+ n1: 8192 0x497D023: std::basic_filebuf<char, std::char_traits<char> >::_M_allocate_internal_buffer() (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n2: 8192 0x4981015: std::basic_filebuf<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+   n1: 8192 0x40E2FA: open (fstream:928)
+    n1: 8192 0x40E2FA: Logger::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (Logger.cpp:146)
+     n0: 8192 0x405356: main (main.cpp:54)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=11
+#-----------
+time=1425306160
+mem_heap_B=703702
+mem_heap_extra_B=2082
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=12
+#-----------
+time=1566522928
+mem_heap_B=703702
+mem_heap_extra_B=2082
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=13
+#-----------
+time=1721596864
+mem_heap_B=785845
+mem_heap_extra_B=2155
+mem_stacks_B=50480
+heap_tree=detailed
+n5: 785845 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 589824 0x40BAC0: allocate (new_allocator.h:127)
+  n1: 589824 0x40BAC0: allocate (alloc_traits.h:133)
+   n1: 589824 0x40BAC0: _M_allocate (stl_vector.h:346)
+    n1: 589824 0x40BAC0: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 589824 0x40BAC0: reserve (vector.tcc:85)
+      n3: 589824 0x40BAC0: Buffer::Buffer(unsigned long) (Buffer.cpp:24)
+       n1: 327680 0x407D67: Connection::Connection(int, Server const*) (Connection.cpp:34)
+        n2: 327680 0x40CA5F: ConnectionManager::addConnection(int, Server const*) (ConnectionManager.cpp:83)
+         n1: 262144 0x41AE57: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 262144 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 262144 0x405613: main (main.cpp:96)
+         n1: 65536 0x41AE9E: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 65536 0x405613: main (main.cpp:96)
+       n1: 262144 0x41C4A2: CgiJob (CgiJob.hpp:31)
+        n1: 262144 0x41C4A2: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:59)
+         n1: 262144 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+          n1: 262144 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 262144 0x405613: main (main.cpp:96)
+       n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 81920 0x40BFB7: allocate (new_allocator.h:127)
+  n1: 81920 0x40BFB7: allocate (alloc_traits.h:133)
+   n1: 81920 0x40BFB7: _M_allocate (stl_vector.h:346)
+    n1: 81920 0x40BFB7: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 81920 0x40BFB7: reserve (vector.tcc:85)
+      n2: 81920 0x40BFB7: Buffer::reset() (Buffer.cpp:95)
+       n1: 65536 0x41C50B: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:72)
+        n1: 65536 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+         n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 65536 0x405613: main (main.cpp:96)
+       n1: 16384 0x41B07F: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:81)
+        n1: 16384 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+         n0: 16384 0x405613: main (main.cpp:96)
+ n1: 72704 0x4912939: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n1: 72704 0x400647D: call_init.part.0 (dl-init.c:70)
+   n1: 72704 0x4006567: call_init (dl-init.c:33)
+    n1: 72704 0x4006567: _dl_init (dl-init.c:117)
+     n1: 72704 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+      n1: 72704 0x1: ???
+       n1: 72704 0x1FFEFFDE0A: ???
+        n0: 72704 0x1FFEFFDE14: ???
+ n0: 25013 in 93 places, all below massif's threshold (1.00%)
+ n1: 16384 0x40BF30: allocate (new_allocator.h:127)
+  n1: 16384 0x40BF30: allocate (alloc_traits.h:133)
+   n1: 16384 0x40BF30: _M_allocate (stl_vector.h:346)
+    n1: 16384 0x40BF30: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 16384 0x40BF30: reserve (vector.tcc:85)
+      n1: 16384 0x40BF30: reset (Buffer.cpp:95)
+       n2: 16384 0x40BF30: Buffer::consume(unsigned long) (Buffer.cpp:53)
+        n1: 16384 0x409430: HttpParser::_parseHeaders(Buffer&, HttpRequest&) (HttpParser.cpp:583)
+         n1: 16384 0x408511: HttpParser::feed(Connection*) (HttpParser.cpp:289)
+          n1: 16384 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+           n1: 16384 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+            n0: 16384 0x405613: main (main.cpp:96)
+        n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=14
+#-----------
+time=1853999528
+mem_heap_B=769430
+mem_heap_extra_B=2138
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=15
+#-----------
+time=1995216296
+mem_heap_B=769430
+mem_heap_extra_B=2138
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=16
+#-----------
+time=2198964272
+mem_heap_B=27967062
+mem_heap_extra_B=10266
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=17
+#-----------
+time=2351842992
+mem_heap_B=78167638
+mem_heap_extra_B=18330
+mem_stacks_B=58432
+heap_tree=detailed
+n2: 78167638 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 77594624 0x40BC2A: allocate (new_allocator.h:127)
+  n1: 77594624 0x40BC2A: allocate (alloc_traits.h:133)
+   n1: 77594624 0x40BC2A: _M_allocate (stl_vector.h:346)
+    n1: 77594624 0x40BC2A: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 77594624 0x40BC2A: reserve (vector.tcc:85)
+      n1: 77594624 0x40BC2A: _ensureCapacity (Buffer.cpp:118)
+       n1: 77594624 0x40BC2A: Buffer::append(char const*, unsigned long) (Buffer.cpp:39)
+        n1: 77594624 0x41CBF0: EventLoop::_handleCgiEvent(int, unsigned int) (EventLoop_helper_cgi.cpp:168)
+         n1: 77594624 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 77594624 0x405613: main (main.cpp:96)
+ n0: 573014 in 97 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=18
+#-----------
+time=2558703656
+mem_heap_B=134790742
+mem_heap_extra_B=18322
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=19
+#-----------
+time=2660391176
+mem_heap_B=168345174
+mem_heap_extra_B=18322
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=20
+#-----------
+time=2767284592
+mem_heap_B=273202774
+mem_heap_extra_B=22362
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=21
+#-----------
+time=2937491128
+mem_heap_B=239648342
+mem_heap_extra_B=18322
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=22
+#-----------
+time=3044384544
+mem_heap_B=344505942
+mem_heap_extra_B=22362
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=23
+#-----------
+time=3226995208
+mem_heap_B=315080278
+mem_heap_extra_B=22354
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=24
+#-----------
+time=3333888624
+mem_heap_B=419937878
+mem_heap_extra_B=26394
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=25
+#-----------
+time=3503593704
+mem_heap_B=386383446
+mem_heap_extra_B=22354
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=26
+#-----------
+time=3610487120
+mem_heap_B=491241046
+mem_heap_extra_B=26394
+mem_stacks_B=58432
+heap_tree=detailed
+n2: 491241046 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 490733568 0x40BC2A: allocate (new_allocator.h:127)
+  n1: 490733568 0x40BC2A: allocate (alloc_traits.h:133)
+   n1: 490733568 0x40BC2A: _M_allocate (stl_vector.h:346)
+    n1: 490733568 0x40BC2A: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 490733568 0x40BC2A: reserve (vector.tcc:85)
+      n1: 490733568 0x40BC2A: _ensureCapacity (Buffer.cpp:118)
+       n1: 490733568 0x40BC2A: Buffer::append(char const*, unsigned long) (Buffer.cpp:39)
+        n1: 490733568 0x41CBF0: EventLoop::_handleCgiEvent(int, unsigned int) (EventLoop_helper_cgi.cpp:168)
+         n1: 490733568 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 490733568 0x405613: main (main.cpp:96)
+ n0: 507478 in 97 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=27
+#-----------
+time=3783839032
+mem_heap_B=319276648
+mem_heap_extra_B=18448
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=28
+#-----------
+time=3889136688
+mem_heap_B=214418888
+mem_heap_extra_B=14360
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=29
+#-----------
+time=4079744992
+mem_heap_B=277333105
+mem_heap_extra_B=14303
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=30
+#-----------
+time=4188569800
+mem_heap_B=382091187
+mem_heap_extra_B=18229
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=31
+#-----------
+time=4362620096
+mem_heap_B=210124866
+mem_heap_extra_B=10158
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=32
+#-----------
+time=4468112520
+mem_heap_B=105200484
+mem_heap_extra_B=5908
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=33
+#-----------
+time=4575114688
+mem_heap_B=342676
+mem_heap_extra_B=1852
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=34
+#-----------
+time=4775708136
+mem_heap_B=508481
+mem_heap_extra_B=2087
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=35
+#-----------
+time=4890965192
+mem_heap_B=508481
+mem_heap_extra_B=2087
+mem_stacks_B=50096
+heap_tree=empty
+#-----------
+snapshot=36
+#-----------
+time=5024487568
+mem_heap_B=574209
+mem_heap_extra_B=2143
+mem_stacks_B=50096
+heap_tree=empty
+#-----------
+snapshot=37
+#-----------
+time=5158617008
+mem_heap_B=574209
+mem_heap_extra_B=2143
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=38
+#-----------
+time=5296389960
+mem_heap_B=574209
+mem_heap_extra_B=2143
+mem_stacks_B=50072
+heap_tree=empty
+#-----------
+snapshot=39
+#-----------
+time=5437535896
+mem_heap_B=639937
+mem_heap_extra_B=2199
+mem_stacks_B=50096
+heap_tree=empty
+#-----------
+snapshot=40
+#-----------
+time=5508127608
+mem_heap_B=639937
+mem_heap_extra_B=2199
+mem_stacks_B=66624
+heap_tree=empty
+#-----------
+snapshot=41
+#-----------
+time=5649294440
+mem_heap_B=639937
+mem_heap_extra_B=2199
+mem_stacks_B=50160
+heap_tree=empty
+#-----------
+snapshot=42
+#-----------
+time=5790494288
+mem_heap_B=639937
+mem_heap_extra_B=2199
+mem_stacks_B=66616
+heap_tree=empty
+#-----------
+snapshot=43
+#-----------
+time=5941585256
+mem_heap_B=705665
+mem_heap_extra_B=2255
+mem_stacks_B=50168
+heap_tree=empty
+#-----------
+snapshot=44
+#-----------
+time=6102977728
+mem_heap_B=705665
+mem_heap_extra_B=2255
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=45
+#-----------
+time=6272962992
+mem_heap_B=705665
+mem_heap_extra_B=2255
+mem_stacks_B=50096
+heap_tree=empty
+#-----------
+snapshot=46
+#-----------
+time=6444095760
+mem_heap_B=771393
+mem_heap_extra_B=2311
+mem_stacks_B=50104
+heap_tree=empty
+#-----------
+snapshot=47
+#-----------
+time=6529664880
+mem_heap_B=771393
+mem_heap_extra_B=2311
+mem_stacks_B=66648
+heap_tree=empty
+#-----------
+snapshot=48
+#-----------
+time=6700786600
+mem_heap_B=771393
+mem_heap_extra_B=2311
+mem_stacks_B=50096
+heap_tree=empty
+#-----------
+snapshot=49
+#-----------
+time=6822509104
+mem_heap_B=34326017
+mem_heap_extra_B=6399
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=50
+#-----------
+time=7030074072
+mem_heap_B=172738049
+mem_heap_extra_B=10439
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=51
+#-----------
+time=7200626216
+mem_heap_B=139118081
+mem_heap_extra_B=10431
+mem_stacks_B=58232
+heap_tree=empty
+#-----------
+snapshot=52
+#-----------
+time=7403900808
+mem_heap_B=206161409
+mem_heap_extra_B=14463
+mem_stacks_B=58232
+heap_tree=empty
+#-----------
+snapshot=53
+#-----------
+time=7611703096
+mem_heap_B=344573441
+mem_heap_extra_B=18503
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=54
+#-----------
+time=7810590544
+mem_heap_B=319276545
+mem_heap_extra_B=22527
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=55
+#-----------
+time=7915452360
+mem_heap_B=424134145
+mem_heap_extra_B=26567
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=56
+#-----------
+time=8050964504
+mem_heap_B=424134145
+mem_heap_extra_B=26567
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=57
+#-----------
+time=8191416568
+mem_heap_B=495437313
+mem_heap_extra_B=26567
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=58
+#-----------
+time=8319938712
+mem_heap_B=470271489
+mem_heap_extra_B=26567
+mem_stacks_B=58432
+heap_tree=detailed
+n2: 470271489 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 469762048 0x40BC2A: allocate (new_allocator.h:127)
+  n1: 469762048 0x40BC2A: allocate (alloc_traits.h:133)
+   n1: 469762048 0x40BC2A: _M_allocate (stl_vector.h:346)
+    n1: 469762048 0x40BC2A: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 469762048 0x40BC2A: reserve (vector.tcc:85)
+      n1: 469762048 0x40BC2A: _ensureCapacity (Buffer.cpp:118)
+       n1: 469762048 0x40BC2A: Buffer::append(char const*, unsigned long) (Buffer.cpp:39)
+        n1: 469762048 0x41CBF0: EventLoop::_handleCgiEvent(int, unsigned int) (EventLoop_helper_cgi.cpp:168)
+         n1: 469762048 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 469762048 0x405613: main (main.cpp:96)
+ n0: 509441 in 109 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=59
+#-----------
+time=8404849016
+mem_heap_B=520603137
+mem_heap_extra_B=26567
+mem_stacks_B=58432
+heap_tree=detailed
+n2: 520603137 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 520093696 0x40BC2A: allocate (new_allocator.h:127)
+  n1: 520093696 0x40BC2A: allocate (alloc_traits.h:133)
+   n1: 520093696 0x40BC2A: _M_allocate (stl_vector.h:346)
+    n1: 520093696 0x40BC2A: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 520093696 0x40BC2A: reserve (vector.tcc:85)
+      n1: 520093696 0x40BC2A: _ensureCapacity (Buffer.cpp:118)
+       n1: 520093696 0x40BC2A: Buffer::append(char const*, unsigned long) (Buffer.cpp:39)
+        n1: 520093696 0x41CBF0: EventLoop::_handleCgiEvent(int, unsigned int) (EventLoop_helper_cgi.cpp:168)
+         n1: 520093696 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 520093696 0x405613: main (main.cpp:96)
+ n0: 509441 in 109 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=60
+#-----------
+time=8545301080
+mem_heap_B=591906305
+mem_heap_extra_B=26567
+mem_stacks_B=58432
+heap_tree=peak
+n2: 591906305 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 591396864 0x40BC2A: allocate (new_allocator.h:127)
+  n1: 591396864 0x40BC2A: allocate (alloc_traits.h:133)
+   n1: 591396864 0x40BC2A: _M_allocate (stl_vector.h:346)
+    n1: 591396864 0x40BC2A: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 591396864 0x40BC2A: reserve (vector.tcc:85)
+      n1: 591396864 0x40BC2A: _ensureCapacity (Buffer.cpp:118)
+       n1: 591396864 0x40BC2A: Buffer::append(char const*, unsigned long) (Buffer.cpp:39)
+        n1: 591396864 0x41CBF0: EventLoop::_handleCgiEvent(int, unsigned int) (EventLoop_helper_cgi.cpp:168)
+         n1: 591396864 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 591396864 0x405613: main (main.cpp:96)
+ n0: 509441 in 109 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=61
+#-----------
+time=8719669296
+mem_heap_B=419939984
+mem_heap_extra_B=18496
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=62
+#-----------
+time=8826676240
+mem_heap_B=315082216
+mem_heap_extra_B=14408
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=63
+#-----------
+time=8931942896
+mem_heap_B=210224416
+mem_heap_extra_B=10304
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=64
+#-----------
+time=9037873872
+mem_heap_B=105184044
+mem_heap_extra_B=5972
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=65
+#-----------
+time=9143302296
+mem_heap_B=259630
+mem_heap_extra_B=1706
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=66
+#-----------
+time=9313193400
+mem_heap_B=508481
+mem_heap_extra_B=2071
+mem_stacks_B=66480
+heap_tree=detailed
+n5: 508481 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 327680 0x40BAC0: allocate (new_allocator.h:127)
+  n1: 327680 0x40BAC0: allocate (alloc_traits.h:133)
+   n1: 327680 0x40BAC0: _M_allocate (stl_vector.h:346)
+    n1: 327680 0x40BAC0: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 327680 0x40BAC0: reserve (vector.tcc:85)
+      n2: 327680 0x40BAC0: Buffer::Buffer(unsigned long) (Buffer.cpp:24)
+       n1: 327680 0x407D67: Connection::Connection(int, Server const*) (Connection.cpp:34)
+        n2: 327680 0x40CA5F: ConnectionManager::addConnection(int, Server const*) (ConnectionManager.cpp:83)
+         n1: 262144 0x41AE57: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 262144 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 262144 0x405613: main (main.cpp:96)
+         n1: 65536 0x41AE9E: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 65536 0x405613: main (main.cpp:96)
+       n0: 0 in 2 places, all below massif's threshold (1.00%)
+ n1: 81920 0x40BF30: allocate (new_allocator.h:127)
+  n1: 81920 0x40BF30: allocate (alloc_traits.h:133)
+   n1: 81920 0x40BF30: _M_allocate (stl_vector.h:346)
+    n1: 81920 0x40BF30: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 81920 0x40BF30: reserve (vector.tcc:85)
+      n1: 81920 0x40BF30: reset (Buffer.cpp:95)
+       n3: 81920 0x40BF30: Buffer::consume(unsigned long) (Buffer.cpp:53)
+        n1: 65536 0x409430: HttpParser::_parseHeaders(Buffer&, HttpRequest&) (HttpParser.cpp:583)
+         n1: 65536 0x408511: HttpParser::feed(Connection*) (HttpParser.cpp:289)
+          n1: 65536 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+           n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+            n0: 65536 0x405613: main (main.cpp:96)
+        n1: 16384 0x40A8B4: HttpParser::_parseBody(Buffer&, HttpRequest&) (HttpParser.cpp:723)
+         n1: 16384 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+          n1: 16384 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 16384 0x405613: main (main.cpp:96)
+        n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 72704 0x4912939: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n1: 72704 0x400647D: call_init.part.0 (dl-init.c:70)
+   n1: 72704 0x4006567: call_init (dl-init.c:33)
+    n1: 72704 0x4006567: _dl_init (dl-init.c:117)
+     n1: 72704 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+      n1: 72704 0x1: ???
+       n1: 72704 0x1FFEFFDE0A: ???
+        n0: 72704 0x1FFEFFDE14: ???
+ n0: 17985 in 106 places, all below massif's threshold (1.00%)
+ n1: 8192 0x497D023: std::basic_filebuf<char, std::char_traits<char> >::_M_allocate_internal_buffer() (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n2: 8192 0x4981015: std::basic_filebuf<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+   n1: 8192 0x40E2FA: open (fstream:928)
+    n1: 8192 0x40E2FA: Logger::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (Logger.cpp:146)
+     n0: 8192 0x405356: main (main.cpp:54)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=67
+#-----------
+time=9398144384
+mem_heap_B=524865
+mem_heap_extra_B=2079
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=68
+#-----------
+time=9525570336
+mem_heap_B=508481
+mem_heap_extra_B=2071
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=69
+#-----------
+time=9652992328
+mem_heap_B=590593
+mem_heap_extra_B=2135
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=70
+#-----------
+time=9822893752
+mem_heap_B=590593
+mem_heap_extra_B=2135
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=71
+#-----------
+time=9950319704
+mem_heap_B=574209
+mem_heap_extra_B=2127
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=72
+#-----------
+time=10077740224
+mem_heap_B=656321
+mem_heap_extra_B=2191
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=73
+#-----------
+time=10247641648
+mem_heap_B=656321
+mem_heap_extra_B=2191
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=74
+#-----------
+time=10375067600
+mem_heap_B=639937
+mem_heap_extra_B=2183
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=75
+#-----------
+time=10502488152
+mem_heap_B=722049
+mem_heap_extra_B=2247
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=76
+#-----------
+time=10672389576
+mem_heap_B=722049
+mem_heap_extra_B=2247
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=77
+#-----------
+time=10799815528
+mem_heap_B=705665
+mem_heap_extra_B=2239
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=78
+#-----------
+time=10927236080
+mem_heap_B=787777
+mem_heap_extra_B=2303
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=79
+#-----------
+time=11097137504
+mem_heap_B=787777
+mem_heap_extra_B=2303
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=80
+#-----------
+time=11267038928
+mem_heap_B=787777
+mem_heap_extra_B=2303
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=81
+#-----------
+time=11458800568
+mem_heap_B=101434881
+mem_heap_extra_B=10423
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=82
+#-----------
+time=11599252632
+mem_heap_B=172738049
+mem_heap_extra_B=10423
+mem_stacks_B=58432
+heap_tree=detailed
+n2: 172738049 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 171966464 0x40BC2A: allocate (new_allocator.h:127)
+  n1: 171966464 0x40BC2A: allocate (alloc_traits.h:133)
+   n1: 171966464 0x40BC2A: _M_allocate (stl_vector.h:346)
+    n1: 171966464 0x40BC2A: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 171966464 0x40BC2A: reserve (vector.tcc:85)
+      n1: 171966464 0x40BC2A: _ensureCapacity (Buffer.cpp:118)
+       n1: 171966464 0x40BC2A: Buffer::append(char const*, unsigned long) (Buffer.cpp:39)
+        n1: 171966464 0x41CBF0: EventLoop::_handleCgiEvent(int, unsigned int) (EventLoop_helper_cgi.cpp:168)
+         n1: 171966464 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 171966464 0x405613: main (main.cpp:96)
+ n0: 771585 in 109 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=83
+#-----------
+time=11778591752
+mem_heap_B=164218369
+mem_heap_extra_B=18487
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=84
+#-----------
+time=11982933736
+mem_heap_B=231261697
+mem_heap_extra_B=22519
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=85
+#-----------
+time=12067844040
+mem_heap_B=281593345
+mem_heap_extra_B=22519
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=86
+#-----------
+time=12208296104
+mem_heap_B=352896513
+mem_heap_extra_B=22519
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=87
+#-----------
+time=12361998440
+mem_heap_B=336053761
+mem_heap_extra_B=26551
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=88
+#-----------
+time=12446908744
+mem_heap_B=386385409
+mem_heap_extra_B=26551
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=89
+#-----------
+time=12587360808
+mem_heap_B=457688577
+mem_heap_extra_B=26551
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=90
+#-----------
+time=12761729024
+mem_heap_B=285722256
+mem_heap_extra_B=18480
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=91
+#-----------
+time=12905921544
+mem_heap_B=377996617
+mem_heap_extra_B=22479
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=92
+#-----------
+time=13045955752
+mem_heap_B=449299785
+mem_heap_extra_B=22479
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=93
+#-----------
+time=13220495064
+mem_heap_B=277333456
+mem_heap_extra_B=14392
+mem_stacks_B=58480
+heap_tree=detailed
+n2: 277333456 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 276824064 0x40BC2A: allocate (new_allocator.h:127)
+  n1: 276824064 0x40BC2A: allocate (alloc_traits.h:133)
+   n1: 276824064 0x40BC2A: _M_allocate (stl_vector.h:346)
+    n1: 276824064 0x40BC2A: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 276824064 0x40BC2A: reserve (vector.tcc:85)
+      n1: 276824064 0x40BC2A: _ensureCapacity (Buffer.cpp:118)
+       n1: 276824064 0x40BC2A: Buffer::append(char const*, unsigned long) (Buffer.cpp:39)
+        n1: 276824064 0x41CBF0: EventLoop::_handleCgiEvent(int, unsigned int) (EventLoop_helper_cgi.cpp:168)
+         n1: 276824064 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 276824064 0x405613: main (main.cpp:96)
+ n0: 509392 in 109 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=94
+#-----------
+time=13327205800
+mem_heap_B=172425905
+mem_heap_extra_B=10247
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=95
+#-----------
+time=13432471016
+mem_heap_B=67568137
+mem_heap_extra_B=6159
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=96
+#-----------
+time=13604795248
+mem_heap_B=105233484
+mem_heap_extra_B=6004
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=97
+#-----------
+time=13798404640
+mem_heap_B=524865
+mem_heap_extra_B=2031
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=98
+#-----------
+time=13925830592
+mem_heap_B=508481
+mem_heap_extra_B=2023
+mem_stacks_B=50088
+heap_tree=detailed
+n5: 508481 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 327680 0x40BAC0: allocate (new_allocator.h:127)
+  n1: 327680 0x40BAC0: allocate (alloc_traits.h:133)
+   n1: 327680 0x40BAC0: _M_allocate (stl_vector.h:346)
+    n1: 327680 0x40BAC0: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 327680 0x40BAC0: reserve (vector.tcc:85)
+      n2: 327680 0x40BAC0: Buffer::Buffer(unsigned long) (Buffer.cpp:24)
+       n1: 327680 0x407D67: Connection::Connection(int, Server const*) (Connection.cpp:34)
+        n2: 327680 0x40CA5F: ConnectionManager::addConnection(int, Server const*) (ConnectionManager.cpp:83)
+         n1: 262144 0x41AE57: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 262144 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 262144 0x405613: main (main.cpp:96)
+         n1: 65536 0x41AE9E: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 65536 0x405613: main (main.cpp:96)
+       n0: 0 in 2 places, all below massif's threshold (1.00%)
+ n1: 81920 0x40BF30: allocate (new_allocator.h:127)
+  n1: 81920 0x40BF30: allocate (alloc_traits.h:133)
+   n1: 81920 0x40BF30: _M_allocate (stl_vector.h:346)
+    n1: 81920 0x40BF30: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 81920 0x40BF30: reserve (vector.tcc:85)
+      n1: 81920 0x40BF30: reset (Buffer.cpp:95)
+       n3: 81920 0x40BF30: Buffer::consume(unsigned long) (Buffer.cpp:53)
+        n1: 65536 0x409430: HttpParser::_parseHeaders(Buffer&, HttpRequest&) (HttpParser.cpp:583)
+         n1: 65536 0x408511: HttpParser::feed(Connection*) (HttpParser.cpp:289)
+          n1: 65536 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+           n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+            n0: 65536 0x405613: main (main.cpp:96)
+        n1: 16384 0x40A8B4: HttpParser::_parseBody(Buffer&, HttpRequest&) (HttpParser.cpp:723)
+         n1: 16384 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+          n1: 16384 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 16384 0x405613: main (main.cpp:96)
+        n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 72704 0x4912939: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n1: 72704 0x400647D: call_init.part.0 (dl-init.c:70)
+   n1: 72704 0x4006567: call_init (dl-init.c:33)
+    n1: 72704 0x4006567: _dl_init (dl-init.c:117)
+     n1: 72704 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+      n1: 72704 0x1: ???
+       n1: 72704 0x1FFEFFDE0A: ???
+        n0: 72704 0x1FFEFFDE14: ???
+ n0: 17985 in 106 places, all below massif's threshold (1.00%)
+ n1: 8192 0x497D023: std::basic_filebuf<char, std::char_traits<char> >::_M_allocate_internal_buffer() (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n2: 8192 0x4981015: std::basic_filebuf<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+   n1: 8192 0x40E2FA: open (fstream:928)
+    n1: 8192 0x40E2FA: Logger::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (Logger.cpp:146)
+     n0: 8192 0x405356: main (main.cpp:54)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=99
+#-----------
+time=14010781272
+mem_heap_B=508481
+mem_heap_extra_B=2023
+mem_stacks_B=50208
+heap_tree=empty
+#-----------
+snapshot=100
+#-----------
+time=14081373088
+mem_heap_B=524865
+mem_heap_extra_B=2031
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=101
+#-----------
+time=14151976784
+mem_heap_B=574209
+mem_heap_extra_B=2079
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=102
+#-----------
+time=14222568576
+mem_heap_B=574209
+mem_heap_extra_B=2079
+mem_stacks_B=50208
+heap_tree=empty
+#-----------
+snapshot=103
+#-----------
+time=14293160392
+mem_heap_B=590593
+mem_heap_extra_B=2087
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=104
+#-----------
+time=14363752104
+mem_heap_B=574209
+mem_heap_extra_B=2079
+mem_stacks_B=50104
+heap_tree=empty
+#-----------
+snapshot=105
+#-----------
+time=14434343864
+mem_heap_B=574209
+mem_heap_extra_B=2079
+mem_stacks_B=66536
+heap_tree=empty
+#-----------
+snapshot=106
+#-----------
+time=14504951840
+mem_heap_B=574209
+mem_heap_extra_B=2079
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=107
+#-----------
+time=14575554864
+mem_heap_B=656321
+mem_heap_extra_B=2143
+mem_stacks_B=50240
+heap_tree=detailed
+n6: 656321 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 458752 0x40BAC0: allocate (new_allocator.h:127)
+  n1: 458752 0x40BAC0: allocate (alloc_traits.h:133)
+   n1: 458752 0x40BAC0: _M_allocate (stl_vector.h:346)
+    n1: 458752 0x40BAC0: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 458752 0x40BAC0: reserve (vector.tcc:85)
+      n3: 458752 0x40BAC0: Buffer::Buffer(unsigned long) (Buffer.cpp:24)
+       n1: 327680 0x407D67: Connection::Connection(int, Server const*) (Connection.cpp:34)
+        n2: 327680 0x40CA5F: ConnectionManager::addConnection(int, Server const*) (ConnectionManager.cpp:83)
+         n1: 262144 0x41AE57: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 262144 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 262144 0x405613: main (main.cpp:96)
+         n1: 65536 0x41AE9E: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 65536 0x405613: main (main.cpp:96)
+       n1: 131072 0x41C4A2: CgiJob (CgiJob.hpp:31)
+        n1: 131072 0x41C4A2: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:59)
+         n1: 131072 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+          n1: 131072 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 131072 0x405613: main (main.cpp:96)
+       n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 72704 0x4912939: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n1: 72704 0x400647D: call_init.part.0 (dl-init.c:70)
+   n1: 72704 0x4006567: call_init (dl-init.c:33)
+    n1: 72704 0x4006567: _dl_init (dl-init.c:117)
+     n1: 72704 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+      n1: 72704 0x1: ???
+       n1: 72704 0x1FFEFFDE0A: ???
+        n0: 72704 0x1FFEFFDE14: ???
+ n1: 65536 0x40BF30: allocate (new_allocator.h:127)
+  n1: 65536 0x40BF30: allocate (alloc_traits.h:133)
+   n1: 65536 0x40BF30: _M_allocate (stl_vector.h:346)
+    n1: 65536 0x40BF30: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 65536 0x40BF30: reserve (vector.tcc:85)
+      n1: 65536 0x40BF30: reset (Buffer.cpp:95)
+       n3: 65536 0x40BF30: Buffer::consume(unsigned long) (Buffer.cpp:53)
+        n1: 32768 0x409430: HttpParser::_parseHeaders(Buffer&, HttpRequest&) (HttpParser.cpp:583)
+         n1: 32768 0x408511: HttpParser::feed(Connection*) (HttpParser.cpp:289)
+          n1: 32768 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+           n1: 32768 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+            n0: 32768 0x405613: main (main.cpp:96)
+        n1: 32768 0x40A8B4: HttpParser::_parseBody(Buffer&, HttpRequest&) (HttpParser.cpp:723)
+         n1: 32768 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+          n1: 32768 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 32768 0x405613: main (main.cpp:96)
+        n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 32768 0x40BFB7: allocate (new_allocator.h:127)
+  n1: 32768 0x40BFB7: allocate (alloc_traits.h:133)
+   n1: 32768 0x40BFB7: _M_allocate (stl_vector.h:346)
+    n1: 32768 0x40BFB7: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 32768 0x40BFB7: reserve (vector.tcc:85)
+      n2: 32768 0x40BFB7: Buffer::reset() (Buffer.cpp:95)
+       n1: 32768 0x41C50B: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:72)
+        n1: 32768 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+         n1: 32768 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 32768 0x405613: main (main.cpp:96)
+       n0: 0 in 5 places, all below massif's threshold (1.00%)
+ n0: 18369 in 105 places, all below massif's threshold (1.00%)
+ n1: 8192 0x497D023: std::basic_filebuf<char, std::char_traits<char> >::_M_allocate_internal_buffer() (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n2: 8192 0x4981015: std::basic_filebuf<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+   n1: 8192 0x40E2FA: open (fstream:928)
+    n1: 8192 0x40E2FA: Logger::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (Logger.cpp:146)
+     n0: 8192 0x405356: main (main.cpp:54)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=108
+#-----------
+time=14646146576
+mem_heap_B=639937
+mem_heap_extra_B=2135
+mem_stacks_B=50104
+heap_tree=empty
+#-----------
+snapshot=109
+#-----------
+time=14716738336
+mem_heap_B=639937
+mem_heap_extra_B=2135
+mem_stacks_B=66536
+heap_tree=empty
+#-----------
+snapshot=110
+#-----------
+time=14787346312
+mem_heap_B=639937
+mem_heap_extra_B=2135
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=111
+#-----------
+time=14857938104
+mem_heap_B=639937
+mem_heap_extra_B=2135
+mem_stacks_B=50208
+heap_tree=empty
+#-----------
+snapshot=112
+#-----------
+time=14928529920
+mem_heap_B=656321
+mem_heap_extra_B=2143
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=113
+#-----------
+time=14999121632
+mem_heap_B=639937
+mem_heap_extra_B=2135
+mem_stacks_B=50104
+heap_tree=empty
+#-----------
+snapshot=114
+#-----------
+time=15069724192
+mem_heap_B=705665
+mem_heap_extra_B=2191
+mem_stacks_B=50208
+heap_tree=empty
+#-----------
+snapshot=115
+#-----------
+time=15140316008
+mem_heap_B=722049
+mem_heap_extra_B=2199
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=116
+#-----------
+time=15210907720
+mem_heap_B=705665
+mem_heap_extra_B=2191
+mem_stacks_B=50104
+heap_tree=empty
+#-----------
+snapshot=117
+#-----------
+time=15281499480
+mem_heap_B=705665
+mem_heap_extra_B=2191
+mem_stacks_B=66536
+heap_tree=detailed
+n6: 705665 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 524288 0x40BAC0: allocate (new_allocator.h:127)
+  n1: 524288 0x40BAC0: allocate (alloc_traits.h:133)
+   n1: 524288 0x40BAC0: _M_allocate (stl_vector.h:346)
+    n1: 524288 0x40BAC0: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 524288 0x40BAC0: reserve (vector.tcc:85)
+      n3: 524288 0x40BAC0: Buffer::Buffer(unsigned long) (Buffer.cpp:24)
+       n1: 327680 0x407D67: Connection::Connection(int, Server const*) (Connection.cpp:34)
+        n2: 327680 0x40CA5F: ConnectionManager::addConnection(int, Server const*) (ConnectionManager.cpp:83)
+         n1: 262144 0x41AE57: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 262144 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 262144 0x405613: main (main.cpp:96)
+         n1: 65536 0x41AE9E: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 65536 0x405613: main (main.cpp:96)
+       n1: 196608 0x41C4A2: CgiJob (CgiJob.hpp:31)
+        n1: 196608 0x41C4A2: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:59)
+         n1: 196608 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+          n1: 196608 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 196608 0x405613: main (main.cpp:96)
+       n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 72704 0x4912939: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n1: 72704 0x400647D: call_init.part.0 (dl-init.c:70)
+   n1: 72704 0x4006567: call_init (dl-init.c:33)
+    n1: 72704 0x4006567: _dl_init (dl-init.c:117)
+     n1: 72704 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+      n1: 72704 0x1: ???
+       n1: 72704 0x1FFEFFDE0A: ???
+        n0: 72704 0x1FFEFFDE14: ???
+ n1: 49152 0x40BFB7: allocate (new_allocator.h:127)
+  n1: 49152 0x40BFB7: allocate (alloc_traits.h:133)
+   n1: 49152 0x40BFB7: _M_allocate (stl_vector.h:346)
+    n1: 49152 0x40BFB7: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 49152 0x40BFB7: reserve (vector.tcc:85)
+      n2: 49152 0x40BFB7: Buffer::reset() (Buffer.cpp:95)
+       n1: 49152 0x41C50B: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:72)
+        n1: 49152 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+         n1: 49152 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 49152 0x405613: main (main.cpp:96)
+       n0: 0 in 5 places, all below massif's threshold (1.00%)
+ n1: 32768 0x40BF30: allocate (new_allocator.h:127)
+  n1: 32768 0x40BF30: allocate (alloc_traits.h:133)
+   n1: 32768 0x40BF30: _M_allocate (stl_vector.h:346)
+    n1: 32768 0x40BF30: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 32768 0x40BF30: reserve (vector.tcc:85)
+      n1: 32768 0x40BF30: reset (Buffer.cpp:95)
+       n3: 32768 0x40BF30: Buffer::consume(unsigned long) (Buffer.cpp:53)
+        n1: 16384 0x409430: HttpParser::_parseHeaders(Buffer&, HttpRequest&) (HttpParser.cpp:583)
+         n1: 16384 0x408511: HttpParser::feed(Connection*) (HttpParser.cpp:289)
+          n1: 16384 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+           n1: 16384 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+            n0: 16384 0x405613: main (main.cpp:96)
+        n1: 16384 0x40A8B4: HttpParser::_parseBody(Buffer&, HttpRequest&) (HttpParser.cpp:723)
+         n1: 16384 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+          n1: 16384 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 16384 0x405613: main (main.cpp:96)
+        n0: 0 in 1 place, below massif's threshold (1.00%)
+ n0: 18561 in 105 places, all below massif's threshold (1.00%)
+ n1: 8192 0x497D023: std::basic_filebuf<char, std::char_traits<char> >::_M_allocate_internal_buffer() (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n2: 8192 0x4981015: std::basic_filebuf<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+   n1: 8192 0x40E2FA: open (fstream:928)
+    n1: 8192 0x40E2FA: Logger::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (Logger.cpp:146)
+     n0: 8192 0x405356: main (main.cpp:54)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=118
+#-----------
+time=15352107456
+mem_heap_B=705665
+mem_heap_extra_B=2191
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=119
+#-----------
+time=15422699248
+mem_heap_B=705665
+mem_heap_extra_B=2191
+mem_stacks_B=50208
+heap_tree=empty
+#-----------
+snapshot=120
+#-----------
+time=15493302768
+mem_heap_B=771393
+mem_heap_extra_B=2247
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=121
+#-----------
+time=15563894480
+mem_heap_B=771393
+mem_heap_extra_B=2247
+mem_stacks_B=66664
+heap_tree=empty
+#-----------
+snapshot=122
+#-----------
+time=15634486192
+mem_heap_B=771393
+mem_heap_extra_B=2247
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=123
+#-----------
+time=15705077952
+mem_heap_B=787777
+mem_heap_extra_B=2255
+mem_stacks_B=50176
+heap_tree=empty
+#-----------
+snapshot=124
+#-----------
+time=15775669664
+mem_heap_B=771393
+mem_heap_extra_B=2247
+mem_stacks_B=50088
+heap_tree=empty
+#-----------
+snapshot=125
+#-----------
+time=15846261376
+mem_heap_B=771393
+mem_heap_extra_B=2247
+mem_stacks_B=66520
+heap_tree=empty
+#-----------
+snapshot=126
+#-----------
+time=15943048792
+mem_heap_B=51103233
+mem_heap_extra_B=10375
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=127
+#-----------
+time=16027959096
+mem_heap_B=101434881
+mem_heap_extra_B=10375
+mem_stacks_B=58432
+heap_tree=detailed
+n2: 101434881 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 100663296 0x40BC2A: allocate (new_allocator.h:127)
+  n1: 100663296 0x40BC2A: allocate (alloc_traits.h:133)
+   n1: 100663296 0x40BC2A: _M_allocate (stl_vector.h:346)
+    n1: 100663296 0x40BC2A: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 100663296 0x40BC2A: reserve (vector.tcc:85)
+      n1: 100663296 0x40BC2A: _ensureCapacity (Buffer.cpp:118)
+       n1: 100663296 0x40BC2A: Buffer::append(char const*, unsigned long) (Buffer.cpp:39)
+        n1: 100663296 0x41CBF0: EventLoop::_handleCgiEvent(int, unsigned int) (EventLoop_helper_cgi.cpp:168)
+         n1: 100663296 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 100663296 0x405613: main (main.cpp:96)
+ n0: 771585 in 109 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=128
+#-----------
+time=16168411160
+mem_heap_B=172738049
+mem_heap_extra_B=10375
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=129
+#-----------
+time=16239990616
+mem_heap_B=107136513
+mem_heap_extra_B=6343
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=130
+#-----------
+time=16322265272
+mem_heap_B=155895297
+mem_heap_extra_B=14407
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=131
+#-----------
+time=16407175576
+mem_heap_B=206226945
+mem_heap_extra_B=14407
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=132
+#-----------
+time=16547627640
+mem_heap_B=277530113
+mem_heap_extra_B=14407
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=133
+#-----------
+time=16619207096
+mem_heap_B=211928577
+mem_heap_extra_B=10375
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=134
+#-----------
+time=16701481752
+mem_heap_B=260687361
+mem_heap_extra_B=18439
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=135
+#-----------
+time=16786392056
+mem_heap_B=311019009
+mem_heap_extra_B=18439
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=136
+#-----------
+time=16926844120
+mem_heap_B=382322177
+mem_heap_extra_B=18439
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=137
+#-----------
+time=16997940560
+mem_heap_B=316392961
+mem_heap_extra_B=14399
+mem_stacks_B=58432
+heap_tree=detailed
+n2: 316392961 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 315883520 0x40BC2A: allocate (new_allocator.h:127)
+  n1: 315883520 0x40BC2A: allocate (alloc_traits.h:133)
+   n1: 315883520 0x40BC2A: _M_allocate (stl_vector.h:346)
+    n1: 315883520 0x40BC2A: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 315883520 0x40BC2A: reserve (vector.tcc:85)
+      n1: 315883520 0x40BC2A: _ensureCapacity (Buffer.cpp:118)
+       n1: 315883520 0x40BC2A: Buffer::append(char const*, unsigned long) (Buffer.cpp:39)
+        n1: 315883520 0x41CBF0: EventLoop::_handleCgiEvent(int, unsigned int) (EventLoop_helper_cgi.cpp:168)
+         n1: 315883520 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 315883520 0x405613: main (main.cpp:96)
+ n0: 509441 in 109 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=138
+#-----------
+time=17079690744
+mem_heap_B=365676033
+mem_heap_extra_B=22471
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=139
+#-----------
+time=17164601048
+mem_heap_B=416007681
+mem_heap_extra_B=22471
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=140
+#-----------
+time=17239959096
+mem_heap_B=407356929
+mem_heap_extra_B=26503
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=141
+#-----------
+time=17367328760
+mem_heap_B=482854401
+mem_heap_extra_B=26503
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=142
+#-----------
+time=17507565472
+mem_heap_B=344442512
+mem_heap_extra_B=18432
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=143
+#-----------
+time=17612683048
+mem_heap_B=239584736
+mem_heap_extra_B=14328
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=144
+#-----------
+time=17719482000
+mem_heap_B=344442009
+mem_heap_extra_B=18327
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=145
+#-----------
+time=17892317216
+mem_heap_B=382190745
+mem_heap_extra_B=18327
+mem_stacks_B=58432
+heap_tree=empty
+#-----------
+snapshot=146
+#-----------
+time=18067565056
+mem_heap_B=210124898
+mem_heap_extra_B=10126
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=147
+#-----------
+time=18177243304
+mem_heap_B=105283538
+mem_heap_extra_B=6086
+mem_stacks_B=58480
+heap_tree=detailed
+n2: 105283538 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 104857600 0x40BC2A: allocate (new_allocator.h:127)
+  n1: 104857600 0x40BC2A: allocate (alloc_traits.h:133)
+   n1: 104857600 0x40BC2A: _M_allocate (stl_vector.h:346)
+    n1: 104857600 0x40BC2A: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 104857600 0x40BC2A: reserve (vector.tcc:85)
+      n1: 104857600 0x40BC2A: _ensureCapacity (Buffer.cpp:118)
+       n1: 104857600 0x40BC2A: Buffer::append(char const*, unsigned long) (Buffer.cpp:39)
+        n1: 104857600 0x41CBF0: EventLoop::_handleCgiEvent(int, unsigned int) (EventLoop_helper_cgi.cpp:168)
+         n1: 104857600 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 104857600 0x405613: main (main.cpp:96)
+ n0: 425938 in 109 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=148
+#-----------
+time=18282506304
+mem_heap_B=425762
+mem_heap_extra_B=1982
+mem_stacks_B=58480
+heap_tree=empty
+#-----------
+snapshot=149
+#-----------
+time=18353111560
+mem_heap_B=508481
+mem_heap_extra_B=2055
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=150
+#-----------
+time=18423703352
+mem_heap_B=508481
+mem_heap_extra_B=2055
+mem_stacks_B=50208
+heap_tree=empty
+#-----------
+snapshot=151
+#-----------
+time=18494295168
+mem_heap_B=524865
+mem_heap_extra_B=2063
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=152
+#-----------
+time=18564886880
+mem_heap_B=508481
+mem_heap_extra_B=2055
+mem_stacks_B=50104
+heap_tree=empty
+#-----------
+snapshot=153
+#-----------
+time=18635478640
+mem_heap_B=508481
+mem_heap_extra_B=2055
+mem_stacks_B=66536
+heap_tree=empty
+#-----------
+snapshot=154
+#-----------
+time=18706086616
+mem_heap_B=508481
+mem_heap_extra_B=2055
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=155
+#-----------
+time=18776689736
+mem_heap_B=590593
+mem_heap_extra_B=2119
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=156
+#-----------
+time=18847281448
+mem_heap_B=574209
+mem_heap_extra_B=2111
+mem_stacks_B=50104
+heap_tree=empty
+#-----------
+snapshot=157
+#-----------
+time=18917873208
+mem_heap_B=574209
+mem_heap_extra_B=2111
+mem_stacks_B=66536
+heap_tree=detailed
+n6: 574209 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 393216 0x40BAC0: allocate (new_allocator.h:127)
+  n1: 393216 0x40BAC0: allocate (alloc_traits.h:133)
+   n1: 393216 0x40BAC0: _M_allocate (stl_vector.h:346)
+    n1: 393216 0x40BAC0: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 393216 0x40BAC0: reserve (vector.tcc:85)
+      n3: 393216 0x40BAC0: Buffer::Buffer(unsigned long) (Buffer.cpp:24)
+       n1: 327680 0x407D67: Connection::Connection(int, Server const*) (Connection.cpp:34)
+        n2: 327680 0x40CA5F: ConnectionManager::addConnection(int, Server const*) (ConnectionManager.cpp:83)
+         n1: 262144 0x41AE57: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 262144 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 262144 0x405613: main (main.cpp:96)
+         n1: 65536 0x41AE9E: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 65536 0x405613: main (main.cpp:96)
+       n1: 65536 0x41C4A2: CgiJob (CgiJob.hpp:31)
+        n1: 65536 0x41C4A2: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:59)
+         n1: 65536 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+          n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 65536 0x405613: main (main.cpp:96)
+       n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 72704 0x4912939: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n1: 72704 0x400647D: call_init.part.0 (dl-init.c:70)
+   n1: 72704 0x4006567: call_init (dl-init.c:33)
+    n1: 72704 0x4006567: _dl_init (dl-init.c:117)
+     n1: 72704 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+      n1: 72704 0x1: ???
+       n1: 72704 0x1FFEFFDE0A: ???
+        n0: 72704 0x1FFEFFDE14: ???
+ n1: 65536 0x40BF30: allocate (new_allocator.h:127)
+  n1: 65536 0x40BF30: allocate (alloc_traits.h:133)
+   n1: 65536 0x40BF30: _M_allocate (stl_vector.h:346)
+    n1: 65536 0x40BF30: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 65536 0x40BF30: reserve (vector.tcc:85)
+      n1: 65536 0x40BF30: reset (Buffer.cpp:95)
+       n3: 65536 0x40BF30: Buffer::consume(unsigned long) (Buffer.cpp:53)
+        n1: 49152 0x409430: HttpParser::_parseHeaders(Buffer&, HttpRequest&) (HttpParser.cpp:583)
+         n1: 49152 0x408511: HttpParser::feed(Connection*) (HttpParser.cpp:289)
+          n1: 49152 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+           n1: 49152 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+            n0: 49152 0x405613: main (main.cpp:96)
+        n1: 16384 0x40A8B4: HttpParser::_parseBody(Buffer&, HttpRequest&) (HttpParser.cpp:723)
+         n1: 16384 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+          n1: 16384 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 16384 0x405613: main (main.cpp:96)
+        n0: 0 in 1 place, below massif's threshold (1.00%)
+ n0: 18177 in 105 places, all below massif's threshold (1.00%)
+ n1: 16384 0x40BFB7: allocate (new_allocator.h:127)
+  n1: 16384 0x40BFB7: allocate (alloc_traits.h:133)
+   n1: 16384 0x40BFB7: _M_allocate (stl_vector.h:346)
+    n1: 16384 0x40BFB7: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 16384 0x40BFB7: reserve (vector.tcc:85)
+      n2: 16384 0x40BFB7: Buffer::reset() (Buffer.cpp:95)
+       n1: 16384 0x41C50B: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:72)
+        n1: 16384 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+         n1: 16384 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 16384 0x405613: main (main.cpp:96)
+       n0: 0 in 5 places, all below massif's threshold (1.00%)
+ n1: 8192 0x497D023: std::basic_filebuf<char, std::char_traits<char> >::_M_allocate_internal_buffer() (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n2: 8192 0x4981015: std::basic_filebuf<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+   n1: 8192 0x40E2FA: open (fstream:928)
+    n1: 8192 0x40E2FA: Logger::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (Logger.cpp:146)
+     n0: 8192 0x405356: main (main.cpp:54)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=158
+#-----------
+time=18988481184
+mem_heap_B=574209
+mem_heap_extra_B=2111
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=159
+#-----------
+time=19059072976
+mem_heap_B=574209
+mem_heap_extra_B=2111
+mem_stacks_B=50208
+heap_tree=empty
+#-----------
+snapshot=160
+#-----------
+time=19129664792
+mem_heap_B=590593
+mem_heap_extra_B=2119
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=161
+#-----------
+time=19200268504
+mem_heap_B=639937
+mem_heap_extra_B=2167
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=162
+#-----------
+time=19270860296
+mem_heap_B=639937
+mem_heap_extra_B=2167
+mem_stacks_B=50208
+heap_tree=empty
+#-----------
+snapshot=163
+#-----------
+time=19341452112
+mem_heap_B=656321
+mem_heap_extra_B=2175
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=164
+#-----------
+time=19412043824
+mem_heap_B=639937
+mem_heap_extra_B=2167
+mem_stacks_B=50104
+heap_tree=empty
+#-----------
+snapshot=165
+#-----------
+time=19482635584
+mem_heap_B=639937
+mem_heap_extra_B=2167
+mem_stacks_B=66536
+heap_tree=empty
+#-----------
+snapshot=166
+#-----------
+time=19553243560
+mem_heap_B=639937
+mem_heap_extra_B=2167
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=167
+#-----------
+time=19623846584
+mem_heap_B=722049
+mem_heap_extra_B=2231
+mem_stacks_B=50240
+heap_tree=detailed
+n6: 722049 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 524288 0x40BAC0: allocate (new_allocator.h:127)
+  n1: 524288 0x40BAC0: allocate (alloc_traits.h:133)
+   n1: 524288 0x40BAC0: _M_allocate (stl_vector.h:346)
+    n1: 524288 0x40BAC0: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 524288 0x40BAC0: reserve (vector.tcc:85)
+      n3: 524288 0x40BAC0: Buffer::Buffer(unsigned long) (Buffer.cpp:24)
+       n1: 327680 0x407D67: Connection::Connection(int, Server const*) (Connection.cpp:34)
+        n2: 327680 0x40CA5F: ConnectionManager::addConnection(int, Server const*) (ConnectionManager.cpp:83)
+         n1: 262144 0x41AE57: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 262144 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 262144 0x405613: main (main.cpp:96)
+         n1: 65536 0x41AE9E: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 65536 0x405613: main (main.cpp:96)
+       n1: 196608 0x41C4A2: CgiJob (CgiJob.hpp:31)
+        n1: 196608 0x41C4A2: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:59)
+         n1: 196608 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+          n1: 196608 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 196608 0x405613: main (main.cpp:96)
+       n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 72704 0x4912939: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n1: 72704 0x400647D: call_init.part.0 (dl-init.c:70)
+   n1: 72704 0x4006567: call_init (dl-init.c:33)
+    n1: 72704 0x4006567: _dl_init (dl-init.c:117)
+     n1: 72704 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+      n1: 72704 0x1: ???
+       n1: 72704 0x1FFEFFDE0A: ???
+        n0: 72704 0x1FFEFFDE14: ???
+ n1: 49152 0x40BF30: allocate (new_allocator.h:127)
+  n1: 49152 0x40BF30: allocate (alloc_traits.h:133)
+   n1: 49152 0x40BF30: _M_allocate (stl_vector.h:346)
+    n1: 49152 0x40BF30: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 49152 0x40BF30: reserve (vector.tcc:85)
+      n1: 49152 0x40BF30: reset (Buffer.cpp:95)
+       n3: 49152 0x40BF30: Buffer::consume(unsigned long) (Buffer.cpp:53)
+        n1: 32768 0x40A8B4: HttpParser::_parseBody(Buffer&, HttpRequest&) (HttpParser.cpp:723)
+         n1: 32768 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+          n1: 32768 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 32768 0x405613: main (main.cpp:96)
+        n1: 16384 0x409430: HttpParser::_parseHeaders(Buffer&, HttpRequest&) (HttpParser.cpp:583)
+         n1: 16384 0x408511: HttpParser::feed(Connection*) (HttpParser.cpp:289)
+          n1: 16384 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+           n1: 16384 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+            n0: 16384 0x405613: main (main.cpp:96)
+        n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 49152 0x40BFB7: allocate (new_allocator.h:127)
+  n1: 49152 0x40BFB7: allocate (alloc_traits.h:133)
+   n1: 49152 0x40BFB7: _M_allocate (stl_vector.h:346)
+    n1: 49152 0x40BFB7: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 49152 0x40BFB7: reserve (vector.tcc:85)
+      n2: 49152 0x40BFB7: Buffer::reset() (Buffer.cpp:95)
+       n1: 49152 0x41C50B: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:72)
+        n1: 49152 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+         n1: 49152 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 49152 0x405613: main (main.cpp:96)
+       n0: 0 in 5 places, all below massif's threshold (1.00%)
+ n0: 18561 in 105 places, all below massif's threshold (1.00%)
+ n1: 8192 0x497D023: std::basic_filebuf<char, std::char_traits<char> >::_M_allocate_internal_buffer() (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n2: 8192 0x4981015: std::basic_filebuf<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+   n1: 8192 0x40E2FA: open (fstream:928)
+    n1: 8192 0x40E2FA: Logger::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (Logger.cpp:146)
+     n0: 8192 0x405356: main (main.cpp:54)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=168
+#-----------
+time=19694438296
+mem_heap_B=705665
+mem_heap_extra_B=2223
+mem_stacks_B=50104
+heap_tree=empty
+#-----------
+snapshot=169
+#-----------
+time=19765030056
+mem_heap_B=705665
+mem_heap_extra_B=2223
+mem_stacks_B=66536
+heap_tree=empty
+#-----------
+snapshot=170
+#-----------
+time=19835638032
+mem_heap_B=705665
+mem_heap_extra_B=2223
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=171
+#-----------
+time=19906229824
+mem_heap_B=705665
+mem_heap_extra_B=2223
+mem_stacks_B=50208
+heap_tree=empty
+#-----------
+snapshot=172
+#-----------
+time=19976821640
+mem_heap_B=722049
+mem_heap_extra_B=2231
+mem_stacks_B=50240
+heap_tree=empty
+#-----------
+snapshot=173
+#-----------
+time=20047424136
+mem_heap_B=771393
+mem_heap_extra_B=2295
+mem_stacks_B=66480
+heap_tree=empty
+#-----------
+snapshot=174
+#-----------
+time=20118024176
+mem_heap_B=771393
+mem_heap_extra_B=2295
+mem_stacks_B=50072
+heap_tree=empty
+#-----------
+snapshot=175
+#-----------
+time=20188615992
+mem_heap_B=787777
+mem_heap_extra_B=2303
+mem_stacks_B=50104
+heap_tree=empty
+#-----------
+snapshot=176
+#-----------
+time=20259207704
+mem_heap_B=771393
+mem_heap_extra_B=2295
+mem_stacks_B=49968
+heap_tree=empty
+#-----------
+snapshot=177
+#-----------
+time=20329799464
+mem_heap_B=771393
+mem_heap_extra_B=2295
+mem_stacks_B=66400
+heap_tree=detailed
+n5: 771393 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 589824 0x40BAC0: allocate (new_allocator.h:127)
+  n1: 589824 0x40BAC0: allocate (alloc_traits.h:133)
+   n1: 589824 0x40BAC0: _M_allocate (stl_vector.h:346)
+    n1: 589824 0x40BAC0: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 589824 0x40BAC0: reserve (vector.tcc:85)
+      n3: 589824 0x40BAC0: Buffer::Buffer(unsigned long) (Buffer.cpp:24)
+       n1: 327680 0x407D67: Connection::Connection(int, Server const*) (Connection.cpp:34)
+        n2: 327680 0x40CA5F: ConnectionManager::addConnection(int, Server const*) (ConnectionManager.cpp:83)
+         n1: 262144 0x41AE57: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 262144 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 262144 0x405613: main (main.cpp:96)
+         n1: 65536 0x41AE9E: EventLoop::_handleAccept(int) (EventLoop_helper_handlers.cpp:9)
+          n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 65536 0x405613: main (main.cpp:96)
+       n1: 262144 0x41C4A2: CgiJob (CgiJob.hpp:31)
+        n1: 262144 0x41C4A2: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:59)
+         n1: 262144 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+          n1: 262144 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 262144 0x405613: main (main.cpp:96)
+       n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 72704 0x4912939: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n1: 72704 0x400647D: call_init.part.0 (dl-init.c:70)
+   n1: 72704 0x4006567: call_init (dl-init.c:33)
+    n1: 72704 0x4006567: _dl_init (dl-init.c:117)
+     n1: 72704 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+      n1: 72704 0x1: ???
+       n1: 72704 0x1FFEFFDE0A: ???
+        n0: 72704 0x1FFEFFDE14: ???
+ n1: 65536 0x40BFB7: allocate (new_allocator.h:127)
+  n1: 65536 0x40BFB7: allocate (alloc_traits.h:133)
+   n1: 65536 0x40BFB7: _M_allocate (stl_vector.h:346)
+    n1: 65536 0x40BFB7: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 65536 0x40BFB7: reserve (vector.tcc:85)
+      n2: 65536 0x40BFB7: Buffer::reset() (Buffer.cpp:95)
+       n1: 65536 0x41C50B: EventLoop::_startCgi(Connection*, CgiRequestInfo const&) (EventLoop_helper_cgi.cpp:72)
+        n1: 65536 0x41B0DC: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:85)
+         n1: 65536 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+          n0: 65536 0x405613: main (main.cpp:96)
+       n0: 0 in 5 places, all below massif's threshold (1.00%)
+ n0: 26945 in 106 places, all below massif's threshold (1.00%)
+ n1: 16384 0x40BF30: allocate (new_allocator.h:127)
+  n1: 16384 0x40BF30: allocate (alloc_traits.h:133)
+   n1: 16384 0x40BF30: _M_allocate (stl_vector.h:346)
+    n1: 16384 0x40BF30: _M_allocate_and_copy<char *> (stl_vector.h:1511)
+     n1: 16384 0x40BF30: reserve (vector.tcc:85)
+      n1: 16384 0x40BF30: reset (Buffer.cpp:95)
+       n2: 16384 0x40BF30: Buffer::consume(unsigned long) (Buffer.cpp:53)
+        n1: 16384 0x40A8B4: HttpParser::_parseBody(Buffer&, HttpRequest&) (HttpParser.cpp:723)
+         n1: 16384 0x41B041: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:61)
+          n1: 16384 0x41AACA: EventLoop::run() (EventLoop.cpp:263)
+           n0: 16384 0x405613: main (main.cpp:96)
+        n0: 0 in 2 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=178
+#-----------
+time=20400407440
+mem_heap_B=771393
+mem_heap_extra_B=2295
+mem_stacks_B=66344
+heap_tree=empty

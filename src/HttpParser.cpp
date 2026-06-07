@@ -260,7 +260,7 @@ bool validate_host(std::string& host_value, uint16_t& port_out)
 void HttpParser::feed(Connection *conn)
 {
     // Nothing to do if already terminal.
-    
+    // conn->readBuffer().debug_dump();
     if (conn->request().parse_state == PSTATE_COMPLETE ||
         conn->request().parse_state == PSTATE_ERROR)
         return;
@@ -704,9 +704,12 @@ void HttpParser::_parseBody(Buffer& buf, HttpRequest& req)
     } 
     req.body.append(buf.data(), to_read);
     buf.consume(to_read);
-
+    
     if (req.body.size() == req.content_length)
+    {
+        buf.earase();
         req.parse_state = PSTATE_COMPLETE;
+    }
 }
 
 

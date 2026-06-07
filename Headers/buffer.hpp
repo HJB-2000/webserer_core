@@ -60,7 +60,8 @@ public:
     size_t      maxSize() const;
     void        reset();
     void        setMaxSize(size_t new_max);
-
+    void    debug_dump() const;
+    void earase();
 private:
     void _compact();
     void _ensureCapacity(size_t needed);

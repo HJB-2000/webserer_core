@@ -1,0 +1,1147 @@
+die__process_class: tag not supported 0x2f (template_type_parameter)!
+die__process_class: tag not supported 0x30 (template_value_parameter)!
+class EventLoop {
+public:
+
+	static const int                  MAX_EVENTS = 4096; /*     0     0 */
+	static const int                  EPOLL_TIMEOUT_MS = 100; /*     0     0 */
+	int                        _epoll_fd;            /*     0     4 */
+
+	/* XXX 4 bytes hole, try to pack */
+
+	class ConnectionManager *  _manager;             /*     8     8 */
+	volatile sig_atomic_t      _running;             /*    16     4 */
+	volatile sig_atomic_t      _stopped;             /*    20     4 */
+	class vector<int, std::allocator<int> > _server_fds; /*    24    24 */
+	class vector<const Server *, std::allocator<const Server *> > _server_configs; /*    48    24 */
+	/* --- cacheline 1 boundary (64 bytes) was 8 bytes ago --- */
+	class map<int, CgiJob *, std::less<int>, std::allocator<std::pair<const int, CgiJob *> > > _cgi_jobs; /*    72    48 */
+	class map<int, EventRef *, std::less<int>, std::allocator<std::pair<const int, EventRef *> > > _event_refs; /*   120    48 */
+	/* --- cacheline 2 boundary (128 bytes) was 40 bytes ago --- */
+	class vector<EventRef *, std::allocator<EventRef *> > _stale_refs; /*   168    24 */
+	/* --- cacheline 3 boundary (192 bytes) --- */
+	class HttpParser          _parser;               /*   192     0 */
+
+	/* XXX last struct has 1 byte of padding */
+	/* XXX 8 bytes hole, try to pack */
+
+	class ResponseHandler     _responder;            /*   200    48 */
+	class map<int, CgiJob *, std::less<int>, std::allocator<std::pair<const int, CgiJob *> > > _cgi_stdin_jobs; /*   248    48 */
+
+	/* Bitfield combined with previous fields */
+
+	static const int                  REAP_STALE_SECONDS = 60; /*     0     0 */
+	/* --- cacheline 4 boundary (256 bytes) was 40 bytes ago --- */
+	class vector<std::pair<int, long>, std::allocator<std::pair<int, long> > > _pending_reap; /*   296    24 */
+	void EventLoop(class EventLoop *);
+
+	void ~EventLoop(class EventLoop *);
+
+	void addServerSocket(class EventLoop *, int, const ServerConfig  *);
+
+	void run(class EventLoop *);
+
+	void stop(class EventLoop *);
+
+	int setNonBlocking(int);
+
+	class ConnectionManager & manager(class EventLoop *);
+
+	void EventLoop(class EventLoop *, const class EventLoop  &);
+
+	class EventLoop & operator=(class EventLoop *, const class EventLoop  &);
+
+	void _dispatch(class EventLoop *, const class epoll_event  &);
+
+	void _handleAccept(class EventLoop *, int);
+
+	void _handleError(class EventLoop *, class Connection *);
+
+	void _handleRead(class EventLoop *, class Connection *);
+
+	void _handleWrite(class EventLoop *, class Connection *);
+
+	bool _isServerFd(const class EventLoop  *, int);
+
+	const ServerConfig  * _configForServer(const class EventLoop  *, int);
+
+	void _handleClientEvent(class EventLoop *, int, uint32_t);
+
+	void _handleCgiEvent(class EventLoop *, int, uint32_t);
+
+	void _startCgi(class EventLoop *, class Connection *, const class CgiRequestInfo  &);
+
+	void _addCgiFd(class EventLoop *, int, int);
+
+	void _finishCgiJob(class EventLoop *, int);
+
+	void _failCgiJob(class EventLoop *, int, int);
+
+	void _closeCgiJob(class EventLoop *, int);
+
+	void _closeCgiJobsForClient(class EventLoop *, int);
+
+	void _closeTimedOutCgiJobs(class EventLoop *);
+
+	void _handleCgiStdinEvent(class EventLoop *, int, uint32_t);
+
+	void _closeCgiStdin(class EventLoop *, class CgiJob *);
+
+	void _reapPending(class EventLoop *);
+
+	void _closeClient(class EventLoop *, int);
+
+	void _rearmClient(class EventLoop *, int);
+
+	void _closeTimedOutClients(class EventLoop *);
+
+	bool _setCloexec(int, const char  *);
+
+	void _registerEventFd(class EventLoop *, int, enum EventKind, uint32_t);
+
+	void _modifyEventFd(class EventLoop *, int, enum EventKind, uint32_t);
+
+	void _unregisterEventFd(class EventLoop *, int);
+
+
+	/* size: 320, cachelines: 5, members: 13, static members: 3 */
+	/* sum members: 308, holes: 2, sum holes: 12 */
+	/* paddings: 1, sum paddings: 1 */
+};
+class Server {
+	string                     _host;                /*     0     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	int                        _port;                /*    32     4 */
+	int                        _timeout_seconds;     /*    36     4 */
+	string                     _root;                /*    40     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	/* --- cacheline 1 boundary (64 bytes) was 8 bytes ago --- */
+	long long int              _client_max_body_size; /*    72     8 */
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std::char_traits<char>, std::allocator<char> > > > _index_Files; /*    80    24 */
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std::char_traits<char>, std::allocator<char> > > > _server_names; /*   104    24 */
+	/* --- cacheline 2 boundary (128 bytes) --- */
+	class map<int, std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::less<int>, std::allocator<std::pair<const int, std::basic_string<char, std::char_traits<char>, std::allocator<char> > > > > _error_page; /*   128    48 */
+	class vector<Location, std::allocator<Location> > _locations; /*   176    24 */
+public:
+
+	void Server(class Server *);
+
+	void Server(class Server *, const class Server  &);
+
+	void Server(class Server *, const class httpConfig  &);
+
+	class Server & operator=(class Server *, const class Server  &);
+
+	void ~Server(class Server *);
+
+	string getRoot(const class Server  *);
+
+	size_t getMaxBody(const class Server  *);
+
+	class map<int, std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::less<int>, std::allocator<std::pair getErrorPageMap(const class Server  *);
+
+	string getHost(const class Server  *);
+
+	int getPort(const class Server  *);
+
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std getIndex_s(const class Server  *);
+
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std getServerNames(const class Server  *);
+
+	class vector<Location, std::allocator<Location> > & getLocations(class Server *);
+
+	const class vector<Location, std::allocator<Location> >  & get_locations(const class Server  *);
+
+	const class Location  * matchLocation(const class Server  *, const string  &);
+
+	int get_timeout_seconds(const class Server  *);
+
+	void setHost(class Server *, const string  &);
+
+	void setPort(class Server *, int &);
+
+	void setServerNames(class Server *, class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std);
+
+	void setRoot(class Server *, string &);
+
+	void setIndex_s(class Server *, const string  &);
+
+	void setMaxBodySize(class Server *, long long int);
+
+	void setErrorPage(class Server *, int, string &);
+
+	void addLocation(class Server *, class Location &);
+
+	void set_default_conf(class Server *);
+
+	void set_timeout_seconds(class Server *, int);
+
+
+	/* size: 200, cachelines: 4, members: 9 */
+	/* sum members: 136, holes: 2, sum holes: 64 */
+	/* last cacheline: 8 bytes */
+};
+class HttpParser {
+public:
+
+	void feed(class HttpParser *, class Connection *);
+
+	void _parseRequestLine(class HttpParser *, class Buffer &, class HttpRequest &);
+
+	void _parseHeaders(class HttpParser *, class Buffer &, class HttpRequest &);
+
+	void _parseBody(class HttpParser *, class Buffer &, class HttpRequest &);
+
+	void _parseChunked(class HttpParser *, class Buffer &, class HttpRequest &);
+
+
+	/* size: 1, cachelines: 0, members: 0 */
+	/* padding: 1 */
+	/* last cacheline: 1 bytes */
+};
+class Buffer {
+public:
+
+	static const size_t               MIN_INITIAL = 8192; /*     0     0 */
+	static const size_t               MAX_INITIAL = 65536; /*     0     0 */
+	size_t                     _cmbs;                /*     0     8 */
+	class vector<char, std::allocator<char> > _storage; /*     8    24 */
+	size_t                     _head;                /*    32     8 */
+	void Buffer(class Buffer *, size_t);
+
+	void append(class Buffer *, const char  *, size_t);
+
+	void consume(class Buffer *, size_t);
+
+	const char  * data(const class Buffer  *);
+
+	char * data(class Buffer *);
+
+	size_t size(const class Buffer  *);
+
+	bool empty(const class Buffer  *);
+
+	size_t maxSize(const class Buffer  *);
+
+	void reset(class Buffer *);
+
+	void setMaxSize(class Buffer *, size_t);
+
+	void _compact(class Buffer *);
+
+	void _ensureCapacity(class Buffer *, size_t);
+
+
+	/* size: 40, cachelines: 1, members: 3, static members: 2 */
+	/* last cacheline: 40 bytes */
+};
+class HttpRequest {
+public:
+
+	class map<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::less<std::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<const std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::basic_string<char, std::char_traits<char>, std::allocator<char> > > > > headers; /*     0    48 */
+	string                     method;               /*    48     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	/* --- cacheline 1 boundary (64 bytes) was 16 bytes ago --- */
+	string                     path;                 /*    80     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	string                     query_string;         /*   112     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	/* --- cacheline 2 boundary (128 bytes) was 16 bytes ago --- */
+	string                     version;              /*   144     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	string                     body;                 /*   176     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	/* --- cacheline 3 boundary (192 bytes) was 16 bytes ago --- */
+	size_t                     body_size;            /*   208     8 */
+	size_t                     content_length;       /*   216     8 */
+	size_t                     max_body_size;        /*   224     8 */
+	size_t                     _chunk_size;          /*   232     8 */
+	int                        body_fd;              /*   240     4 */
+	int                        error_code;           /*   244     4 */
+	enum ParseState            parse_state;          /*   248     4 */
+	bool                       chunked;              /*   252     1 */
+	bool                       _chunk_trailing;      /*   253     1 */
+	bool                       _chunk_done;          /*   254     1 */
+	void HttpRequest(class HttpRequest *);
+
+	void reset(class HttpRequest *);
+
+	string header(const class HttpRequest  *, const string  &);
+
+	bool expectsBody(const class HttpRequest  *);
+
+	bool keepAlive(const class HttpRequest  *);
+
+
+	/* size: 256, cachelines: 4, members: 16 */
+	/* sum members: 95, holes: 5, sum holes: 160 */
+	/* padding: 1 */
+};
+class ResponseHandler {
+	class map<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::less<std::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<const std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::basic_string<char, std::char_traits<char>, std::allocator<char> > > > > _mime; /*     0    48 */
+public:
+
+	void ResponseHandler(class ResponseHandler *);
+
+	void handle(class ResponseHandler *, const class HttpRequest  &, const ServerConfig  &, class Buffer &);
+
+	void sendError(class ResponseHandler *, int, const ServerConfig  &, class Buffer &);
+
+	bool resolveCgiRequest(const class ResponseHandler  *, const class HttpRequest  &, const ServerConfig  &, class CgiRequestInfo &);
+
+	void handleCgiOutput(class ResponseHandler *, const class HttpRequest  &, const ServerConfig  &, const class Buffer  &, class Buffer &);
+
+	void ResponseHandler(class ResponseHandler *, const class ResponseHandler  &);
+
+	class ResponseHandler & operator=(class ResponseHandler *, const class ResponseHandler  &);
+
+	void _serveStaticFile(class ResponseHandler *, const class HttpRequest  &, const string  &, const ServerConfig  &, class Buffer &);
+
+	void _sendDirectoryListing(class ResponseHandler *, const class HttpRequest  &, const string  &, const ServerConfig  &, class Buffer &);
+
+	void _sendRedirect(class ResponseHandler *, int, const string  &, const class HttpRequest  &, class Buffer &);
+
+	void _handlePost(class ResponseHandler *, const class HttpRequest  &, const class Location  &, const ServerConfig  &, class Buffer &);
+
+	void _handleDelete(class ResponseHandler *, const string  &, const class HttpRequest  &, const ServerConfig  &, class Buffer &);
+
+	void _sendErrorInternal(class ResponseHandler *, int, const class HttpRequest  &, const ServerConfig  &, class Buffer &);
+
+	string _loadErrorPage(const class ResponseHandler  *, int, const ServerConfig  &);
+
+	string _builtinErrorBody(const class ResponseHandler  *, int);
+
+	void _writeHeaders(class ResponseHandler *, int, const string  &, size_t, const string  &, const class HttpRequest  &, class Buffer &);
+
+	string _resolveFsPath(const class ResponseHandler  *, const class HttpRequest  &, const class Location  *, const ServerConfig  &);
+
+	bool _methodAllowed(const class ResponseHandler  *, const string  &, const class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<cha);
+
+	string _getMimeType(const class ResponseHandler  *, const string  &);
+
+	string _httpDate(const class ResponseHandler  *);
+
+	string _reasonPhrase(const class ResponseHandler  *, int);
+
+	string _connectionHeader(const class ResponseHandler  *, const class HttpRequest  &);
+
+	void _appendStr(class ResponseHandler *, class Buffer &, const string  &);
+
+	void _appendStr(class ResponseHandler *, class Buffer &, const char  *, size_t);
+
+	void _stubCgi(class ResponseHandler *, const class HttpRequest  &, const ServerConfig  &, class Buffer &);
+
+
+	/* size: 48, cachelines: 1, members: 1 */
+	/* last cacheline: 48 bytes */
+};
+struct _IO_FILE {
+	int                        _flags;               /*     0     4 */
+
+	/* XXX 4 bytes hole, try to pack */
+
+	char *                     _IO_read_ptr;         /*     8     8 */
+	char *                     _IO_read_end;         /*    16     8 */
+	char *                     _IO_read_base;        /*    24     8 */
+	char *                     _IO_write_base;       /*    32     8 */
+	char *                     _IO_write_ptr;        /*    40     8 */
+	char *                     _IO_write_end;        /*    48     8 */
+	char *                     _IO_buf_base;         /*    56     8 */
+	/* --- cacheline 1 boundary (64 bytes) --- */
+	char *                     _IO_buf_end;          /*    64     8 */
+	char *                     _IO_save_base;        /*    72     8 */
+	char *                     _IO_backup_base;      /*    80     8 */
+	char *                     _IO_save_end;         /*    88     8 */
+	class _IO_marker *         _markers;             /*    96     8 */
+	class _IO_FILE *           _chain;               /*   104     8 */
+	int                        _fileno;              /*   112     4 */
+	int                        _flags2;              /*   116     4 */
+	__off_t                    _old_offset;          /*   120     8 */
+	/* --- cacheline 2 boundary (128 bytes) --- */
+	unsigned short             _cur_column;          /*   128     2 */
+	signed char                _vtable_offset;       /*   130     1 */
+	char                       _shortbuf[1];         /*   131     1 */
+
+	/* XXX 4 bytes hole, try to pack */
+
+	_IO_lock_t *               _lock;                /*   136     8 */
+	__off64_t                  _offset;              /*   144     8 */
+	class _IO_codecvt *        _codecvt;             /*   152     8 */
+	class _IO_wide_data *      _wide_data;           /*   160     8 */
+	class _IO_FILE *           _freeres_list;        /*   168     8 */
+	void *                     _freeres_buf;         /*   176     8 */
+	size_t                     __pad5;               /*   184     8 */
+	/* --- cacheline 3 boundary (192 bytes) --- */
+	int                        _mode;                /*   192     4 */
+	char                       _unused2[20];         /*   196    20 */
+
+	/* size: 216, cachelines: 4, members: 29 */
+	/* sum members: 208, holes: 2, sum holes: 8 */
+	/* last cacheline: 24 bytes */
+};
+struct __va_list_tag {
+	unsigned int               gp_offset;            /*     0     4 */
+	unsigned int               fp_offset;            /*     4     4 */
+	void *                     overflow_arg_area;    /*     8     8 */
+	void *                     reg_save_area;        /*    16     8 */
+
+	/* size: 24, cachelines: 1, members: 4 */
+	/* last cacheline: 24 bytes */
+};
+struct sockaddr_in {
+	sa_family_t                sin_family;           /*     0     2 */
+	in_port_t                  sin_port;             /*     2     2 */
+	struct in_addr             sin_addr;             /*     4     4 */
+	unsigned char              sin_zero[8];          /*     8     8 */
+
+	/* size: 16, cachelines: 1, members: 4 */
+	/* last cacheline: 16 bytes */
+};
+struct in_addr {
+	in_addr_t                  s_addr;               /*     0     4 */
+
+	/* size: 4, cachelines: 1, members: 1 */
+	/* last cacheline: 4 bytes */
+};
+struct sockaddr {
+	sa_family_t                sa_family;            /*     0     2 */
+	char                       sa_data[14];          /*     2    14 */
+
+	/* size: 16, cachelines: 1, members: 2 */
+	/* last cacheline: 16 bytes */
+};
+struct addrinfo {
+	int                        ai_flags;             /*     0     4 */
+	int                        ai_family;            /*     4     4 */
+	int                        ai_socktype;          /*     8     4 */
+	int                        ai_protocol;          /*    12     4 */
+	socklen_t                  ai_addrlen;           /*    16     4 */
+
+	/* XXX 4 bytes hole, try to pack */
+
+	class sockaddr *           ai_addr;              /*    24     8 */
+	char *                     ai_canonname;         /*    32     8 */
+	class addrinfo *           ai_next;              /*    40     8 */
+
+	/* size: 48, cachelines: 1, members: 8 */
+	/* sum members: 44, holes: 1, sum holes: 4 */
+	/* last cacheline: 48 bytes */
+};
+class httpConfig {
+	long long int              _client_max_body_size; /*     0     8 */
+	class map<int, std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::less<int>, std::allocator<std::pair<const int, std::basic_string<char, std::char_traits<char>, std::allocator<char> > > > > _error_page; /*     8    48 */
+	class vector<Server, std::allocator<Server> > _all_servers; /*    56    24 */
+	/* --- cacheline 1 boundary (64 bytes) was 16 bytes ago --- */
+	bool                       _exist_location;      /*    80     1 */
+public:
+
+	void httpConfig(class httpConfig *);
+
+	void httpConfig(class httpConfig *, const class httpConfig  &);
+
+	class httpConfig & operator=(class httpConfig *, const class httpConfig  &);
+
+	void ~httpConfig(class httpConfig *);
+
+	void set_cl_mx_bd_sz(class httpConfig *, long long int);
+
+	long long int get_cl_mx_bd_sz(const class httpConfig  *);
+
+	void set_error_page(class httpConfig *, int, string);
+
+	class map<int, std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::less<int>, std::allocator<std::pair get_error_page(const class httpConfig  *);
+
+	void parsServer(class httpConfig *, class Server &, class vector<Lexer, std::allocator<Lexer> > &, size_t &);
+
+	void parseDirective(class httpConfig *, class Server &, const string  &, class vector<Lexer, std::allocator<Lexer> > &, size_t &);
+
+	void parsLocation(class httpConfig *, class Location &, class vector<Lexer, std::allocator<Lexer> > &, size_t &);
+
+	void parseDirective(class httpConfig *, class Location &, const string  &, class vector<Lexer, std::allocator<Lexer> > &, size_t &);
+
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std consumeValues(class httpConfig *, size_t &, class vector<Lexer, std::allocator<Lexer> > &);
+
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std consumeDirective(class httpConfig *, size_t &, class vector<Lexer, std::allocator<Lexer> > &);
+
+	void set_servers(class httpConfig *, class Server &);
+
+	class vector<Server, std::allocator<Server> > & get_all_servers(class httpConfig *);
+
+	const class vector<Server, std::allocator<Server> >  & get_all_servers(const class httpConfig  *);
+
+	void set_default_conf(class httpConfig *);
+
+	void set_exist_location(class httpConfig *);
+
+	bool get_exist_location(class httpConfig *);
+
+
+	/* size: 88, cachelines: 2, members: 4 */
+	/* padding: 7 */
+	/* last cacheline: 24 bytes */
+};
+class Lexer {
+	t_token_type               _type;                /*     0     4 */
+
+	/* XXX 4 bytes hole, try to pack */
+
+	string                     _value;               /*     8     0 */
+	static class map<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, token_type, std::less<std::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<const std::basic_string<char, std::char_traits<char>, std::allocator<char> >, token_type> > > _grammar; /*     0     0 */
+public:
+
+	void Lexer(class Lexer *, t_token_type, string);
+
+	void Lexer(class Lexer *, const class Lexer  &);
+
+	class Lexer & operator=(class Lexer *, const class Lexer  &);
+
+	string get_value(class Lexer *);
+
+	string get_token_type(class Lexer *);
+
+	void set_grammar(class Lexer *);
+
+	void ~Lexer(class Lexer *);
+
+	t_token_type identify(const string  &);
+
+	void init_grammar(void);
+
+
+	/* size: 40, cachelines: 1, members: 2, static members: 1 */
+	/* sum members: 4, holes: 1, sum holes: 4 */
+	/* padding: 32 */
+	/* last cacheline: 40 bytes */
+};
+class ParserConf {
+	class httpConfig          _http;                 /*     0    88 */
+
+	/* XXX last struct has 7 bytes of padding */
+
+	/* --- cacheline 1 boundary (64 bytes) was 24 bytes ago --- */
+	class eventsConfig        _events;               /*    88    40 */
+
+	/* XXX last struct has 32 bytes of padding */
+
+	/* --- cacheline 2 boundary (128 bytes) --- */
+	bool                       _exist_http;          /*   128     1 */
+	bool                       _exist_server;        /*   129     1 */
+public:
+
+	void ParserConf(class ParserConf *);
+
+	void ParserConf(class ParserConf *, bool);
+
+	void ~ParserConf(class ParserConf *);
+
+	void parsHTTP(class ParserConf *, class vector<Lexer, std::allocator<Lexer> > &, size_t &);
+
+	void parseDirective(class ParserConf *, class httpConfig &, const string  &, class vector<Lexer, std::allocator<Lexer> > &, size_t &);
+
+	void parseEvents(class ParserConf *, class eventsConfig &, class vector<Lexer, std::allocator<Lexer> > &, size_t &);
+
+	void parseDirective(class ParserConf *, class eventsConfig &, const string  &, class vector<Lexer, std::allocator<Lexer> > &, size_t &);
+
+	void set_events(class ParserConf *, class eventsConfig &);
+
+	class httpConfig & get_http(class ParserConf *);
+
+	void check_for_blocks(class ParserConf *);
+
+	void set_exist_http(class ParserConf *);
+
+	bool get_exist_http(class ParserConf *);
+
+	void set_exist_server(class ParserConf *);
+
+	bool get_exist_server(class ParserConf *);
+
+
+	/* size: 136, cachelines: 3, members: 4 */
+	/* padding: 6 */
+	/* paddings: 2, sum paddings: 39 */
+	/* last cacheline: 8 bytes */
+};
+class eventsConfig {
+	int                        _worker_connections;  /*     0     4 */
+
+	/* XXX 4 bytes hole, try to pack */
+
+	string                     _event_model;         /*     8     0 */
+public:
+
+	void eventsConfig(class eventsConfig *);
+
+	void eventsConfig(class eventsConfig *, const class eventsConfig  &);
+
+	class eventsConfig & operator=(class eventsConfig *, const class eventsConfig  &);
+
+	void ~eventsConfig(class eventsConfig *);
+
+	void set_worker_connections(class eventsConfig *, int);
+
+	void set_event_model(class eventsConfig *, string);
+
+	int get_worker_connections(class eventsConfig *);
+
+	string get_event_model(class eventsConfig *);
+
+	void set_default_conf(class eventsConfig *);
+
+
+	/* size: 40, cachelines: 1, members: 2 */
+	/* sum members: 4, holes: 1, sum holes: 4 */
+	/* padding: 32 */
+	/* last cacheline: 40 bytes */
+};
+class Connection {
+	int                        _fd;                  /*     0     4 */
+
+	/* XXX 4 bytes hole, try to pack */
+
+	const ServerConfig  *      _config;              /*     8     8 */
+	class Buffer              _read_buffer;          /*    16    40 */
+	class Buffer              _write_buffer;         /*    56    40 */
+	/* --- cacheline 1 boundary (64 bytes) was 32 bytes ago --- */
+	class HttpRequest         _request;              /*    96   256 */
+
+	/* XXX last struct has 1 byte of padding */
+
+	/* --- cacheline 5 boundary (320 bytes) was 32 bytes ago --- */
+	enum ConnectionState       _state;               /*   352     4 */
+
+	/* XXX 4 bytes hole, try to pack */
+
+	time_t                     _last_active;         /*   360     8 */
+	bool                       _peer_half_closed;    /*   368     1 */
+
+	/* XXX 7 bytes hole, try to pack */
+
+	string                     _client_ip;           /*   376     0 */
+public:
+
+	void Connection(class Connection *, int, const ServerConfig  *);
+
+	void ~Connection(class Connection *);
+
+	ssize_t recv(class Connection *);
+
+	ssize_t send(class Connection *);
+
+	void reset(class Connection *);
+
+	class epoll_event buildEpollEvent(class Connection *);
+
+	bool isTimedOut(const class Connection  *, time_t);
+
+	int fd(const class Connection  *);
+
+	enum ConnectionState state(const class Connection  *);
+
+	time_t lastActive(const class Connection  *);
+
+	const ServerConfig  * config(const class Connection  *);
+
+	class Buffer & readBuffer(class Connection *);
+
+	void kill_buffer(class Connection *);
+
+	const class Buffer  & readBuffer(const class Connection  *);
+
+	class Buffer & writeBuffer(class Connection *);
+
+	const class Buffer  & writeBuffer(const class Connection  *);
+
+	class HttpRequest & request(class Connection *);
+
+	const class HttpRequest  & request(const class Connection  *);
+
+	void setProcessing(class Connection *);
+
+	void setWriting(class Connection *);
+
+	void setClosing(class Connection *);
+
+	void setReading(class Connection *);
+
+	void setCgiRunning(class Connection *);
+
+	void setPeerHalfClosed(class Connection *);
+
+	bool peerHalfClosed(const class Connection  *);
+
+	void updateBufferSizes(class Connection *, size_t);
+
+	const string  & get_clientIp(const class Connection  *);
+
+	void setClientIp(class Connection *, const string  &);
+
+	void Connection(class Connection *, const class Connection  &);
+
+	class Connection & operator=(class Connection *, const class Connection  &);
+
+	void _touchActive(class Connection *);
+
+
+	/* size: 408, cachelines: 7, members: 9 */
+	/* sum members: 361, holes: 3, sum holes: 15 */
+	/* padding: 32 */
+	/* paddings: 1, sum paddings: 1 */
+	/* last cacheline: 24 bytes */
+};
+struct epoll_event {
+	uint32_t                   events;               /*     0     4 */
+	epoll_data_t               data;                 /*     4     8 */
+
+	/* size: 12, cachelines: 1, members: 2 */
+	/* last cacheline: 12 bytes */
+} __attribute__((__packed__));
+union epoll_data {
+	void *                     ptr;                /*     0     8 */
+	int                        fd;                 /*     0     4 */
+	uint32_t                   u32;                /*     0     4 */
+	uint64_t                   u64;                /*     0     8 */
+};
+class Location {
+	string                     _path;                /*     0     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	string                     _root;                /*    32     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	/* --- cacheline 1 boundary (64 bytes) --- */
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std::char_traits<char>, std::allocator<char> > > > _index_Files; /*    64    24 */
+	bool                       _autoindex;           /*    88     1 */
+
+	/* XXX 7 bytes hole, try to pack */
+
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std::char_traits<char>, std::allocator<char> > > > _allowed_methods; /*    96    24 */
+	string                     _cgi_path;            /*   120     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	/* --- cacheline 2 boundary (128 bytes) was 24 bytes ago --- */
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std::char_traits<char>, std::allocator<char> > > > _cgi_extensions; /*   152    24 */
+	string                     _upload;              /*   176     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	/* --- cacheline 3 boundary (192 bytes) was 16 bytes ago --- */
+	int                        _return_code;         /*   208     4 */
+
+	/* XXX 4 bytes hole, try to pack */
+
+	string                     _return_value;        /*   216     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	long long int              _client_max_body_size; /*   248     8 */
+	/* --- cacheline 4 boundary (256 bytes) --- */
+	class map<int, std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::less<int>, std::allocator<std::pair<const int, std::basic_string<char, std::char_traits<char>, std::allocator<char> > > > > _error_page; /*   256    48 */
+	bool                       _redirect_enabled;    /*   304     1 */
+public:
+
+	void Location(class Location *);
+
+	void Location(class Location *, const class Location  &);
+
+	void Location(class Location *, const class Server  &);
+
+	class Location & operator=(class Location *, const class Location  &);
+
+	void ~Location(class Location *);
+
+	void setPath(class Location *, string);
+
+	void setMethods(class Location *, string);
+
+	void setRoot(class Location *, const string  &);
+
+	void setCGI_extensions(class Location *, const class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<cha);
+
+	void setCGI_path(class Location *, const string  &);
+
+	void setIndex_s(class Location *, const string  &);
+
+	void setAutoindex(class Location *, const string  &);
+
+	void setUploadStore(class Location *, const string  &);
+
+	void setClientMaxBodySize(class Location *, long long int);
+
+	void setReturnRedirection(class Location *, int, string);
+
+	void set_error_page_loc(class Location *, int, string);
+
+	string getPath(const class Location  *);
+
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std getMethods(const class Location  *);
+
+	string getRoot(const class Location  *);
+
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std getIndex_s(const class Location  *);
+
+	bool getAutoindex(const class Location  *);
+
+	const class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<cha getCGI_extensions(const class Location  *);
+
+	string getCGI_path(const class Location  *);
+
+	string getUploadStore(const class Location  *);
+
+	size_t getClientMaxBodySize(const class Location  *);
+
+	int getReturnRedirection_code(const class Location  *);
+
+	string getReturnRedirection_path(const class Location  *);
+
+	class map<int, std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::less<int>, std::allocator<std::pair get_error_page_loc(const class Location  *);
+
+	bool getRedirectEnabled(const class Location  *);
+
+	void clear_index(class Location *);
+
+	void check_for_allowed_methods(class Location *);
+
+	void set_default_conf(class Location *, int);
+
+
+	/* size: 312, cachelines: 5, members: 13 */
+	/* sum members: 134, holes: 7, sum holes: 171 */
+	/* padding: 7 */
+	/* last cacheline: 56 bytes */
+};
+class BodyLimitException : public runtime_error {
+public:
+
+	/* class runtime_error       <ancestor>; */      /*     0     0 */
+	void BodyLimitException(class BodyLimitException *, const string  &);
+
+	virtual void ~BodyLimitException(class BodyLimitException *);
+
+	/* vtable has 1 entries: {
+	   [0] = ~BodyLimitException((null)), 
+	} */
+	/* size: 16, cachelines: 1, members: 1 */
+	/* padding: 16 */
+	/* last cacheline: 16 bytes */
+};
+class ConnectionManager {
+	int                        _epoll_fd;            /*     0     4 */
+	int                        _max_connections;     /*     4     4 */
+	class map<int, Connection *, std::less<int>, std::allocator<std::pair<const int, Connection *> > > _connections; /*     8    48 */
+public:
+
+	void ConnectionManager(class ConnectionManager *, int);
+
+	void ~ConnectionManager(class ConnectionManager *);
+
+	int addConnection(class ConnectionManager *, int, const ServerConfig  *);
+
+	void closeConnection(class ConnectionManager *, int);
+
+	void rearmEpoll(class ConnectionManager *, int);
+
+	class Connection * get(class ConnectionManager *, int);
+
+	const class Connection  * get(const class ConnectionManager  *, int);
+
+	class vector<int, std::allocator<int> > getTimedOutFds(class ConnectionManager *, time_t);
+
+	size_t count(const class ConnectionManager  *);
+
+	bool empty(const class ConnectionManager  *);
+
+	void ConnectionManager(class ConnectionManager *, const class ConnectionManager  &);
+
+	class ConnectionManager & operator=(class ConnectionManager *, const class ConnectionManager  &);
+
+	int _setNonBlocking(int);
+
+	void _destroy(class ConnectionManager *, int);
+
+	void _destroyAll(class ConnectionManager *);
+
+
+	/* size: 56, cachelines: 1, members: 3 */
+	/* last cacheline: 56 bytes */
+};
+struct sockaddr_storage {
+	sa_family_t                ss_family;            /*     0     2 */
+	char                       __ss_padding[118];    /*     2   118 */
+	/* --- cacheline 1 boundary (64 bytes) was 56 bytes ago --- */
+	long unsigned int          __ss_align;           /*   120     8 */
+
+	/* size: 128, cachelines: 2, members: 3 */
+};
+class Logger {
+	string                     _path;                /*     0     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	ofstream                   _file;                /*    32     0 */
+
+	/* XXX 512 bytes hole, try to pack */
+
+	/* --- cacheline 8 boundary (512 bytes) was 32 bytes ago --- */
+	class TeeStreambuf *       _tee;                 /*   544     8 */
+	streambuf *                _orig_cerr;           /*   552     8 */
+	enum Level                 _min_level;           /*   560     4 */
+	enum Level {
+		DEBUG = 0,
+		INFO  = 1,
+		WARN  = 2,
+		ERROR = 3,
+		PERF  = 4,
+		STATE = 5,
+	};
+
+public:
+
+	class Logger & instance(void);
+
+	void open(class Logger *, const string  &);
+
+	void close(class Logger *);
+
+	void setLevel(class Logger *, enum Level);
+
+	enum Level getLevel(const class Logger  *);
+
+	void log(class Logger *, enum Level, const string  &);
+
+	void perf(class Logger *, const string  &);
+
+	void state(class Logger *, const string  &);
+
+	const string  & path(const class Logger  *);
+
+	void Logger(class Logger *);
+
+	void ~Logger(class Logger *);
+
+	void Logger(class Logger *, const class Logger  &);
+
+	class Logger & operator=(class Logger *, const class Logger  &);
+
+	void _writeTagged(class Logger *, const char  *, const string  &);
+
+	const char  * _levelTag(enum Level);
+
+	class Stopwatch {
+		time_t                     _start;               /*     0     8 */
+	public:
+
+		void Stopwatch(class Stopwatch *);
+
+		double elapsed_ms(const class Stopwatch  *);
+
+		string str(const class Stopwatch  *);
+
+		void reset(class Stopwatch *);
+
+
+		/* size: 8, cachelines: 1, members: 1 */
+		/* last cacheline: 8 bytes */
+	};
+
+
+	/* size: 568, cachelines: 9, members: 5 */
+	/* sum members: 20, holes: 2, sum holes: 544 */
+	/* padding: 4 */
+	/* last cacheline: 56 bytes */
+};
+class TeeStreambuf : public streambuf {
+public:
+
+	/* streambuf                  <ancestor>; */     /*     0     0 */
+
+	/* XXX 64 bytes hole, try to pack */
+
+	/* --- cacheline 1 boundary (64 bytes) --- */
+	streambuf *                _orig;                /*    64     8 */
+	ofstream &                 _file;                /*    72     8 */
+	bool                       _at_line_start;       /*    80     1 */
+	void TeeStreambuf(class TeeStreambuf *, streambuf *, ofstream &);
+
+protected:
+
+	virtual int overflow(class TeeStreambuf *, int);
+
+	virtual streamsize xsputn(class TeeStreambuf *, const char  *, streamsize);
+
+	string _utcTimestamp(void);
+
+public:
+
+	virtual void ~TeeStreambuf(class TeeStreambuf *);
+
+	/* vtable has 3 entries: {
+	   [13] = overflow((null)), 
+	   [12] = xsputn((null)), 
+	   [0] = ~TeeStreambuf((null)), 
+	} */
+	/* size: 88, cachelines: 2, members: 4 */
+	/* sum members: 17, holes: 1, sum holes: 64 */
+	/* padding: 7 */
+	/* last cacheline: 24 bytes */
+};
+struct CgiRequestInfo {
+	const class Location  *    location;             /*     0     8 */
+	string                     script_path;          /*     8     0 */
+
+	/* size: 40, cachelines: 1, members: 2 */
+	/* padding: 32 */
+	/* last cacheline: 40 bytes */
+};
+struct stat {
+	__dev_t                    st_dev;               /*     0     8 */
+	__ino_t                    st_ino;               /*     8     8 */
+	__nlink_t                  st_nlink;             /*    16     8 */
+	__mode_t                   st_mode;              /*    24     4 */
+	__uid_t                    st_uid;               /*    28     4 */
+	__gid_t                    st_gid;               /*    32     4 */
+	int                        __pad0;               /*    36     4 */
+	__dev_t                    st_rdev;              /*    40     8 */
+	__off_t                    st_size;              /*    48     8 */
+	__blksize_t                st_blksize;           /*    56     8 */
+	/* --- cacheline 1 boundary (64 bytes) --- */
+	__blkcnt_t                 st_blocks;            /*    64     8 */
+	struct timespec            st_atim;              /*    72    16 */
+	struct timespec            st_mtim;              /*    88    16 */
+	struct timespec            st_ctim;              /*   104    16 */
+	__syscall_slong_t          __glibc_reserved[3];  /*   120    24 */
+
+	/* size: 144, cachelines: 3, members: 15 */
+	/* last cacheline: 16 bytes */
+};
+struct timespec {
+	__time_t                   tv_sec;               /*     0     8 */
+	__syscall_slong_t          tv_nsec;              /*     8     8 */
+
+	/* size: 16, cachelines: 1, members: 2 */
+	/* last cacheline: 16 bytes */
+};
+struct dirent {
+	__ino_t                    d_ino;                /*     0     8 */
+	__off_t                    d_off;                /*     8     8 */
+	unsigned short             d_reclen;             /*    16     2 */
+	unsigned char              d_type;               /*    18     1 */
+	char                       d_name[256];          /*    19   256 */
+
+	/* size: 280, cachelines: 5, members: 5 */
+	/* padding: 5 */
+	/* last cacheline: 24 bytes */
+};
+class CgiHandler {
+public:
+
+	int                        _body_fd;             /*     0     4 */
+
+	/* XXX 4 bytes hole, try to pack */
+
+	const class HttpRequest  & _request;             /*     8     8 */
+	const class Server  &      _server;              /*    16     8 */
+	const class Location  &    _location;            /*    24     8 */
+	string                     _script_path;         /*    32     0 */
+
+	/* XXX 32 bytes hole, try to pack */
+
+	/* --- cacheline 1 boundary (64 bytes) --- */
+	pid_t                      _child_pid;           /*    64     4 */
+	int                        _cgi_in_pipe[2];      /*    68     8 */
+	enum CgiState              _state;               /*    76     4 */
+	int                        _error_code;          /*    80     4 */
+
+	/* XXX 4 bytes hole, try to pack */
+
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std::char_traits<char>, std::allocator<char> > > > _meta_env; /*    88    24 */
+	class vector<char *, std::allocator<char *> > _env_ptrs; /*   112    24 */
+	/* --- cacheline 2 boundary (128 bytes) was 8 bytes ago --- */
+	bool                       _env_logged;          /*   136     1 */
+
+	/* XXX 7 bytes hole, try to pack */
+
+	string                     _client_ip;           /*   144     0 */
+	void CgiHandler(class CgiHandler *, const class HttpRequest  &, const class Server  &, const class Location  &, const string  &, const string  &);
+
+	void ~CgiHandler(class CgiHandler *);
+
+	bool startCgi(class CgiHandler *, int);
+
+	enum CgiState getState(const class CgiHandler  *);
+
+	int getErrorCode(const class CgiHandler  *);
+
+	pid_t getChildPid(const class CgiHandler  *);
+
+	int releaseStdinFd(class CgiHandler *);
+
+	void filling_meta_variables(class CgiHandler *, const class HttpRequest  &, const class Server  &, const class Location  &);
+
+	class vector<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::basic_string<char, std buildCgiEnvironment(const class CgiHandler  *, const class HttpRequest  &, const class Server  &, const class libbpf: failed to get EHDR from youpi.conf
+pahole: file './webserv' has no supported type information.
+Location  &);
+
+	void close_fd(class CgiHandler *, int &);
+
+	bool isEnvKeyRequired(const class CgiHandler  *, const string  &);
+
+	bool validate_env_contract(const class CgiHandler  *);
+
+	void log_env_once(class CgiHandler *);
+
+
+	/* size: 176, cachelines: 3, members: 13 */
+	/* sum members: 97, holes: 4, sum holes: 47 */
+	/* padding: 32 */
+	/* last cacheline: 48 bytes */
+};
+struct EventRef {
+	enum EventKind             kind;                 /*     0     4 */
+	int                        fd;                   /*     4     4 */
+	void EventRef(class EventRef *, enum EventKind, int);
+
+
+	/* size: 8, cachelines: 1, members: 2 */
+	/* last cacheline: 8 bytes */
+};
+struct CgiJob {
+	int                        client_fd;            /*     0     4 */
+	int                        result_fd;            /*     4     4 */
+	pid_t                      child_pid;            /*     8     4 */
+
+	/* XXX 4 bytes hole, try to pack */
+
+	class Buffer              result_buffer;         /*    16    40 */
+	time_t                     start_time;           /*    56     8 */
+	/* --- cacheline 1 boundary (64 bytes) --- */
+	int                        _timeout_seconds;     /*    64     4 */
+	int                        stdin_fd;             /*    68     4 */
+	const string  *            stdin_body;           /*    72     8 */
+	size_t                     stdin_offset;         /*    80     8 */
+	void CgiJob(class CgiJob *, int, int, size_t, int);
+
+	void ~CgiJob(class CgiJob *);
+
+
+	/* size: 88, cachelines: 2, members: 9 */
+	/* sum members: 84, holes: 1, sum holes: 4 */
+	/* last cacheline: 24 bytes */
+};
