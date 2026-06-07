@@ -88,8 +88,9 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
         {
             _setCloexec(stdin_fd, "cgi-stdin");
             job->stdin_fd     = stdin_fd;
-            job->stdin_body   = conn->request().body;
-            conn->request().body.clear();
+            // FIX: Use swap instead of copy to avoid duplicating 100MB
+            job->stdin_body.swap(conn->request().body);
+            // conn->request().body is now empty (capacity may remain but that's OK - reset() will handle it)
             job->stdin_offset = 0;
             _cgi_stdin_jobs[stdin_fd] = job;
             try {
@@ -127,7 +128,8 @@ void EventLoop::_closeCgiStdin(CgiJob* job)
 
     job->stdin_fd     = -1;
     job->stdin_offset = 0;
-    job->stdin_body.clear();
+    // FIX: Use swap to actually release stdin_body memory (could be 100MB)
+    { std::string _empty; _empty.swap(job->stdin_body); }
 }
 
 // Wrapped the read loop in a try/catch block to return a clean 413 instead of crashing.
@@ -181,12 +183,23 @@ void EventLoop::_finishCgiJob(int result_fd)
     CgiJob* job = jt->second;
     Connection* conn = _manager->get(job->client_fd);
 
+    // [DIAG] Track memory before handling CGI output
+    std::cerr << "[DIAG finish_cgi] result_fd=" << result_fd 
+              << " result_buf.size=" << job->result_buffer.size()
+              << " result_buf.cap=" << job->result_buffer.capacity()
+              << "\n";
+
     if (conn)
     {
         _responder.handleCgiOutput(conn->request(),
                                    *conn->config(),
                                    job->result_buffer,
                                    conn->writeBuffer());
+        // [DIAG] Track memory after handling CGI output
+        std::cerr << "[DIAG finish_cgi] after handleCgiOutput"
+                  << " write_buf.size=" << conn->writeBuffer().size()
+                  << " write_buf.cap=" << conn->writeBuffer().capacity()
+                  << "\n";
         conn->setWriting();
         _rearmClient(conn->fd());
     }
@@ -221,6 +234,13 @@ void EventLoop::_closeCgiJob(int result_fd)
     // If the stdin writer is still active, close and unregister it first
     // so the child sees EOF and exits promptly.
     _closeCgiStdin(it->second);
+
+    // [DIAG] Debug memory state before deleting CgiJob
+    std::cerr << "[DIAG cgi_close] result_fd=" << result_fd 
+              << " stdin_body.cap=" << it->second->stdin_body.capacity()
+              << " result_buf.size=" << it->second->result_buffer.size()
+              << " result_buf.cap=" << it->second->result_buffer.capacity()
+              << "\n";
 
     // Reap child process to prevent zombies. Never block the event loop:
     // if the child hasn't exited yet, send SIGKILL and defer the reap.

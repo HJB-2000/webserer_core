@@ -58,6 +58,7 @@ public:
     size_t      size()    const;
     bool        empty()   const;
     size_t      maxSize() const;
+    size_t      capacity() const;  // for debugging - shows internal vector capacity
     void        reset();
     void        setMaxSize(size_t new_max);
     void    debug_dump() const;

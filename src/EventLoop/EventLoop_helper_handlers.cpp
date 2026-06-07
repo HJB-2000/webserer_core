@@ -63,10 +63,16 @@ void EventLoop::_handleRead(Connection* conn)
 
             if (conn->request().parse_state == PSTATE_ERROR)
             {
-
-                // conn->request().headers["connection"] = "close";
                 std::cerr << "[EventLoop] parse error " << conn->request().error_code
                           << " on fd " << fd << "\n";
+                
+                // [DIAG] Track memory at error
+                std::cerr << "[DIAG error] fd=" << fd
+                          << " req.body.size=" << conn->request().body.size()
+                          << " req.body.cap=" << conn->request().body.capacity()
+                          << " read_buf.size=" << conn->readBuffer().size()
+                          << "\n";
+
                 // Phase 3: real error response
                 _responder.sendError(conn->request().error_code,
                                      *conn->config(),
@@ -102,8 +108,9 @@ void EventLoop::_handleRead(Connection* conn)
     catch (const BodyLimitException&)
     {
         // readBuffer exceeded client_max_body_size → 413
+        std::cerr << "[EventLoop] body limit exceeded on fd " << fd << "\n";
+        // Send 413 error response first, then close
         conn->request().headers["connection"] = "close";
-        // Phase 3: real 413 response
         _responder.sendError(413, *conn->config(), conn->writeBuffer());
         conn->setWriting();
         _rearmClient(fd);
