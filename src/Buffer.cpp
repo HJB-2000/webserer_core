@@ -82,9 +82,13 @@ size_t Buffer::maxSize() const
 
 void Buffer::reset()
 {
-    _storage.clear();
+    // _storage.clear();
     _head = 0;
-
+      // std::vector::clear() only sets size=0, but keeps the heap allocation.
+    // std::vector::reserve() NEVER shrinks - it only grows.
+    // After 100MB body, _storage.capacity() stays at 100MB+ if we just call clear().
+    // swap() with empty vector forces deallocation, then we reserve fresh.
+    { std::vector<char> _empty; _empty.swap(_storage); }
     // Same logic as constructor: ensure buffer can hold headers
     size_t initial = 64 * 1024;  // 64KB minimum for headers
     if (initial > _cmbs && _cmbs > 0) initial = _cmbs;
@@ -95,7 +99,10 @@ void Buffer::earase()
     std::vector<char> empty;
     _storage.swap(empty);
 }
-
+size_t Buffer::capacity() const
+{
+    return _storage.capacity();
+}
 void Buffer::_compact()
 {
     if (_head == 0) return;
