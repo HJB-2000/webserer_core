@@ -1,10 +1,3 @@
-// ============================================================
-//  src/API_conf.cpp
-//
-//  Config parser API — called once from main().
-//  Returns the full list of parsed ServerConfig objects.
-// ============================================================
-
 #include "Headers/API_conf.hpp"
 
 #include "parserConf.hpp"

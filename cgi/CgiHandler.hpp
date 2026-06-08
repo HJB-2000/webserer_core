@@ -24,18 +24,11 @@ class CgiHandler
         CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path, const std::string& client_ip);
         ~CgiHandler();
 
-        bool startCgi(int write_end);
-
-        CgiState           getState()        const;
-        int                getErrorCode()    const;
-        pid_t              getChildPid()     const;
-
-
-        // Transfer ownership of the stdin write fd to the caller.
-        // After this call, CgiHandler will no longer close the fd in its
-        // destructor — the caller must close it.
-        int  releaseStdinFd();
-
+        bool      startCgi(int write_end);
+        CgiState  getState()        const;
+        int       getErrorCode()    const;
+        pid_t     getChildPid()     const;
+        int       releaseStdinFd();
 
     private:
         void filling_meta_variables(const HttpRequest& request, const Server& config, const Location& location);
@@ -45,18 +38,13 @@ class CgiHandler
         bool        validate_env_contract() const;
         void        log_env_once();
 
-         HttpRequest&   _request;
+        HttpRequest&   _request;
         const Location&      _location;
         std::string          _script_path;
-
         pid_t   _child_pid;
         int     _cgi_in_pipe[2];
-
         CgiState     _state;
-
-
         int          _error_code;
-
         std::vector<std::string>  _meta_env;
         std::vector<char*>        _env_ptrs;
         bool                      _env_logged;

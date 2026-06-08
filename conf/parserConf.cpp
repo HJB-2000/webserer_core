@@ -139,7 +139,7 @@ bool is_valid_size(const std::string str)
         {
             dot++;
             if (dot > 1)                return false;
-            if (i == 0)                 return false; // leading dot: ".5M"
+            if (i == 0)                 return false;
             if (i + 1 >= num_end || !isdigit(static_cast<unsigned char>(str[i + 1])))
                 return false;
             continue;

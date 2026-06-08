@@ -49,31 +49,19 @@ void EventLoop::_handleRead(Connection* conn)
             if (n < 0)
             {
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
-                    break;  // edge-trigger drained
+                    break;
                 std::cerr << "[EventLoop] recv error on fd " << fd
                           << ": " << std::strerror(errno) << "\n";
                 _closeClient(fd);
                 return;
             }
 
-            // ── Phase 2: HttpParser ──────────────────────────
-            // _parser.feed(conn->readBuffer(), conn->request());
             _parser.feed(conn);
-            // ─────────────────────────────────────────────────
 
             if (conn->request().parse_state == PSTATE_ERROR)
             {
                 std::cerr << "[EventLoop] parse error " << conn->request().error_code
                           << " on fd " << fd << "\n";
-                
-                // [DIAG] Track memory at error
-                std::cerr << "[DIAG error] fd=" << fd
-                          << " req.body.size=" << conn->request().body.size()
-                          << " req.body.cap=" << conn->request().body.capacity()
-                          << " read_buf.size=" << conn->readBuffer().size()
-                          << "\n";
-
-                // Phase 3: real error response
                 _responder.sendError(conn->request().error_code,
                                      *conn->config(),
                                      conn->writeBuffer());
@@ -88,8 +76,7 @@ void EventLoop::_handleRead(Connection* conn)
                 CgiRequestInfo cgi;
                 if (_responder.resolveCgiRequest(conn->request(), *conn->config(), cgi))
                 {
-                    // std::cout << conn->request().body << std::endl;
-                    _startCgi(conn, cgi);
+                    _ApiStartCgi(conn, cgi);
                     return;
                 }
 
@@ -106,9 +93,7 @@ void EventLoop::_handleRead(Connection* conn)
     }
     catch (const BodyLimitException&)
     {
-        // readBuffer exceeded client_max_body_size → 413
         std::cerr << "[EventLoop] body limit exceeded on fd " << fd << "\n";
-        // Send 413 error response first, then close
         conn->request().headers["connection"] = "close";
         _responder.sendError(413, *conn->config(), conn->writeBuffer());
         conn->setWriting();
@@ -138,7 +123,7 @@ void EventLoop::_handleWrite(Connection* conn)
     {
         if (!conn->peerHalfClosed() && conn->request().keepAlive())
         {
-            conn->setReading();        // resets buffers + request + stamps time
+            conn->setReading(); // resets buffers + request + stamps time
             _rearmClient(fd);  // re-arm EPOLLIN
         }
         else
@@ -213,14 +198,10 @@ void EventLoop::_handleCgiStdinEvent(int stdin_fd, uint32_t events)
             continue;
         }
         if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
-            return;  // pipe full — wait for next EPOLLOUT
+            return;
 
-        // EPIPE or other error: child closed stdin or died. Give up writing,
-        // but keep reading its stdout — it may still have produced output.
         _closeCgiStdin(job);
         return;
     }
-
-    // Body fully written — close write end to signal EOF to the child.
     _closeCgiStdin(job);
 }

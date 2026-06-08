@@ -1,6 +1,3 @@
-// ============================================================
-//  ConnectionManager.cpp — ConnectionManager implementations
-// ============================================================
 #include "serverConfig.hpp"
 #include "Headers/ConnectionManager.hpp"
 
@@ -17,10 +14,14 @@
 #include <ctime>
 #include <sstream>
 #include "Headers/Logger.hpp"
-#include <arpa/inet.h>   // only for ntohl, ntohs etc., not for inet_ntop
+#include <arpa/inet.h>
+
+
+size_t ConnectionManager::count() const { return _connections.size(); }
+bool   ConnectionManager::empty() const { return _connections.empty(); }
+
 static std::string addrToString(const struct sockaddr_storage& addr)
 {
-    // IPv4 only
     const struct sockaddr_in* sin = reinterpret_cast<const struct sockaddr_in*>(&addr);
     uint32_t ip = ntohl(sin->sin_addr.s_addr);
     std::ostringstream oss;
@@ -30,8 +31,6 @@ static std::string addrToString(const struct sockaddr_storage& addr)
         << (ip & 0xFF);
     return oss.str();
 }
-
-// ── ctor / dtor ──────────────────────────────────────────────
 
 ConnectionManager::ConnectionManager(int epoll_fd)
     : _epoll_fd(epoll_fd)
@@ -45,21 +44,13 @@ ConnectionManager::~ConnectionManager()
     _destroyAll();
 }
 
-// ── addConnection ────────────────────────────────────────────
-//
-// Order (important):
-//   1. accept()           → get client_fd
-//   2. _setNonBlocking()  → MUST happen BEFORE epoll_ctl ADD
-//   3. new Connection()   → stable heap object
-//   4. map insert         → manager takes ownership
-//   5. epoll_ctl ADD      → epoll borrows data.ptr
 int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
 {
     struct sockaddr_storage client_addr;
     socklen_t addr_len = sizeof(client_addr);
 
     if (static_cast<int>(_connections.size()) >= _max_connections)
-        return -1;  // at capacity — let kernel queue new SYNs
+        return -1;
 
     int client_fd = ::accept(server_fd,
                              reinterpret_cast<struct sockaddr*>(&client_addr),
@@ -72,7 +63,6 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
                   << std::strerror(errno) << "\n";
         return -1;
     }
-
     if (_setNonBlocking(client_fd) < 0)
     {
         std::cerr << "[ConnectionManager] setNonBlocking failed for fd "
@@ -81,18 +71,8 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
         return -1;
     }
     Connection* conn = new Connection(client_fd, config);   
-    
-    // Connection* conn = NULL;
-    // try {
-    //     conn = new Connection(client_fd, config);   
-    // }
-    // catch (const std::exception& ex)
-    // {
-    //     throw;
-    // }
-
-    std::string client_ip = addrToString(client_addr); // getting the ip_client from the client_addr
-    conn->setClientIp(client_ip); // storing the remote ip address of client
+    std::string client_ip = addrToString(client_addr);
+    conn->setClientIp(client_ip);
     if (_connections.count(client_fd))
     {
         std::cerr << "[ConnectionManager] fd " << client_fd
@@ -100,16 +80,10 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
         _destroy(client_fd);
     }
     _connections[client_fd] = conn;
-
-    // epoll registration is handled by EventLoop::_handleAccept via _registerEventFd
     std::cerr << "[ConnectionManager] accepted fd " << client_fd << "\n";
     return client_fd;
 }
 
-// ── closeConnection ──────────────────────────────────────────
-//
-// ⚠️  epoll DEL first → delete → erase. Never the other way.
-//    Any epoll data.ptr for this fd is dangling after return.
 void ConnectionManager::closeConnection(int fd)
 {
     if (!_connections.count(fd))
@@ -118,14 +92,10 @@ void ConnectionManager::closeConnection(int fd)
                   << ") — fd not in map\n";
         return;
     }
-
     ::epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
     _destroy(fd);
-
     std::cerr << "[ConnectionManager] closed fd " << fd << "\n";
 }
-
-// ── rearmEpoll ───────────────────────────────────────────────
 
 void ConnectionManager::rearmEpoll(int fd)
 {
@@ -136,7 +106,6 @@ void ConnectionManager::rearmEpoll(int fd)
                   << ") — fd not in map\n";
         return;
     }
-
     epoll_event ev = it->second->buildEpollEvent();  
     if (::epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0)  
     {  
@@ -145,8 +114,6 @@ void ConnectionManager::rearmEpoll(int fd)
         closeConnection(fd);  
     };
 }
-
-// ── get ──────────────────────────────────────────────────────
 
 Connection* ConnectionManager::get(int fd)
 {
@@ -160,11 +127,6 @@ const Connection* ConnectionManager::get(int fd) const
     return (it != _connections.end()) ? it->second : NULL;
 }
 
-// ── getTimedOutFds ───────────────────────────────────────────
-//
-// Returns fds of timed-out connections without closing them.
-// EventLoop calls _closeClient() on each to properly clean up
-// EventRef, CGI jobs, and the connection itself.
 std::vector<int> ConnectionManager::getTimedOutFds(time_t default_timeout_seconds)
 {
     std::vector<int> stale;
@@ -174,27 +136,16 @@ std::vector<int> ConnectionManager::getTimedOutFds(time_t default_timeout_second
     {
         Connection*         conn = it->second;
         const ServerConfig* cfg  = conn->config();
-        // CGI-running connections are managed by _closeTimedOutCgiJobs()
-        // Don't let the connection timeout race against the CGI timeout
         if (conn->state() == CSTATE_CGI_RUNNING)
             continue;
         time_t limit = (cfg != NULL)
             ? static_cast<time_t>(cfg->get_timeout_seconds())
             : default_timeout_seconds;
-
         if (conn->isTimedOut(limit))
             stale.push_back(it->first);
     }
-
     return stale;
 }
-
-// ── count / empty ────────────────────────────────────────────
-
-size_t ConnectionManager::count() const { return _connections.size(); }
-bool   ConnectionManager::empty() const { return _connections.empty(); }
-
-// ── private helpers ──────────────────────────────────────────
 
 int ConnectionManager::_setNonBlocking(int fd)
 {
@@ -203,7 +154,6 @@ int ConnectionManager::_setNonBlocking(int fd)
     return ::fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
-// ⚠️  delete BEFORE erase — always, never the other way.
 void ConnectionManager::_destroy(int fd)
 {
     delete _connections[fd];

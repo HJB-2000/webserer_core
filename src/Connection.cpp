@@ -1,27 +1,8 @@
-// ============================================================
-//  Connection.cpp
-//  Implements the non-trivial methods of Connection.
-//
-//  Kept separate from the header so the interface stays clean
-//  and the server core can be compiled as a discrete unit.
-//
-//  ServerConfig.hpp must be included here (not just forward-
-//  declared) because the constructor accesses config members.
-// ============================================================
-
 #include "serverConfig.hpp"
 #include "Headers/Connection.hpp"
-#include "mem_debug.hpp"
+#include <cstring>  
+#include <iostream>
 
-#include <cstring>   // memset (for epoll_event)
-#include <iostream>  // std::cerr (debug logging)
-
-// ── Constructor ─────────────────────────────────────────────
-//
-// Both Buffers are initialised with config->client_max_body_size
-// so the 413 ceiling is enforced from the very first byte.
-// last_active is stamped at construction so timeout tracking begins
-// the moment the connection is accepted, not on first data.
 Connection::Connection(int fd, const ServerConfig* config)
     : _fd(fd)
     , _config(config)
@@ -33,13 +14,6 @@ Connection::Connection(int fd, const ServerConfig* config)
     , _peer_half_closed(false)
 {}
 
-// ── Destructor ───────────────────────────────────────────────
-//
-// Single close point for the fd.
-// ConnectionManager always calls:
-//   delete connections[fd];    ← destructor fires here
-//   connections.erase(fd);
-// so close() happens exactly once.
 Connection::~Connection()
 {
     if (_fd >= 0)
@@ -49,15 +23,6 @@ Connection::~Connection()
     }
 }
 
-// ── recv ─────────────────────────────────────────────────────
-//
-// Reads from the kernel socket buffer into a 16 KB stack buffer,
-// then appends to readBuffer() (the Buffer object).
-// Using a stack buffer keeps Buffer in full control of its memory.
-//
-// In edge-trigger mode the caller loops this until EAGAIN.
-// BufferOverflowException propagates up — the EventLoop / core
-// catches it and sends a 413.
 ssize_t Connection::recv()
 {
     char    tmp[16 * 1024];
@@ -65,18 +30,12 @@ ssize_t Connection::recv()
 
     if (n > 0)
     {
-        // May throw BufferOverflowException → caller catches → 413
         _read_buffer.append(tmp, static_cast<size_t>(n));
         _touchActive();
     }
     return n;
 }
 
-// ── send ─────────────────────────────────────────────────────
-//
-// Drains as many bytes as the kernel will accept from writeBuffer().
-// Buffer::consume() tracks the offset internally — no manual index.
-// MSG_NOSIGNAL prevents SIGPIPE if the peer has already closed.
 ssize_t Connection::send()
 {
     if (_write_buffer.empty())
@@ -94,24 +53,8 @@ ssize_t Connection::send()
     return n;
 }
 
-// ── reset ────────────────────────────────────────────────────
-//
-// Full wipe for keep-alive reuse.
-// Clears raw byte buffers, the parsed request, resets state to
-// CSTATE_READING, and stamps last_active so timeout restarts cleanly.
-// Called by setReading() and (rarely) directly for error recovery.
 void Connection::reset()
-{
-    // [DIAG reset] - Debug: show memory state before reset
-    // std::cerr << "[DIAG reset] fd=" << _fd 
-    //           << " req.body.size=" << _request.body.size() 
-    //           << " req.body.cap=" << _request.body.capacity()
-    //           << " read_buf.size=" << _read_buffer.size()
-    //           << " read_buf.cap=" << _read_buffer.capacity()
-    //           << " write_buf.size=" << _write_buffer.size()
-    //           << " write_buf.cap=" << _write_buffer.capacity()
-    //           << "\n";
-    
+{   
     _read_buffer.reset();
     _write_buffer.reset();
      size_t server_default = _config->getMaxBody();  
@@ -123,13 +66,11 @@ void Connection::reset()
     _touchActive();
 }
 
-// ── isTimedOut ───────────────────────────────────────────────
 bool Connection::isTimedOut(time_t timeout_seconds) const
 {
     return (std::time(NULL) - _last_active) > timeout_seconds;
 }
 
-// ── accessors ────────────────────────────────────────────────
 int                 Connection::fd()          const { return _fd;           }
 ConnectionState     Connection::state()       const { return _state;        }
 time_t              Connection::lastActive()  const { return _last_active;  }
@@ -143,7 +84,6 @@ const Buffer& Connection::writeBuffer() const { return _write_buffer; }
 HttpRequest&       Connection::request()       { return _request; }
 const HttpRequest& Connection::request() const { return _request; }
 
-// ── state transitions ────────────────────────────────────────
 void Connection::setProcessing() { _state = CSTATE_PROCESSING; }
 void Connection::setWriting()    { _state = CSTATE_WRITING;    }
 void Connection::setClosing()    { _state = CSTATE_CLOSING;    }
@@ -155,32 +95,17 @@ void Connection::setReading()
 }
 
 
-// ── peer half-close ──────────────────────────────────────────
 void Connection::setPeerHalfClosed() { _peer_half_closed = true; }
 bool Connection::peerHalfClosed() const { return _peer_half_closed; }
 
-// ── private helpers ──────────────────────────────────────────
 void Connection::_touchActive() { _last_active = std::time(NULL); }
 
-// ── buildEpollEvent ──────────────────────────────────────────
-//
-// Returns an epoll_event ready for epoll_ctl().
-//
-// Interest mask is derived from current state:
-//   CSTATE_READING    → EPOLLIN  | EPOLLET | EPOLLRDHUP
-//   CSTATE_WRITING    → EPOLLOUT | EPOLLET | EPOLLRDHUP
-//   CS_PROCESSING → EPOLLET  | EPOLLRDHUP  (no I/O interest)
-//   CS_CLOSING    → EPOLLET  | EPOLLRDHUP  (no I/O interest)
-//
-// data.ptr = this  so the event loop can recover the Connection*
-// directly without a map lookup.
-// ⚠️  After closeConnection() this pointer is dangling.
-//     The dispatch loop MUST NOT dereference it after deletion.
+
 epoll_event Connection::buildEpollEvent()
 {
     epoll_event ev;
     memset(&ev, 0, sizeof(ev));
-    ev.data.ptr = this;   // borrow — ConnectionManager's map owns the memory
+    ev.data.ptr = this;
     ev.events   = EPOLLET | EPOLLRDHUP;
 
     switch (_state)
@@ -192,21 +117,13 @@ epoll_event Connection::buildEpollEvent()
             ev.events |= EPOLLOUT;
             break;
         default:
-            break;  // CS_PROCESSING / CS_CLOSING / CS_CGI_RUNNING: no I/O interest
+            break;
     }
     return ev;
 }
 
 void Connection::updateBufferSizes(size_t new_max)  
 {  
-    // Ensure we don't truncate existing data  
-    // if (new_max < _read_buffer.size() || new_max < _write_buffer.size()) {
-    //     std::cout << "||||||||||" << new_max << "||||||||||" << std::endl;
-    //     std::cout << "_read_buffer" << _read_buffer.size() << std::endl;  
-    //     std::cout << "_write_buffer" << _write_buffer.size() << std::endl;  
-    //     std::cerr << "[Warning] Cannot reduce buffer size below current content size\n";  
-    //     return;  
-    // }  
     _read_buffer.setMaxSize(new_max);  
     _write_buffer.setMaxSize(new_max);  
 }

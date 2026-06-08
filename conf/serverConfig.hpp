@@ -25,7 +25,6 @@ class Server
         int getPort() const;
         std::vector<std::string> getIndex_s() const;
         std::vector<std::string> getServerNames() const;
-        // Non-const accessor – used by the parser to fill in defaults
         std::vector<Location>& getLocations();
         const std::vector<Location>& get_locations() const;
         const Location* matchLocation(const std::string& path) const;
@@ -54,15 +53,10 @@ class Server
 
 };
 
-// Virtual-host matching helper:
-// 1) exact host-header match on requested port
-// 2) fallback to first server on requested port
-// 3) NULL if no server listens on that port
 const Server* matchServer(const std::vector<Server>& servers,
                           const std::string& host_header,
                           int port);
 
-// Alias used by the core (src/) so it can refer to Server as ServerConfig.
 typedef Server ServerConfig;
 
 #endif
