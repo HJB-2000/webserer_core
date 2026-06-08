@@ -423,13 +423,13 @@ void ResponseHandler::_handlePost(
         return;
     }
 
-    const std::string& body_data = req.body;
+    // const std::string& body_data = req.body;
     size_t             written   = 0;
-    while (written < body_data.size())
+    while (written < req.body.size())
     {
         ssize_t n = ::write(fd,
-                            body_data.c_str() + written,
-                            body_data.size()  - written);
+                            req.body.data() + written,
+                            req.body.size()  - written);
         if (n <= 0)
         {
             ::close(fd);

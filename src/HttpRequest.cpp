@@ -1,8 +1,9 @@
 #include "Headers/HttpRequest.hpp"
 #include <cctype>
 
-HttpRequest::HttpRequest()
-    : parse_state(PSTATE_IDLE)
+HttpRequest::HttpRequest(size_t client_max_body_size)
+    : body(client_max_body_size)
+    , parse_state(PSTATE_IDLE)
     , content_length(0)
     , chunked(false)
     , max_body_size(0)
@@ -19,7 +20,8 @@ void HttpRequest::reset()
     query_string.clear();
     version.clear();
     headers.clear();
-    { std::string _empty; _empty.swap(body); }
+    body.reset();
+    // { std::string _empty; _empty.swap(body); }
     parse_state     = PSTATE_IDLE;
     content_length  = 0;
     chunked         = false;

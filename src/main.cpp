@@ -2,7 +2,13 @@
 #include "serverConfig.hpp"
 #include "Headers/API_conf.hpp"
 #include "Headers/Logger.hpp"
-
+/*
+The fix: don't buffer the entire body in stdin_body. 
+Stream it directly from conn->readBuffer() the same way we stream CGI output
+ — write to stdin fd as EPOLLOUT fires, reading from the original request body in place.
+  But since you already moved it via swap, the memory is the same location — the issue is 20 jobs all holding their
+   100MB body simultaneously.
+*/
 #include <iostream>
 #include <fstream>
 #include <unistd.h>

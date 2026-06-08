@@ -39,6 +39,9 @@ void Buffer::consume(size_t n)
         n = size();
     _head += n;
 
+    if (_head > 0 && _head >= _storage.size() / 2)
+        _compact();
+
     if (_head == _storage.size())
         reset();
 }

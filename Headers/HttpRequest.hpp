@@ -1,6 +1,6 @@
 #ifndef HTTP_REQUEST_HPP
 #define HTTP_REQUEST_HPP
-
+#include "../Headers/buffer.hpp"
 #include <string>
 #include <map>
 #include <cstddef>
@@ -26,7 +26,8 @@ public:
 
     std::map<std::string, std::string> headers;
 
-    std::string body;
+    // std::string body;
+    Buffer body;
 
     ParseState  parse_state;
     size_t      content_length;
@@ -38,8 +39,8 @@ public:
     size_t      _chunk_size;      
     bool        _chunk_trailing;  
     bool        _chunk_done;      
-
-    HttpRequest();
+    
+    HttpRequest(size_t client_max_body_size);
     void reset();
     
     std::string header(const std::string& key) const;

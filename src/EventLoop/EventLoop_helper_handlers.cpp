@@ -275,7 +275,13 @@ void EventLoop::_handleCgiStdinEvent(int stdin_fd, uint32_t events)
         return;
 
     CgiJob* job = it->second;
-
+    Connection* conn = _manager->get(job->client_fd);
+    if (!conn)
+    {
+        _closeCgiStdin(job);
+        return;
+    }
+    Buffer& body = conn->request().body;
     // EPOLLERR/EPOLLHUP on the write end means the child closed its stdin
     // (or died). Close our end; the child either has what it needs or is gone.
     if (events & (EPOLLERR | EPOLLHUP))
@@ -284,16 +290,20 @@ void EventLoop::_handleCgiStdinEvent(int stdin_fd, uint32_t events)
         return;
     }
 
-    while (job->stdin_offset < job->stdin_body.size())
+    while (body.size() > 0)
     {
-        const char*  data = job->stdin_body.data() + job->stdin_offset;
-        const size_t left = job->stdin_body.size() - job->stdin_offset;
+        const char*  data = body.data();
+        const size_t left = body.size();
+
         ssize_t n = ::write(stdin_fd, data, left);
+
         if (n > 0)
         {
-            job->stdin_offset += static_cast<size_t>(n);
+            body.consume(static_cast<size_t>(n));
+            job->body_written += static_cast<size_t>(n);
             continue;
         }
+
         if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
             return;
 

@@ -296,8 +296,8 @@ void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
         if (stdin_fd >= 0) {
             _setCloexec(stdin_fd, "cgi-stdin");
             job->stdin_fd     = stdin_fd;
-            job->stdin_body.swap(conn->request().body);
-            job->stdin_offset = 0;
+            // job->stdin_body.swap(conn->request().body);
+            // job->stdin_offset = 0;
             _cgi_stdin_jobs[stdin_fd] = job;
             try {
                 _registerEventFd(stdin_fd, EV_CGI_STDIN,

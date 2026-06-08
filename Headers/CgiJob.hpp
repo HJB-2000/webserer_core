@@ -53,8 +53,8 @@ struct CgiJob
     time_t      start_time;
     int         _timeout_seconds;
     int         stdin_fd;
-    std::string stdin_body;
-    size_t      stdin_offset;
+    // std::string stdin_body;
+    // size_t      stdin_offset;
 
     // streaming state
     bool        headers_sent;   // true once HTTP response line+headers written to writeBuffer
@@ -68,8 +68,8 @@ struct CgiJob
     ,       start_time(std::time(NULL))
     ,       _timeout_seconds(timeout)
     ,       stdin_fd(-1)
-    ,       stdin_body()
-    ,       stdin_offset(0)
+// ,       stdin_body()
+// ,       stdin_offset(0)
     ,       headers_sent(false)
     ,       body_written(0)
     {}
