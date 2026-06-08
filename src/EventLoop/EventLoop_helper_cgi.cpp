@@ -54,6 +54,7 @@ void EventLoop::_startCgi(Connection* conn, const CgiRequestInfo& info)
         _rearmClient(conn->fd());
         return;
     }
+
     CgiJob* job = NULL;
     try {
         job = new CgiJob(conn->fd(), result_read_fd, conn->writeBuffer().maxSize(), conn->config()->get_timeout_seconds());
@@ -184,10 +185,10 @@ void EventLoop::_finishCgiJob(int result_fd)
     Connection* conn = _manager->get(job->client_fd);
 
     // [DIAG] Track memory before handling CGI output
-    std::cerr << "[DIAG finish_cgi] result_fd=" << result_fd 
-              << " result_buf.size=" << job->result_buffer.size()
-              << " result_buf.cap=" << job->result_buffer.capacity()
-              << "\n";
+    // std::cerr << "[DIAG finish_cgi] result_fd=" << result_fd 
+    //           << " result_buf.size=" << job->result_buffer.size()
+    //           << " result_buf.cap=" << job->result_buffer.capacity()
+    //           << "\n";
 
     if (conn)
     {
@@ -196,14 +197,14 @@ void EventLoop::_finishCgiJob(int result_fd)
                                    job->result_buffer,
                                    conn->writeBuffer());
         // [DIAG] Track memory after handling CGI output
-        std::cerr << "[DIAG finish_cgi] after handleCgiOutput"
-                  << " write_buf.size=" << conn->writeBuffer().size()
-                  << " write_buf.cap=" << conn->writeBuffer().capacity()
-                  << "\n";
+        // std::cerr << "[DIAG finish_cgi] after handleCgiOutput"
+        //           << " write_buf.size=" << conn->writeBuffer().size()
+        //           << " write_buf.cap=" << conn->writeBuffer().capacity()
+        //           << "\n";
         conn->setWriting();
         _rearmClient(conn->fd());
     }
-
+    
     _closeCgiJob(result_fd);
 }
 
@@ -236,11 +237,11 @@ void EventLoop::_closeCgiJob(int result_fd)
     _closeCgiStdin(it->second);
 
     // [DIAG] Debug memory state before deleting CgiJob
-    std::cerr << "[DIAG cgi_close] result_fd=" << result_fd 
-              << " stdin_body.cap=" << it->second->stdin_body.capacity()
-              << " result_buf.size=" << it->second->result_buffer.size()
-              << " result_buf.cap=" << it->second->result_buffer.capacity()
-              << "\n";
+    // std::cerr << "[DIAG cgi_close] result_fd=" << result_fd 
+    //           << " stdin_body.cap=" << it->second->stdin_body.capacity()
+    //           << " result_buf.size=" << it->second->result_buffer.size()
+    //           << " result_buf.cap=" << it->second->result_buffer.capacity()
+    //           << "\n";
 
     // Reap child process to prevent zombies. Never block the event loop:
     // if the child hasn't exited yet, send SIGKILL and defer the reap.

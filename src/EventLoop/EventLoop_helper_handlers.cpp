@@ -85,7 +85,6 @@ void EventLoop::_handleRead(Connection* conn)
             if (conn->request().parse_state == PSTATE_COMPLETE)
             {
                 conn->setProcessing();
-
                 CgiRequestInfo cgi;
                 if (_responder.resolveCgiRequest(conn->request(), *conn->config(), cgi))
                 {

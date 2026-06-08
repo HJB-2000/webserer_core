@@ -61,8 +61,8 @@ public:
     size_t      capacity() const;  // for debugging - shows internal vector capacity
     void        reset();
     void        setMaxSize(size_t new_max);
-    void    debug_dump() const;
-    void earase();
+    void        debug_dump() const;
+    void        earase();
 private:
     void _compact();
     void _ensureCapacity(size_t needed);

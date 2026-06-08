@@ -103,14 +103,14 @@ ssize_t Connection::send()
 void Connection::reset()
 {
     // [DIAG reset] - Debug: show memory state before reset
-    std::cerr << "[DIAG reset] fd=" << _fd 
-              << " req.body.size=" << _request.body.size() 
-              << " req.body.cap=" << _request.body.capacity()
-              << " read_buf.size=" << _read_buffer.size()
-              << " read_buf.cap=" << _read_buffer.capacity()
-              << " write_buf.size=" << _write_buffer.size()
-              << " write_buf.cap=" << _write_buffer.capacity()
-              << "\n";
+    // std::cerr << "[DIAG reset] fd=" << _fd 
+    //           << " req.body.size=" << _request.body.size() 
+    //           << " req.body.cap=" << _request.body.capacity()
+    //           << " read_buf.size=" << _read_buffer.size()
+    //           << " read_buf.cap=" << _read_buffer.capacity()
+    //           << " write_buf.size=" << _write_buffer.size()
+    //           << " write_buf.cap=" << _write_buffer.capacity()
+    //           << "\n";
     
     _read_buffer.reset();
     _write_buffer.reset();

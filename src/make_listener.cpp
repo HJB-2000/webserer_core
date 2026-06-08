@@ -33,7 +33,9 @@ int make_listener(const char* host, int port)
         return -1;
     }
 
-    int reuse, reuseport, nodaly = 1;
+    int reuse = 1;
+    int reuseport = 1;
+    int nodaly = 1;
     int timeout_seconds = 30;
 
     if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)

@@ -86,7 +86,7 @@ public:
     // ── ctor / reset ───────────────────────────────────────
     HttpRequest();
     void reset();
-
+    
     // ── convenience accessors ──────────────────────────────
     std::string header(const std::string& key) const;
     bool        expectsBody()                  const;

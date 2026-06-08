@@ -200,7 +200,7 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
 }
 
 CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path,  const std::string& client_ip)
-    : _request(request), _location(location),
+    : _request((HttpRequest &)request), _location(location),
       _script_path(script_path), _child_pid(-1), _state(CGI_IDLE),
       _error_code(0), _env_logged(false), _client_ip(client_ip)
 {
@@ -217,6 +217,7 @@ void CgiHandler::close_fd(int& fd_pipe)
         fd_pipe = -1;
     }
 }
+
 bool CgiHandler::startCgi(int write_end)
 {
     std::string cgi_path = _location.getCGI_path();
@@ -288,8 +289,7 @@ bool CgiHandler::startCgi(int write_end)
         return false;
     }
 
-    const std::string& body = _request.body;
-    bool need_stdin = !body.empty();
+    bool need_stdin = !_request.body.empty();
 
     if (need_stdin)
     {
