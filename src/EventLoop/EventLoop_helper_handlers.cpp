@@ -77,6 +77,8 @@ void EventLoop::_handleRead(Connection* conn)
                 if (_responder.resolveCgiRequest(conn->request(), *conn->config(), cgi))
                 {
                     _ApiStartCgi(conn, cgi);
+                    extern void enforce_memory_limit();
+                    enforce_memory_limit();
                     return;
                 }
 
@@ -101,38 +103,133 @@ void EventLoop::_handleRead(Connection* conn)
     }
 }
 
+// void EventLoop::_handleWrite(Connection* conn)
+// {
+//     const int fd = conn->fd();
+
+//     while (!conn->writeBuffer().empty())
+//     {
+//         ssize_t n = conn->send();
+//         if (n < 0)
+//         {
+//             if (errno == EAGAIN || errno == EWOULDBLOCK)
+//                 break;  // kernel buffer full — wait for next EPOLLOUT
+//             std::cerr << "[EventLoop] send error on fd " << fd
+//                       << ": " << std::strerror(errno) << "\n";
+//             _closeClient(fd);
+//             return;
+//         }
+//     }
+
+//     if (conn->writeBuffer().empty())
+//     {
+//         if (!conn->peerHalfClosed() && conn->request().keepAlive())
+//         {
+//             conn->setReading(); // resets buffers + request + stamps time
+//             _rearmClient(fd);  // re-arm EPOLLIN
+//         }
+//         else
+//         {
+//             _closeClient(fd);
+//         }
+//     }
+//     // else: buffer not empty — EPOLLOUT will fire again
+// }
+
 void EventLoop::_handleWrite(Connection* conn)
 {
     const int fd = conn->fd();
-
+ 
     while (!conn->writeBuffer().empty())
     {
         ssize_t n = conn->send();
         if (n < 0)
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
-                break;  // kernel buffer full — wait for next EPOLLOUT
+                break;
             std::cerr << "[EventLoop] send error on fd " << fd
                       << ": " << std::strerror(errno) << "\n";
             _closeClient(fd);
             return;
         }
     }
-
+ 
+    // std::cerr << "[WR-DBG] fd=" << fd
+    //           << " wbuf_after_send=" << conn->writeBuffer().size()
+    //           << " cgi_jobs=" << _cgi_jobs.size() << "\n";
+ 
+    // ── check if a CGI job is still streaming for this client ──
+    static const size_t CGI_STREAM_LWM = 64 * 1024;
+ 
+    bool has_active_cgi = false;
+    int  active_cgi_fd  = -1;
+    for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
+         it != _cgi_jobs.end(); ++it)
+    {
+        if (it->second->client_fd == fd)
+        {
+            has_active_cgi = true;
+            active_cgi_fd  = it->first;
+            break;
+        }
+    }
+ 
+    if (has_active_cgi)
+    {
+        // CGI still running — never transition to READING yet.
+        if (conn->writeBuffer().size() < CGI_STREAM_LWM)
+        {
+            // std::cerr << "[WR-DBG] releasing bp: cgi_fd=" << active_cgi_fd
+            //           << " client_fd=" << fd
+            //           << " wbuf=" << conn->writeBuffer().size() << "\n";
+            _modifyEventFd(active_cgi_fd, EV_CGI,
+                           EPOLLIN | EPOLLET | EPOLLHUP | EPOLLERR);
+            _handleCgiEvent(active_cgi_fd, EPOLLIN);
+            if (!_manager->get(fd))
+                return;
+        }
+ 
+        // After draining / after CGI added more data:
+        // always keep client armed for EPOLLOUT so we keep draining.
+        // setWriting() is idempotent — safe to call even if already WRITING.
+        conn->setWriting();
+        _rearmClient(fd);
+ 
+        // std::cerr << "[WR-DBG] cgi active: fd=" << fd
+        //           << " kept EPOLLOUT wbuf=" << conn->writeBuffer().size() << "\n";
+        return;
+    }
+ 
+    // No active CGI — normal finish path.
+    if (!_manager->get(fd))
+        return;
+ 
     if (conn->writeBuffer().empty())
     {
         if (!conn->peerHalfClosed() && conn->request().keepAlive())
         {
-            conn->setReading(); // resets buffers + request + stamps time
-            _rearmClient(fd);  // re-arm EPOLLIN
+            // std::cerr << "[WR-DBG] fd=" << fd << " -> setReading\n";
+            conn->setReading();
+            _rearmClient(fd);
         }
         else
         {
+            // std::cerr << "[WR-DBG] fd=" << fd << " -> closeClient\n";
             _closeClient(fd);
         }
     }
-    // else: buffer not empty — EPOLLOUT will fire again
+    else
+    {
+        // std::cerr << "[WR-DBG] fd=" << fd << " -> rearm EPOLLOUT wbuf="
+                //   << conn->writeBuffer().size() << "\n";
+        conn->setWriting();
+        _rearmClient(fd);
+    }
 }
+ 
+ 
+ 
+ 
 
 void EventLoop::_handleClientEvent(int client_fd, uint32_t events)
 {

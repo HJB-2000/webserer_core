@@ -1,7 +1,242 @@
+// #include "Headers/EventLoop.hpp"
+// #include "cgi/CgiHandler.hpp"
+
+
+// void EventLoop::_addCgiFd(int result_fd, int client_fd)
+// {
+//     try {
+//         _registerEventFd(result_fd, EV_CGI, EPOLLIN | EPOLLET | EPOLLHUP | EPOLLERR);
+//         std::cerr << "[EventLoop] CGI fd " << result_fd
+//                   << " registered for client fd " << client_fd << "\n";
+//     }
+//     catch (const std::exception& e)  
+//     {  
+//         std::cerr << "[EventLoop] failed to register CGI fd " << result_fd   
+//                   << ": " << e.what() << "\n";  
+//         ::close(result_fd);  
+//         throw;  
+//     }  
+
+// }
+
+// void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
+// {
+//     int fds[2];
+//     if (::pipe(fds) < 0)
+//     {
+//         _responder.sendError(500, *conn->config(), conn->writeBuffer());
+//         conn->setWriting();
+//         _rearmClient(conn->fd());
+//         return;
+//     }
+//     if (::fcntl(fds[0], F_SETFD, FD_CLOEXEC) < 0 || 
+//         ::fcntl(fds[1], F_SETFD, FD_CLOEXEC) < 0)
+//     {
+//         ::close(fds[0]);
+//         ::close(fds[1]);
+//         _responder.sendError(500, *conn->config(), conn->writeBuffer());
+//         conn->setWriting();
+//         _rearmClient(conn->fd());
+//         return;
+//     }
+
+//     int result_read_fd = fds[0];
+//     int result_write_fd = fds[1];
+
+//     if (EventLoop::setNonBlocking(result_read_fd) < 0)
+//     {
+//         ::close(result_read_fd);
+//         ::close(result_write_fd);
+//         _responder.sendError(500, *conn->config(), conn->writeBuffer());
+//         conn->setWriting();
+//         _rearmClient(conn->fd());
+//         return;
+//     }
+
+//     CgiJob* job = NULL;
+//     try {
+//         job = new CgiJob(conn->fd(), result_read_fd, conn->writeBuffer().maxSize(), conn->config()->get_timeout_seconds());
+//         _addCgiFd(result_read_fd, conn->fd());
+//         _cgi_jobs[result_read_fd] = job;
+//     }
+//     catch (const std::exception& ex)
+//     {
+//         if (job != NULL) {
+//             delete job; 
+//             job = NULL;
+//         }
+//         throw;
+//     }
+//     conn->setCgiRunning();
+//     _rearmClient(conn->fd());
+
+//     CgiHandler cgi(conn->request(), *conn->config(), *info.location, info.script_path, conn->get_clientIp());
+    
+//     bool ok = cgi.startCgi(result_write_fd);
+//     if (ok)
+//     {
+//         job->child_pid = cgi.getChildPid();
+//         int stdin_fd = cgi.releaseStdinFd();
+//         if (stdin_fd >= 0)
+//         {
+//             _setCloexec(stdin_fd, "cgi-stdin");
+//             job->stdin_fd     = stdin_fd;
+//             job->stdin_body.swap(conn->request().body);
+//             job->stdin_offset = 0;
+//             _cgi_stdin_jobs[stdin_fd] = job;
+//             try {
+//                 _registerEventFd(stdin_fd, EV_CGI_STDIN,
+//                                  EPOLLOUT | EPOLLET | EPOLLERR | EPOLLHUP);
+//             }
+//             catch (const std::exception& ex) {
+//                 std::cerr << "[EventLoop] failed to register CGI stdin fd " << stdin_fd   
+//                   << ": " << ex.what() << "\n";  
+//                 _closeCgiStdin(job); 
+//             }
+//         }
+//     }
+//     ::close(result_write_fd);
+
+//     if (!ok)
+//     {
+//         _closeCgiJob(result_read_fd);
+//         _responder.sendError(500, *conn->config(), conn->writeBuffer());
+//         conn->setWriting();
+//         _rearmClient(conn->fd());
+//     }
+// }
+
+// void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
+// {
+//     std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
+//     if (it == _cgi_jobs.end())
+//         return;
+
+//     CgiJob* job = it->second;
+
+//     if (events & (EPOLLERR | EPOLLHUP))
+//     {
+//         // still try to drain
+//     }
+
+//     char buf[8192];
+//     try
+//     {
+//         while (true)
+//         {
+//             ssize_t n = ::read(result_fd, buf, sizeof(buf));
+//             if (n > 0)
+//             {
+//                 job->result_buffer.append(buf, static_cast<size_t>(n));
+//                 continue;
+//             }
+//             if (n == 0)
+//             {
+//                 _finishCgiJob(result_fd);
+//                 return;
+//             }
+//             if (errno == EAGAIN || errno == EWOULDBLOCK)
+//                 return;
+
+//             _failCgiJob(result_fd, 502);
+//             return;
+//         }
+//     }
+//     catch (const BodyLimitException&)
+//     {
+//         _failCgiJob(result_fd, 413);
+//     }
+// }
 #include "Headers/EventLoop.hpp"
 #include "cgi/CgiHandler.hpp"
+#include <sstream>
+ 
+static const size_t CGI_HEADER_BUF_LIMIT = 64 * 1024;
+static const size_t CGI_STREAM_HWM       = 256 * 1024;
+ 
+static size_t findHeaderEnd(const Buffer& buf)
+{
+    const char*  d = buf.data();
+    const size_t n = buf.size();
+    if (n < 2) return std::string::npos;
+    for (size_t i = 0; i + 3 < n; ++i)
+        if (d[i]=='\r' && d[i+1]=='\n' && d[i+2]=='\r' && d[i+3]=='\n')
+            return i + 4;
+    for (size_t i = 0; i + 1 < n; ++i)
+        if (d[i]=='\n' && d[i+1]=='\n')
+            return i + 2;
+    return std::string::npos;
+}
+ 
+static int flushCgiHeaders(const char* data, size_t sep,
+                           const HttpRequest& req, const ServerConfig& cfg,
+                           Buffer& wb)
+{
+    (void)cfg;
+    int         status_code  = 200;
+    std::string content_type = "text/html";
+    std::string extra;
+    size_t line_start = 0;
+    for (size_t i = 0; i < sep; ++i)
+    {
+        if (data[i] != '\n') continue;
+        size_t line_len = i - line_start;
+        if (line_len > 0 && data[i - 1] == '\r') --line_len;
+        if (line_len > 0)
+        {
+            std::string line(data + line_start, line_len);
+            size_t colon = line.find(':');
+            if (colon != std::string::npos)
+            {
+                std::string key = line.substr(0, colon);
+                std::string val = line.substr(colon + 1);
+                size_t vs = val.find_first_not_of(" \t");
+                if (vs != std::string::npos) val = val.substr(vs);
+                std::string lkey = key;
+                for (size_t j = 0; j < lkey.size(); ++j)
+                    lkey[j] = static_cast<char>(std::tolower(static_cast<unsigned char>(lkey[j])));
+                if (lkey == "status") { std::istringstream sc(val); sc >> status_code; }
+                else if (lkey == "content-type") content_type = val;
+                else extra += key + ": " + val + "\r\n";
+            }
+        }
+        line_start = i + 1;
+    }
+    const char* reason = "OK";
+    if      (status_code == 201) reason = "Created";
+    else if (status_code == 204) reason = "No Content";
+    else if (status_code == 301) reason = "Moved Permanently";
+    else if (status_code == 302) reason = "Found";
+    else if (status_code == 400) reason = "Bad Request";
+    else if (status_code == 403) reason = "Forbidden";
+    else if (status_code == 404) reason = "Not Found";
+    else if (status_code == 500) reason = "Internal Server Error";
+    else if (status_code == 502) reason = "Bad Gateway";
+    else if (status_code == 504) reason = "Gateway Timeout";
+    std::string conn_val = req.keepAlive() ? "keep-alive" : "close";
+    std::ostringstream hdr;
+    hdr << "HTTP/1.1 " << status_code << " " << reason << "\r\n"
+        << "Server: webserv/1.0\r\n"
+        << "Content-Type: " << content_type << "\r\n"
+        << "Transfer-Encoding: chunked\r\n"
+        << "Connection: " << conn_val << "\r\n"
+        << extra << "\r\n";
+    const std::string& h = hdr.str();
+    wb.append(h.c_str(), h.size());
+    return status_code;
+}
 
-
+#include <cstdio>
+static void writeChunk(Buffer& wb, const char* data, size_t len)
+{
+    if (len == 0) return;
+    char hex[32];
+    int  hlen = std::snprintf(hex, sizeof(hex), "%zx\r\n", len);
+    wb.append(hex, static_cast<size_t>(hlen));
+    wb.append(data, len);
+    wb.append("\r\n", 2);
+}
+ 
 void EventLoop::_addCgiFd(int result_fd, int client_fd)
 {
     try {
@@ -9,76 +244,56 @@ void EventLoop::_addCgiFd(int result_fd, int client_fd)
         std::cerr << "[EventLoop] CGI fd " << result_fd
                   << " registered for client fd " << client_fd << "\n";
     }
-    catch (const std::exception& e)  
-    {  
-        std::cerr << "[EventLoop] failed to register CGI fd " << result_fd   
-                  << ": " << e.what() << "\n";  
-        ::close(result_fd);  
-        throw;  
-    }  
-
+    catch (const std::exception& e) {
+        std::cerr << "[EventLoop] failed to register CGI fd " << result_fd
+                  << ": " << e.what() << "\n";
+        ::close(result_fd);
+        throw;
+    }
 }
-
+ 
 void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
 {
     int fds[2];
-    if (::pipe(fds) < 0)
-    {
+    if (::pipe(fds) < 0) {
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
-        conn->setWriting();
-        _rearmClient(conn->fd());
-        return;
+        conn->setWriting(); _rearmClient(conn->fd()); return;
     }
-    if (::fcntl(fds[0], F_SETFD, FD_CLOEXEC) < 0 || 
-        ::fcntl(fds[1], F_SETFD, FD_CLOEXEC) < 0)
-    {
-        ::close(fds[0]);
-        ::close(fds[1]);
+    if (::fcntl(fds[0], F_SETFD, FD_CLOEXEC) < 0 ||
+        ::fcntl(fds[1], F_SETFD, FD_CLOEXEC) < 0) {
+        ::close(fds[0]); ::close(fds[1]);
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
-        conn->setWriting();
-        _rearmClient(conn->fd());
-        return;
+        conn->setWriting(); _rearmClient(conn->fd()); return;
     }
-
-    int result_read_fd = fds[0];
+    int result_read_fd  = fds[0];
     int result_write_fd = fds[1];
-
-    if (EventLoop::setNonBlocking(result_read_fd) < 0)
-    {
-        ::close(result_read_fd);
-        ::close(result_write_fd);
+    if (EventLoop::setNonBlocking(result_read_fd) < 0) {
+        ::close(result_read_fd); ::close(result_write_fd);
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
-        conn->setWriting();
-        _rearmClient(conn->fd());
-        return;
+        conn->setWriting(); _rearmClient(conn->fd()); return;
     }
-
     CgiJob* job = NULL;
     try {
-        job = new CgiJob(conn->fd(), result_read_fd, conn->writeBuffer().maxSize(), conn->config()->get_timeout_seconds());
+        job = new CgiJob(conn->fd(), result_read_fd,
+                         CGI_HEADER_BUF_LIMIT,
+                         conn->config()->get_timeout_seconds());
         _addCgiFd(result_read_fd, conn->fd());
         _cgi_jobs[result_read_fd] = job;
     }
-    catch (const std::exception& ex)
-    {
-        if (job != NULL) {
-            delete job; 
-            job = NULL;
-        }
-        throw;
-    }
+    catch (const std::exception& ex) { delete job; throw; }
+ 
     conn->setCgiRunning();
     _rearmClient(conn->fd());
-
-    CgiHandler cgi(conn->request(), *conn->config(), *info.location, info.script_path, conn->get_clientIp());
-    
+    // std::cerr << "[START-DBG] CGI started: client_fd=" << conn->fd()
+    //           << " result_fd=" << result_read_fd << "\n";
+ 
+    CgiHandler cgi(conn->request(), *conn->config(), *info.location,
+                   info.script_path, conn->get_clientIp());
     bool ok = cgi.startCgi(result_write_fd);
-    if (ok)
-    {
+    if (ok) {
         job->child_pid = cgi.getChildPid();
-        int stdin_fd = cgi.releaseStdinFd();
-        if (stdin_fd >= 0)
-        {
+        int stdin_fd   = cgi.releaseStdinFd();
+        if (stdin_fd >= 0) {
             _setCloexec(stdin_fd, "cgi-stdin");
             job->stdin_fd     = stdin_fd;
             job->stdin_body.swap(conn->request().body);
@@ -89,61 +304,128 @@ void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
                                  EPOLLOUT | EPOLLET | EPOLLERR | EPOLLHUP);
             }
             catch (const std::exception& ex) {
-                std::cerr << "[EventLoop] failed to register CGI stdin fd " << stdin_fd   
-                  << ": " << ex.what() << "\n";  
-                _closeCgiStdin(job); 
+                std::cerr << "[EventLoop] failed to register CGI stdin fd "
+                          << stdin_fd << ": " << ex.what() << "\n";
+                _closeCgiStdin(job);
             }
         }
     }
     ::close(result_write_fd);
-
-    if (!ok)
-    {
+    if (!ok) {
         _closeCgiJob(result_read_fd);
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
-        conn->setWriting();
-        _rearmClient(conn->fd());
+        conn->setWriting(); _rearmClient(conn->fd());
     }
 }
-
+ 
 void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
 {
     std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
-    if (it == _cgi_jobs.end())
+    if (it == _cgi_jobs.end()) {
+        // std::cerr << "[CGI-DBG] _handleCgiEvent: result_fd=" << result_fd << " NOT IN MAP\n";
         return;
-
-    CgiJob* job = it->second;
-
-    if (events & (EPOLLERR | EPOLLHUP))
-    {
-        // still try to drain
     }
-
-    char buf[8192];
+    CgiJob*     job  = it->second;
+    Connection* conn = _manager->get(job->client_fd);
+ 
+    // std::cerr << "[CGI-DBG] enter: result_fd=" << result_fd
+    //           << " client_fd=" << job->client_fd
+    //           << " headers_sent=" << job->headers_sent
+    //           << " body_written=" << job->body_written
+    //           << " wbuf=" << (conn ? (int)conn->writeBuffer().size() : -1)
+    //           << " events=" << events << "\n";
+ 
+    if (events & (EPOLLERR | EPOLLHUP))
+        // std::cerr << "[CGI-DBG] EPOLLERR|EPOLLHUP on result_fd=" << result_fd << "\n";
+ 
+    if (conn && job->headers_sent &&
+        conn->writeBuffer().size() >= CGI_STREAM_HWM)
+    {
+        // std::cerr << "[CGI-DBG] HWM pause: result_fd=" << result_fd
+        //           << " wbuf=" << conn->writeBuffer().size() << "\n";
+        return;
+    }
+ 
+    char buf[16 * 1024];
     try
     {
         while (true)
         {
             ssize_t n = ::read(result_fd, buf, sizeof(buf));
+            // std::cerr << "[CGI-DBG] read: result_fd=" << result_fd << " n=" << n
+            //           << " errno=" << (n < 0 ? errno : 0) << "\n";
+ 
             if (n > 0)
             {
-                job->result_buffer.append(buf, static_cast<size_t>(n));
+                if (!job->headers_sent)
+                {
+                    job->result_buffer.append(buf, static_cast<size_t>(n));
+                    size_t body_start = findHeaderEnd(job->result_buffer);
+                    // std::cerr << "[CGI-DBG] header phase: rbuf=" << job->result_buffer.size()
+                    //           << " body_start=" << (body_start == std::string::npos ? -1 : (int)body_start) << "\n";
+                    if (body_start == std::string::npos)
+                        continue;
+                    if (!conn) { _closeCgiJob(result_fd); return; }
+                    flushCgiHeaders(job->result_buffer.data(), body_start,
+                                    conn->request(), *conn->config(), conn->writeBuffer());
+                    job->headers_sent = true;
+                    size_t leftover = job->result_buffer.size() - body_start;
+                    // std::cerr << "[CGI-DBG] headers flushed: leftover=" << leftover
+                    //           << " wbuf=" << conn->writeBuffer().size() << "\n";
+                    if (leftover > 0 && conn->request().method != "HEAD")
+                        writeChunk(conn->writeBuffer(),
+                                   job->result_buffer.data() + body_start, leftover);
+                    job->body_written += leftover;
+                    job->result_buffer.earase();
+                    conn->setWriting();
+                    _rearmClient(conn->fd());
+                }
+                else
+                {
+                    if (!conn) { _closeCgiJob(result_fd); return; }
+                    if (conn->request().method != "HEAD")
+                        writeChunk(conn->writeBuffer(), buf, static_cast<size_t>(n));
+                    job->body_written += static_cast<size_t>(n);
+                    // std::cerr << "[CGI-DBG] body chunk: n=" << n
+                    //           << " body_written=" << job->body_written
+                    //           << " wbuf=" << conn->writeBuffer().size() << "\n";
+                    if (conn->writeBuffer().size() >= CGI_STREAM_HWM)
+                    {
+                        // std::cerr << "[CGI-DBG] HWM mid-stream pause: wbuf="
+                        //           << conn->writeBuffer().size() << "\n";
+                        return;
+                    }
+                }
                 continue;
             }
+ 
             if (n == 0)
             {
+                // std::cerr << "[CGI-DBG] EOF: result_fd=" << result_fd
+                //           << " headers_sent=" << job->headers_sent
+                //           << " body_written=" << job->body_written << "\n";
                 _finishCgiJob(result_fd);
                 return;
             }
+ 
             if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                // std::cerr << "[CGI-DBG] EAGAIN: result_fd=" << result_fd
+                //           << " headers_sent=" << job->headers_sent
+                //           << " body_written=" << job->body_written << "\n";
                 return;
-
+            }
+ 
+            // std::cerr << "[CGI-DBG] read error: result_fd=" << result_fd
+            //           << " errno=" << errno << "\n";
             _failCgiJob(result_fd, 502);
             return;
         }
     }
     catch (const BodyLimitException&)
     {
-        _failCgiJob(result_fd, 413);
+        // std::cerr << "[CGI-DBG] BodyLimitException (header > 64KB): result_fd=" << result_fd << "\n";
+        _failCgiJob(result_fd, 502);
     }
 }
+ 

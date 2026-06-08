@@ -151,6 +151,8 @@ void EventLoop::_reapPending()
 
 void EventLoop::_dispatch(const epoll_event& ev)
 {
+    extern void enforce_memory_limit();
+    enforce_memory_limit();
     EventRef* ref = static_cast<EventRef*>(ev.data.ptr);
     if (!ref || ref->kind == EV_INVALID)
         return;
