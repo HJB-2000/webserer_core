@@ -22,19 +22,16 @@ class httpConfig
         long long get_cl_mx_bd_sz() const;
         void set_error_page(int err_code, std::string err_path);
         std::map<int, std::string> get_error_page() const;
-        // parsing
-        // for server
+
         void parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexems, size_t &i);
         void parseDirective(Server &server, const std::string &directive, std::vector<Lexer> &stream, size_t &i);
 
-        // for location
         void parsLocation(Location &obj_Location, std::vector<Lexer> &stream_lexems, size_t &i);
         void parseDirective(Location &location, const std::string &directive, std::vector<Lexer> &stream, size_t &i);
 
         std::vector<std::string> consumeValues(size_t &i, std::vector<Lexer> &stream);
         std::vector<std::string> consumeDirective(size_t &i, std::vector<Lexer> &stream);
 
-        // servers vector
         void set_servers(Server& server);
     std::vector<Server>& get_all_servers();
     const std::vector<Server>& get_all_servers() const;

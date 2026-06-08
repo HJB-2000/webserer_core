@@ -35,5 +35,4 @@ class Lexer
         static std::map<std::string, t_token_type> _grammar;
 
 };
-// class for location and server and 
 #endif

@@ -41,19 +41,15 @@ const Location* Server::matchLocation(const std::string& path) const
         if (loc_path.empty())
             continue;
 
-        // Must be a prefix
         if (path.compare(0, loc_path.size(), loc_path) != 0)
             continue;
 
-        // Enforce path‑component boundary
         if (!loc_path.empty() && loc_path[loc_path.size() - 1] != '/')
         {
-            // location doesn't end with '/'; next char must be '/' or end
             if (path.size() > loc_path.size() && path[loc_path.size()] != '/')
                 continue;
         }
 
-        // Pick the longest matching prefix
         if (loc_path.length() > best_len)
         {
             best = &_locations[i];

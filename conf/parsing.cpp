@@ -54,7 +54,6 @@ void remove_comments(std::stringstream &buff)
         out.push_back(str[i]);
     }
     buff.str(out);
-    //
 }
 
 void refactoring_buffer(std::stringstream &buff)
@@ -81,8 +80,6 @@ void refactoring_buffer(std::stringstream &buff)
     if(!out.empty() && out[0] == ' ')
         out.erase(0, 1);
     buff.str(out);
-
-    //
 }
 
 void insert_space(std::stringstream &buff)
@@ -104,8 +101,6 @@ void insert_space(std::stringstream &buff)
         }
     }
     buff.str(out);
-
-    //
 }
 
 std::vector<std::string> storing_in_vec(std::stringstream &buff)
@@ -174,8 +169,6 @@ static bool is_readable(const std::string& path)
 
 void validate_final_config(std::vector<Server>& servers, long long http_default_cmbs)
 {
-    // removed the check for the same port listening
-
     for (size_t s = 0; s < servers.size(); ++s) 
     {
         const Server& server = servers[s];
@@ -328,7 +321,3 @@ void parsing_lexems(ParserConf& parser, std::vector<Lexer>& stream_lexems)
     validate_final_config(parser.get_http().get_all_servers(),
                           parser.get_http().get_cl_mx_bd_sz());
 }
-
-
-
-// # [] 2. Bug 7: Integer Overflow in Content-Length Parsing

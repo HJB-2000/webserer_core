@@ -14,8 +14,7 @@ struct CgiJob
     pid_t       child_pid;
     Buffer      result_buffer;
     time_t      start_time;
-    int         _timeout_seconds; // to check based on config file
-    // Non-blocking stdin write state (only used when the request has a body)
+    int         _timeout_seconds;
     int         stdin_fd;
     std::string stdin_body;
     size_t      stdin_offset;

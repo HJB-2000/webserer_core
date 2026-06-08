@@ -81,7 +81,7 @@ std::string formatUtcTimestamp()
 	oss << "] ";
 	return oss.str();
 }
-} // namespace
+}
 
 TeeStreambuf::TeeStreambuf(std::streambuf* orig, std::ofstream& file)
 	: _orig(orig)

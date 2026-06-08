@@ -1,6 +1,3 @@
-// ============================================================
-//  HttpRequest.cpp — HttpRequest implementations
-// ============================================================
 #include "Headers/HttpRequest.hpp"
 #include <cctype>
 
@@ -22,10 +19,6 @@ void HttpRequest::reset()
     query_string.clear();
     version.clear();
     headers.clear();
-    // FIX: Use swap trick to actually release body memory
-    // std::string::clear() only sets size=0, but keeps the heap allocation.
-    // After 100MB POST, body.capacity() stays at 100MB if we just call clear().
-    // swap() with empty string forces deallocation.
     { std::string _empty; _empty.swap(body); }
     parse_state     = PSTATE_IDLE;
     content_length  = 0;

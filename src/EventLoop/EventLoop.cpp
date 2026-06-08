@@ -4,8 +4,6 @@
 #include "Headers/HttpParser.hpp"
 #include "Headers/ResponseHandler.hpp"
 
-
-
 EventLoop::EventLoop()
     : _epoll_fd(-1)
     , _manager(NULL)
@@ -22,13 +20,50 @@ EventLoop::EventLoop()
     _manager = new ConnectionManager(_epoll_fd);
 }
 
-
 EventLoop::~EventLoop()
 {
+    for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
+         it != _cgi_jobs.end(); ++it)
+    {
+        CgiJob* job = it->second;
+        if (job->child_pid > 0)
+        {
+            kill(job->child_pid, SIGKILL);
+            int status;
+            waitpid(job->child_pid, &status, 0);
+        }
+        if (job->stdin_fd >= 0)
+            ::close(job->stdin_fd);
+        std::map<int, CgiJob*>::iterator sit = _cgi_stdin_jobs.find(job->stdin_fd);
+        if (sit != _cgi_stdin_jobs.end())
+            _cgi_stdin_jobs.erase(sit);
+        delete job;
+    }
+    _cgi_jobs.clear();
+    _cgi_stdin_jobs.clear();
+
+    for (std::map<int, EventRef*>::iterator it = _event_refs.begin();
+         it != _event_refs.end(); ++it)
+    {
+        delete it->second;
+    }
+    _event_refs.clear();
+
+    for (size_t i = 0; i < _stale_refs.size(); ++i)
+        delete _stale_refs[i];
+    _stale_refs.clear();
+
+    _pending_reap.clear();
+
+    for (size_t i = 0; i < _server_fds.size(); ++i)
+        ::close(_server_fds[i]);
+    _server_fds.clear();
+
     delete _manager;
     if (_epoll_fd >= 0)
         ::close(_epoll_fd);
 }
+    
 
 void EventLoop::_unregisterEventFd(int fd)
 {
@@ -72,7 +107,6 @@ void EventLoop::_closeClient(int fd)
     _closeCgiJobsForClient(fd);
     _unregisterEventFd(fd);
     _manager->closeConnection(fd);
-    // delete _event_refs[fd];
 }
 
 void EventLoop::_closeTimedOutClients()
@@ -103,15 +137,13 @@ void EventLoop::_reapPending()
         {
             std::cerr << "[EventLoop] giving up reap for pid " << pid
                       << " after " << REAP_STALE_SECONDS << "s\n";
-            continue;  // drop — likely D-state; avoid unbounded growth
+            continue;
         }
 
         int   status;
         pid_t ret = waitpid(pid, &status, WNOHANG);
         if (ret == 0)
-            remaining.push_back(_pending_reap[i]);  // still not exited
-        // ret > 0  : reaped
-        // ret < 0  : ECHILD or similar — drop it
+            remaining.push_back(_pending_reap[i]);
     }
     _pending_reap.swap(remaining);
 }
@@ -161,12 +193,11 @@ void EventLoop::run()
         if (n < 0)
         {
             if (errno == EINTR) 
-                continue;   // signal interrupted — loop again
+                continue;
             std::cerr << "[EventLoop] epoll_wait error: "
                       << std::strerror(errno) << "\n";
             break;
         }
-        // it was removed for some tests  i put it back
         for (int i = 0; i < n; ++i)
             _dispatch(events[i]);
 

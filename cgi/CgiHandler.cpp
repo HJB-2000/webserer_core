@@ -39,7 +39,6 @@ bool CgiHandler::validate_env_contract() const
         std::string value = line.substr(eq + 1);
         if (isEnvKeyRequired(key) && value.empty())
         {
-            // std::cerr << "[cgi][env] EMPTY required key: " << key << std::endl;
             ok = false;
         }
     }
@@ -63,10 +62,7 @@ bool CgiHandler::validate_env_contract() const
             }
         }
         if (!found)
-        {
-            // std::cerr << "[cgi][env] MISSING required key: " << required[r] << std::endl;
             ok = false;
-        }
     }
     return ok;
 }
@@ -74,23 +70,12 @@ bool CgiHandler::validate_env_contract() const
 void CgiHandler::log_env_once()
 {
     if (_env_logged) return;
-    // std::cerr << "-------[cgi][env] generated entries:-------" << std::endl;
-    // for (size_t i = 0; i < _meta_env.size(); ++i)
-    //     std::cerr << "  " << _meta_env[i] << std::endl;
-    // std::cerr << "-------[cgi][env] contract check: "
-    //           << (validate_env_contract() ? "PASS-------" : "FAIL-------") << std::endl;
     _env_logged = true;
 }
 
 void CgiHandler::filling_meta_variables(const HttpRequest& request, const Server& config, const Location& location)
 {
     _meta_env = buildCgiEnvironment(request, config, location);
-
-    // _env_ptrs holds raw char* into _meta_env's string buffers.
-    // CRITICAL: _meta_env must NEVER be modified after this point —
-    // any push_back/resize/assignment on _meta_env will reallocate its
-    // internal strings and silently invalidate every pointer here,
-    // causing execve() to receive garbage environment pointers.
     _env_ptrs.clear();
     _env_ptrs.reserve(_meta_env.size() + 1);
     for (size_t i = 0; i < _meta_env.size(); ++i)
@@ -104,12 +89,9 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
     (void)location;
     std::vector<std::string> env;
 
-    // Fix #6: SERVER_NAME must be the hostname from the Host request header
-    // (RFC 3875 §4.1.14), not the server's bind address. Strip port if present.
     std::string server_name = request.header("host");
     if (server_name.empty())
         server_name = server.getHost();
-    // Strip port suffix (host:port → host)
     size_t colon_pos = server_name.rfind(':');
     if (colon_pos != std::string::npos)
         server_name = server_name.substr(0, colon_pos);
@@ -125,12 +107,11 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
         if (!path_info.empty() && path_info[0] != '/') 
             path_info = "/" + path_info;
     }
-    // Workaround for cgi_test: if still empty, use script_name (non‑empty)
-    if (path_info.empty())
-        path_info = script_name;   // e.g., "/directory/youpi.bla"
 
-    // Also adjust PATH_TRANSLATED accordingly (use script_filename)
-    std::string path_translated = script_filename;  // not doc_root + path_info
+    if (path_info.empty())
+        path_info = script_name;
+
+    std::string path_translated = script_filename;
     if (!path_info.empty())
     {
         std::string doc_root = server.getRoot();
@@ -157,8 +138,6 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
         (request.query_string.empty() ? "" : "?" + request.query_string));
     env.push_back("DOCUMENT_ROOT=" + server.getRoot());
 
-    // Fix #7: CONTENT_TYPE and CONTENT_LENGTH only set when body is present
-    // (RFC 3875 §4.1.2 — omit CONTENT_LENGTH when there is no message body)
     if (!request.body.empty())
     {
         std::ostringstream content_length_ss;
@@ -168,8 +147,6 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
     }
     else
     {
-        // Still set CONTENT_TYPE when sent by the client even without a body,
-        // but leave CONTENT_LENGTH absent.
         std::string ct = request.header("content-type");
         if (!ct.empty())
             env.push_back("CONTENT_TYPE=" + ct);
@@ -178,8 +155,6 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
     for (std::map<std::string, std::string>::const_iterator it = request.headers.begin();
          it != request.headers.end(); ++it)
     {
-        // RFC 3875 §4.1.18: Content-Type and Content-Length are CONTENT_TYPE /
-        // CONTENT_LENGTH only — do not duplicate as HTTP_* meta-variables.
         if (it->first == "content-type" || it->first == "content-length")
             continue;
         std::string key = it->first;
@@ -190,12 +165,6 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
         }
         env.push_back("HTTP_" + key + "=" + it->second);
     }
-    // std::cerr << "-------[cgi][env] generated entries:-------" << std::endl;
-    // for (size_t i = 0; i < env.size(); ++i) {
-    //     std::cerr << "  " << env[i] << std::endl;
-    // }
-    // std::cerr << "-------[cgi][env] contract check: " 
-    //         << (env.size() > 0 ? "PASS" : "FAIL") << "-------" << std::endl;
     return env;
 }
 
@@ -227,11 +196,7 @@ bool CgiHandler::startCgi(int write_end)
         _state = CGI_ERROR;
         return false;
     }
-    // std::cout << "||||||||||||" << cgi_path << "||||||||||||" << std::endl;
 
-    // stat() the CGI interpreter — record inode fingerprint for child
-    // verification. Two separate structs so the second stat() does not
-    // overwrite the first (original code reused a single struct stat sb).
     struct stat sb_cgi;
     if (stat(cgi_path.c_str(), &sb_cgi) != 0)
     {
@@ -260,7 +225,6 @@ bool CgiHandler::startCgi(int write_end)
         return false;
     }
 
-    // stat() the script — separate struct so sb_cgi is preserved intact
     struct stat sb_script;
     if (stat(script_file.c_str(), &sb_script) != 0)
     {
@@ -300,7 +264,6 @@ bool CgiHandler::startCgi(int write_end)
             return false;
         }
 
-        // Set FD_CLOEXEC to guarantee no descriptor leaks into unrelated forks
         if (::fcntl(_cgi_in_pipe[0], F_SETFD, FD_CLOEXEC) == -1 ||
             ::fcntl(_cgi_in_pipe[1], F_SETFD, FD_CLOEXEC) == -1)
         {
@@ -314,8 +277,6 @@ bool CgiHandler::startCgi(int write_end)
         }
     }
 
-    // Convert paths to absolute before fork to ensure they're valid
-    // after chdir() in child process
     char resolved_path[1024];
     if (realpath(cgi_path.c_str(), resolved_path) != NULL)
         cgi_path = resolved_path;
@@ -339,10 +300,6 @@ bool CgiHandler::startCgi(int write_end)
 
     if (_child_pid == 0)
     {
-        // ── TOCTOU Fix: re-verify inodes before execve ───────────────────
-        // Compare st_ino + st_dev against snapshots taken in parent.
-        // If the file was swapped in the fork()→execve() window, the
-        // inode numbers won't match and we abort before executing anything.
         struct stat verify_cgi;
         if (stat(cgi_path.c_str(), &verify_cgi) != 0
             || verify_cgi.st_ino != sb_cgi.st_ino

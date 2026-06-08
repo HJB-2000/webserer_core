@@ -59,9 +59,6 @@ void verifying_path_in_locations_inside_server(Server &obj_Server)
     for (size_t i = 0; i < tmp_locations.size(); i++)
     {
         std::string path = tmp_locations[i].getPath();
-
-        // Normalize: strip trailing slash unless the path is exactly "/"
-        // This catches logical duplicates like /uploads vs /uploads/
         if (path.size() > 1 && path[path.size() - 1] == '/')
             path.erase(path.size() - 1);
 
@@ -73,9 +70,6 @@ void verifying_path_in_locations_inside_server(Server &obj_Server)
     }
 }
 
-// Validates that every index filename has an extension (contains a '.' after
-// the first character). A bare word like "file" or "index" with no extension
-// is almost certainly a misconfiguration and will cause silent 404s at runtime.
 static void validate_index_filenames(const std::vector<std::string>& index_files,
                                      std::vector<Lexer>& stream, size_t i,
                                      const char* context)
@@ -83,7 +77,6 @@ static void validate_index_filenames(const std::vector<std::string>& index_files
     for (size_t k = 0; k < index_files.size(); ++k)
     {
         const std::string& name = index_files[k];
-        // Find the last '.' after position 0
         size_t dot_pos = name.rfind('.');
         if (dot_pos == std::string::npos || dot_pos == 0 || dot_pos == name.size() - 1)
         {
@@ -118,11 +111,9 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
 
         if (colon_pos != std::string::npos)
         {
-            // Form: host:port  — e.g. 127.0.0.1:8080  *:8080  localhost:8080
             std::string tmp_host = val.substr(0, colon_pos);
             std::string tmp_port = val.substr(colon_pos + 1);
 
-            // Resolve symbolic host aliases before IPv4 validation
             if (tmp_host == "*")
                 tmp_host = "0.0.0.0";
             else if (tmp_host == "localhost")
@@ -147,13 +138,9 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
         }
         else
         {
-            // No colon — two sub-cases:
-            //   a) pure port number     e.g. listen 9090;  → host defaults to 0.0.0.0
-            //   b) bare IPv4 address    e.g. listen 127.0.0.1;  → port defaults to 9090
             long port_long;
             if (safe_strtol(val, port_long))
             {
-                // Sub-case a: plain port number
                 int tmp_port = static_cast<int>(port_long);
                 if (tmp_port < 1 || tmp_port > 65535)
                     report_parse_error("Syntax Error: directive ", stream, i,
@@ -164,7 +151,6 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
             }
             else if (is_valid_host(val))
             {
-                // Sub-case b: bare IPv4 — port defaults to 9090
                 std::string tmp_host = val;
                 server.setHost(tmp_host);
                 int default_port = 9090;
@@ -315,11 +301,9 @@ void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexem
         report_parse_error("Missing required directive: root", stream_lexems, i, "parsServer");
     if (obj_Server.getIndex_s().empty())
         report_parse_error("Missing required directive: index", stream_lexems, i, "parsServer");
-    // Validate the server-level index filenames have real extensions
     validate_index_filenames(obj_Server.getIndex_s(), stream_lexems, i, "parsServer/index");
     if (obj_Server.get_timeout_seconds() <= 0)
         report_parse_error("Missing required directive: timeout", stream_lexems, i, "parsServer");
-    // ---------- Inherit server defaults for every location ----------
     std::vector<Location>& locs = obj_Server.getLocations();
     for (size_t idx = 0; idx < locs.size(); ++idx)
     {
@@ -328,7 +312,7 @@ void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexem
         if (loc.getRoot().empty())
             loc.setRoot(obj_Server.getRoot());
         if (loc.getIndex_s().empty())
-            loc.setIndex_s(obj_Server.getIndex_s().front());   // take the first index
+            loc.setIndex_s(obj_Server.getIndex_s().front());
         if (loc.getClientMaxBodySize() == 0)
             loc.setClientMaxBodySize(static_cast<long long>(obj_Server.getMaxBody()));
         if (loc.get_error_page_loc().empty())
@@ -342,17 +326,14 @@ void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexem
         }
     }
 
-    // ---------- Now validate all locations ----------
     for (size_t idx = 0; idx < locs.size(); ++idx)
     {
-        // Validate index filenames for locations that actually serve static files
         bool is_redirect = (locs[idx].getReturnRedirection_code() != -1);
         bool is_cgi      = (!locs[idx].getCGI_path().empty() && !locs[idx].getCGI_extensions().empty());
         if (!is_redirect && !is_cgi)
             validate_index_filenames(locs[idx].getIndex_s(), stream_lexems, i,
                                      ("parsServer/location[" + locs[idx].getPath() + "]/index").c_str());
     } 
-    // validate_filesystem_directives(obj_Server, stream_lexems, i);
     verifying_path_in_locations_inside_server(obj_Server);
     i++;
 }

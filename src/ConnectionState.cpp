@@ -1,6 +1,3 @@
-// ============================================================
-//  ConnectionState.cpp — connStateStr implementation
-// ============================================================
 #include "Headers/ConnectionState.hpp"
 
 const char* connStateStr(ConnectionState s)
