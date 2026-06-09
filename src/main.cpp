@@ -73,7 +73,7 @@ void dump_kernel_memory_regions() {
 #include <malloc.h>
 void enforce_memory_limit() 
 {
-    // malloc_trim(0);
+    malloc_trim(0);
     static long page_size = sysconf(_SC_PAGESIZE);
     std::ifstream statm("/proc/self/statm");
     if (!statm.is_open()) return;
@@ -84,10 +84,10 @@ void enforce_memory_limit()
         size_t current_rss_bytes = resident_pages * page_size;
         
         // 1. Calculate Megabytes (MiB) using double for precision, or integer division if you prefer
-        double current_rss_mb = static_cast<double>(current_rss_bytes) / (1024.0 * 1024.0);
+        // double current_rss_mb = static_cast<double>(current_rss_bytes) / (1024.0 * 1024.0);
 
         // 2. Print the usage before the check
-        std::cout << "=====>>: " << current_rss_mb << " MB" << std::endl; 
+        // std::cerr << "=====>>: " << current_rss_mb << " MB" << std::endl; 
 
         if (current_rss_bytes >= MEMORY_LIMIT_BYTES) {
             std::cerr << "\n[MONITOR] Threshold reached! Halting for GDB attachment..." << std::endl;
@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
         std::signal(SIGTERM, sig_handler);
         std::signal(SIGPIPE, SIG_IGN);
         std::cerr << "[core] server ready — press Ctrl+C to stop\n";
-        enforce_memory_limit();
+        // enforce_memory_limit();
         loop.run();
         std::cerr << "[core] shutdown complete\n";
         Logger::instance().close();

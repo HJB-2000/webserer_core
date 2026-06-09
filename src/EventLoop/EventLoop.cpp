@@ -124,6 +124,7 @@ void EventLoop::_modifyEventFd(int fd, EventKind kind, uint32_t events)
 {
     std::map<int, EventRef*>::iterator it = _event_refs.find(fd);
     if (it == _event_refs.end()) return;
+    if (it->second->kind == EV_INVALID) return; // This silently skips the modify if the fd is already being torn down, 
     (void)kind;
     epoll_event ev;
     std::memset(&ev, 0, sizeof(ev));
@@ -257,7 +258,7 @@ void EventLoop::run()
             delete _stale_refs[i];
         _stale_refs.clear();
         // Now RSS reflects fully-collected state for this iteration
-        extern void enforce_memory_limit();
+        extern void enforce_memory_limit(); // uncomment this to see the role of malloc_trim
         enforce_memory_limit();
         _closeTimedOutClients();
         _closeTimedOutCgiJobs();
