@@ -150,6 +150,9 @@ void EventLoop::_closeClient(int fd)
     _closeCgiJobsForClient(fd);
     _unregisterEventFd(fd);
     _manager->closeConnection(fd);
+    // extern void enforce_memory_limit();
+    // enforce_memory_limit();
+
 }
 
 void EventLoop::_closeTimedOutClients()
@@ -245,7 +248,6 @@ void EventLoop::run()
                       << std::strerror(errno) << "\n";
             break;
         }
-        // If stop() was called, don't process more events
         if (_stopped)
             break;
         for (int i = 0; i < n; ++i)
@@ -254,7 +256,9 @@ void EventLoop::run()
         for (size_t i = 0; i < _stale_refs.size(); ++i)
             delete _stale_refs[i];
         _stale_refs.clear();
-
+        // Now RSS reflects fully-collected state for this iteration
+        extern void enforce_memory_limit();
+        enforce_memory_limit();
         _closeTimedOutClients();
         _closeTimedOutCgiJobs();
         _reapPending();

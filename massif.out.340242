@@ -1,0 +1,584 @@
+desc: (none)
+cmd: ./webserv youpi.conf
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=760174023
+mem_heap_B=277180004
+mem_heap_extra_B=13708
+mem_stacks_B=0
+heap_tree=peak
+n2: 277180004 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 277086208 0x11CBD0: __gnu_cxx::new_allocator<char>::allocate(unsigned long, void const*) (new_allocator.h:127)
+  n1: 277086208 0x11CA4B: __gnu_cxx::__alloc_traits<std::allocator<char>, char>::allocate(std::allocator<char>&, unsigned long) (alloc_traits.h:133)
+   n1: 277086208 0x11C637: std::_Vector_base<char, std::allocator<char> >::_M_allocate(unsigned long) (stl_vector.h:346)
+    n1: 277086208 0x11BE53: char* std::vector<char, std::allocator<char> >::_M_allocate_and_copy<char*>(unsigned long, char*, char*) (stl_vector.h:1511)
+     n2: 277086208 0x11BB55: std::vector<char, std::allocator<char> >::reserve(unsigned long) (vector.tcc:85)
+      n1: 276824064 0x11BA7E: Buffer::_ensureCapacity(unsigned long) (Buffer.cpp:109)
+       n1: 276824064 0x11B576: Buffer::append(char const*, unsigned long) (Buffer.cpp:29)
+        n1: 276824064 0x118630: HttpParser::_parseBody(Buffer&, HttpRequest&) (HttpParser.cpp:588)
+         n1: 276824064 0x115EF7: HttpParser::feed(Connection*) (HttpParser.cpp:240)
+          n1: 276824064 0x12F6CB: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:59)
+           n1: 276824064 0x12FE79: EventLoop::_handleClientEvent(int, unsigned int) (EventLoop_helper_handlers.cpp:260)
+            n1: 276824064 0x12BC16: EventLoop::_dispatch(epoll_event const&) (EventLoop.cpp:225)
+             n1: 276824064 0x12BD6D: EventLoop::run() (EventLoop.cpp:251)
+              n0: 276824064 0x10EE7F: main (main.cpp:155)
+      n0: 262144 in 2 places, all below massif's threshold (1.00%)
+ n0: 93796 in 28 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=2
+#-----------
+time=1499490090
+mem_heap_B=210071436
+mem_heap_extra_B=9756
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=3
+#-----------
+time=2389615554
+mem_heap_B=172256884
+mem_heap_extra_B=9716
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=4
+#-----------
+time=3324855546
+mem_heap_B=105410356
+mem_heap_extra_B=5756
+mem_stacks_B=0
+heap_tree=detailed
+n2: 105410356 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 105316352 0x11CBD0: __gnu_cxx::new_allocator<char>::allocate(unsigned long, void const*) (new_allocator.h:127)
+  n1: 105316352 0x11CA4B: __gnu_cxx::__alloc_traits<std::allocator<char>, char>::allocate(std::allocator<char>&, unsigned long) (alloc_traits.h:133)
+   n1: 105316352 0x11C637: std::_Vector_base<char, std::allocator<char> >::_M_allocate(unsigned long) (stl_vector.h:346)
+    n1: 105316352 0x11BE53: char* std::vector<char, std::allocator<char> >::_M_allocate_and_copy<char*>(unsigned long, char*, char*) (stl_vector.h:1511)
+     n2: 105316352 0x11BB55: std::vector<char, std::allocator<char> >::reserve(unsigned long) (vector.tcc:85)
+      n1: 105250816 0x11BA7E: Buffer::_ensureCapacity(unsigned long) (Buffer.cpp:109)
+       n2: 105250816 0x11B576: Buffer::append(char const*, unsigned long) (Buffer.cpp:29)
+        n1: 104857600 0x118630: HttpParser::_parseBody(Buffer&, HttpRequest&) (HttpParser.cpp:588)
+         n1: 104857600 0x115EF7: HttpParser::feed(Connection*) (HttpParser.cpp:240)
+          n1: 104857600 0x12F6CB: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:59)
+           n1: 104857600 0x12FE79: EventLoop::_handleClientEvent(int, unsigned int) (EventLoop_helper_handlers.cpp:260)
+            n1: 104857600 0x12BC16: EventLoop::_dispatch(epoll_event const&) (EventLoop.cpp:225)
+             n1: 104857600 0x12BD6D: EventLoop::run() (EventLoop.cpp:251)
+              n0: 104857600 0x10EE7F: main (main.cpp:155)
+        n0: 393216 in 1 place, below massif's threshold (1.00%)
+      n0: 65536 in 2 places, all below massif's threshold (1.00%)
+ n0: 94004 in 29 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=5
+#-----------
+time=3904048110
+mem_heap_B=138702452
+mem_heap_extra_B=9684
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=6
+#-----------
+time=4607549876
+mem_heap_B=210268060
+mem_heap_extra_B=9796
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=7
+#-----------
+time=5744813503
+mem_heap_B=172256884
+mem_heap_extra_B=9684
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=8
+#-----------
+time=6843364572
+mem_heap_B=67464524
+mem_heap_extra_B=5556
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=9
+#-----------
+time=7553745611
+mem_heap_B=210005620
+mem_heap_extra_B=9684
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=10
+#-----------
+time=8459251442
+mem_heap_B=33712318
+mem_heap_extra_B=5418
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=11
+#-----------
+time=9299495962
+mem_heap_B=33910092
+mem_heap_extra_B=5556
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=12
+#-----------
+time=10139370352
+mem_heap_B=210071452
+mem_heap_extra_B=9788
+mem_stacks_B=0
+heap_tree=detailed
+n2: 210071452 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 209977344 0x11CBD0: __gnu_cxx::new_allocator<char>::allocate(unsigned long, void const*) (new_allocator.h:127)
+  n1: 209977344 0x11CA4B: __gnu_cxx::__alloc_traits<std::allocator<char>, char>::allocate(std::allocator<char>&, unsigned long) (alloc_traits.h:133)
+   n1: 209977344 0x11C637: std::_Vector_base<char, std::allocator<char> >::_M_allocate(unsigned long) (stl_vector.h:346)
+    n1: 209977344 0x11BE53: char* std::vector<char, std::allocator<char> >::_M_allocate_and_copy<char*>(unsigned long, char*, char*) (stl_vector.h:1511)
+     n2: 209977344 0x11BB55: std::vector<char, std::allocator<char> >::reserve(unsigned long) (vector.tcc:85)
+      n1: 209977344 0x11BA7E: Buffer::_ensureCapacity(unsigned long) (Buffer.cpp:109)
+       n2: 209977344 0x11B576: Buffer::append(char const*, unsigned long) (Buffer.cpp:29)
+        n1: 209715200 0x118630: HttpParser::_parseBody(Buffer&, HttpRequest&) (HttpParser.cpp:588)
+         n1: 209715200 0x115EF7: HttpParser::feed(Connection*) (HttpParser.cpp:240)
+          n1: 209715200 0x12F6CB: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:59)
+           n1: 209715200 0x12FE79: EventLoop::_handleClientEvent(int, unsigned int) (EventLoop_helper_handlers.cpp:260)
+            n1: 209715200 0x12BC16: EventLoop::_dispatch(epoll_event const&) (EventLoop.cpp:225)
+             n1: 209715200 0x12BD6D: EventLoop::run() (EventLoop.cpp:251)
+              n0: 209715200 0x10EE7F: main (main.cpp:155)
+        n0: 262144 in 1 place, below massif's threshold (1.00%)
+      n0: 0 in 2 places, all below massif's threshold (1.00%)
+ n0: 94108 in 29 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=13
+#-----------
+time=10619450568
+mem_heap_B=210136988
+mem_heap_extra_B=9788
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=14
+#-----------
+time=11459555189
+mem_heap_B=138702452
+mem_heap_extra_B=9684
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=15
+#-----------
+time=12179633399
+mem_heap_B=210333596
+mem_heap_extra_B=9788
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=16
+#-----------
+time=13259412397
+mem_heap_B=172256884
+mem_heap_extra_B=9684
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=17
+#-----------
+time=13979377114
+mem_heap_B=210333596
+mem_heap_extra_B=9788
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=18
+#-----------
+time=14829612341
+mem_heap_B=172256884
+mem_heap_extra_B=9684
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=19
+#-----------
+time=15385018112
+mem_heap_B=210136988
+mem_heap_extra_B=9788
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=20
+#-----------
+time=16495632065
+mem_heap_B=172256884
+mem_heap_extra_B=9684
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=21
+#-----------
+time=17236014472
+mem_heap_B=210071452
+mem_heap_extra_B=9796
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=22
+#-----------
+time=17976443927
+mem_heap_B=105213260
+mem_heap_extra_B=5556
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=23
+#-----------
+time=18716788282
+mem_heap_B=210333596
+mem_heap_extra_B=9788
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=24
+#-----------
+time=19642213045
+mem_heap_B=105672308
+mem_heap_extra_B=5652
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=25
+#-----------
+time=20197539076
+mem_heap_B=210136988
+mem_heap_extra_B=9796
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=26
+#-----------
+time=20938006342
+mem_heap_B=33910092
+mem_heap_extra_B=5556
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=27
+#-----------
+time=21863529682
+mem_heap_B=210268060
+mem_heap_extra_B=9796
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=28
+#-----------
+time=22418798722
+mem_heap_B=210202524
+mem_heap_extra_B=9788
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=29
+#-----------
+time=23159150484
+mem_heap_B=172256884
+mem_heap_extra_B=9684
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=30
+#-----------
+time=24017177300
+mem_heap_B=210268060
+mem_heap_extra_B=9796
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=31
+#-----------
+time=24622321449
+mem_heap_B=105213260
+mem_heap_extra_B=5556
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=32
+#-----------
+time=25227535756
+mem_heap_B=210268060
+mem_heap_extra_B=9796
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=33
+#-----------
+time=26437736114
+mem_heap_B=33910124
+mem_heap_extra_B=5564
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=34
+#-----------
+time=27042863759
+mem_heap_B=172256916
+mem_heap_extra_B=9676
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=35
+#-----------
+time=27950573606
+mem_heap_B=210268092
+mem_heap_extra_B=9756
+mem_stacks_B=0
+heap_tree=detailed
+n2: 210268092 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 210173952 0x11CBD0: __gnu_cxx::new_allocator<char>::allocate(unsigned long, void const*) (new_allocator.h:127)
+  n1: 210173952 0x11CA4B: __gnu_cxx::__alloc_traits<std::allocator<char>, char>::allocate(std::allocator<char>&, unsigned long) (alloc_traits.h:133)
+   n1: 210173952 0x11C637: std::_Vector_base<char, std::allocator<char> >::_M_allocate(unsigned long) (stl_vector.h:346)
+    n1: 210173952 0x11BE53: char* std::vector<char, std::allocator<char> >::_M_allocate_and_copy<char*>(unsigned long, char*, char*) (stl_vector.h:1511)
+     n2: 210173952 0x11BB55: std::vector<char, std::allocator<char> >::reserve(unsigned long) (vector.tcc:85)
+      n1: 210108416 0x11BA7E: Buffer::_ensureCapacity(unsigned long) (Buffer.cpp:109)
+       n2: 210108416 0x11B576: Buffer::append(char const*, unsigned long) (Buffer.cpp:29)
+        n1: 209715200 0x118630: HttpParser::_parseBody(Buffer&, HttpRequest&) (HttpParser.cpp:588)
+         n1: 209715200 0x115EF7: HttpParser::feed(Connection*) (HttpParser.cpp:240)
+          n1: 209715200 0x12F6CB: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:59)
+           n1: 209715200 0x12FE79: EventLoop::_handleClientEvent(int, unsigned int) (EventLoop_helper_handlers.cpp:260)
+            n1: 209715200 0x12BC16: EventLoop::_dispatch(epoll_event const&) (EventLoop.cpp:225)
+             n1: 209715200 0x12BD6D: EventLoop::run() (EventLoop.cpp:251)
+              n0: 209715200 0x10EE7F: main (main.cpp:155)
+        n0: 393216 in 1 place, below massif's threshold (1.00%)
+      n0: 65536 in 2 places, all below massif's threshold (1.00%)
+ n0: 94140 in 30 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=36
+#-----------
+time=28555701248
+mem_heap_B=121925268
+mem_heap_extra_B=9676
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=37
+#-----------
+time=29463351425
+mem_heap_B=67266782
+mem_heap_extra_B=5410
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=38
+#-----------
+time=30371293853
+mem_heap_B=67464556
+mem_heap_extra_B=5564
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=39
+#-----------
+time=30976410044
+mem_heap_B=210005652
+mem_heap_extra_B=9676
+mem_stacks_B=0
+heap_tree=detailed
+n2: 210005652 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 209911808 0x11CBD0: __gnu_cxx::new_allocator<char>::allocate(unsigned long, void const*) (new_allocator.h:127)
+  n1: 209911808 0x11CA4B: __gnu_cxx::__alloc_traits<std::allocator<char>, char>::allocate(std::allocator<char>&, unsigned long) (alloc_traits.h:133)
+   n1: 209911808 0x11C637: std::_Vector_base<char, std::allocator<char> >::_M_allocate(unsigned long) (stl_vector.h:346)
+    n1: 209911808 0x11BE53: char* std::vector<char, std::allocator<char> >::_M_allocate_and_copy<char*>(unsigned long, char*, char*) (stl_vector.h:1511)
+     n2: 209911808 0x11BB55: std::vector<char, std::allocator<char> >::reserve(unsigned long) (vector.tcc:85)
+      n1: 209715200 0x11BA7E: Buffer::_ensureCapacity(unsigned long) (Buffer.cpp:109)
+       n2: 209715200 0x11B576: Buffer::append(char const*, unsigned long) (Buffer.cpp:29)
+        n1: 209715200 0x118630: HttpParser::_parseBody(Buffer&, HttpRequest&) (HttpParser.cpp:588)
+         n1: 209715200 0x115EF7: HttpParser::feed(Connection*) (HttpParser.cpp:240)
+          n1: 209715200 0x12F6CB: EventLoop::_handleRead(Connection*) (EventLoop_helper_handlers.cpp:59)
+           n1: 209715200 0x12FE79: EventLoop::_handleClientEvent(int, unsigned int) (EventLoop_helper_handlers.cpp:260)
+            n1: 209715200 0x12BC16: EventLoop::_dispatch(epoll_event const&) (EventLoop.cpp:225)
+             n1: 209715200 0x12BD6D: EventLoop::run() (EventLoop.cpp:251)
+              n0: 209715200 0x10EE7F: main (main.cpp:155)
+        n0: 0 in 1 place, below massif's threshold (1.00%)
+      n0: 196608 in 2 places, all below massif's threshold (1.00%)
+ n0: 93844 in 30 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=40
+#-----------
+time=31581791532
+mem_heap_B=210071484
+mem_heap_extra_B=9756
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=41
+#-----------
+time=32186873380
+mem_heap_B=105213292
+mem_heap_extra_B=5564
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=42
+#-----------
+time=33094714330
+mem_heap_B=210333628
+mem_heap_extra_B=9748
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=43
+#-----------
+time=34305049016
+mem_heap_B=210005652
+mem_heap_extra_B=9676
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=44
+#-----------
+time=34910291992
+mem_heap_B=210333628
+mem_heap_extra_B=9748
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=45
+#-----------
+time=36120559749
+mem_heap_B=210268092
+mem_heap_extra_B=9756
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=46
+#-----------
+time=36725778602
+mem_heap_B=105146886
+mem_heap_extra_B=5498
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=47
+#-----------
+time=37638618137
+mem_heap_B=17132908
+mem_heap_extra_B=5564
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=48
+#-----------
+time=38243798661
+mem_heap_B=172256916
+mem_heap_extra_B=9676
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=49
+#-----------
+time=38849046210
+mem_heap_B=210071484
+mem_heap_extra_B=9748
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=50
+#-----------
+time=39329159137
+mem_heap_B=67464572
+mem_heap_extra_B=5548
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=51
+#-----------
+time=39809241412
+mem_heap_B=172256932
+mem_heap_extra_B=9660
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=52
+#-----------
+time=40289398915
+mem_heap_B=210071500
+mem_heap_extra_B=9724
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=53
+#-----------
+time=40769501733
+mem_heap_B=289206
+mem_heap_extra_B=1426
+mem_stacks_B=0
+heap_tree=detailed
+n5: 289206 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 196608 0x11CBD0: __gnu_cxx::new_allocator<char>::allocate(unsigned long, void const*) (new_allocator.h:127)
+  n1: 196608 0x11CA4B: __gnu_cxx::__alloc_traits<std::allocator<char>, char>::allocate(std::allocator<char>&, unsigned long) (alloc_traits.h:133)
+   n1: 196608 0x11C637: std::_Vector_base<char, std::allocator<char> >::_M_allocate(unsigned long) (stl_vector.h:346)
+    n1: 196608 0x11BE53: char* std::vector<char, std::allocator<char> >::_M_allocate_and_copy<char*>(unsigned long, char*, char*) (stl_vector.h:1511)
+     n3: 196608 0x11BB55: std::vector<char, std::allocator<char> >::reserve(unsigned long) (vector.tcc:85)
+      n1: 131072 0x11BA7E: Buffer::_ensureCapacity(unsigned long) (Buffer.cpp:109)
+       n2: 131072 0x11B576: Buffer::append(char const*, unsigned long) (Buffer.cpp:29)
+        n1: 131072 0x133096: writeChunk(Buffer&, char const*, unsigned long) (EventLoop_helper_cgi.cpp:236)
+         n2: 131072 0x133D1E: EventLoop::_handleCgiEvent(int, unsigned int) (EventLoop_helper_cgi.cpp:381)
+          n1: 131072 0x12FC77: EventLoop::_handleWrite(Connection*) (EventLoop_helper_handlers.cpp:187)
+           n1: 131072 0x12FE98: EventLoop::_handleClientEvent(int, unsigned int) (EventLoop_helper_handlers.cpp:266)
+            n1: 131072 0x12BC16: EventLoop::_dispatch(epoll_event const&) (EventLoop.cpp:225)
+             n1: 131072 0x12BD6D: EventLoop::run() (EventLoop.cpp:251)
+              n0: 131072 0x10EE7F: main (main.cpp:155)
+          n0: 0 in 1 place, below massif's threshold (1.00%)
+        n0: 0 in 1 place, below massif's threshold (1.00%)
+      n2: 65536 0x11B89D: Buffer::reset() (Buffer.cpp:82)
+       n2: 65536 0x11B6FF: Buffer::consume(unsigned long) (Buffer.cpp:46)
+        n1: 65536 0x12FFED: EventLoop::_handleCgiStdinEvent(int, unsigned int) (EventLoop_helper_handlers.cpp:302)
+         n1: 65536 0x12BBEE: EventLoop::_dispatch(epoll_event const&) (EventLoop.cpp:219)
+          n1: 65536 0x12BD6D: EventLoop::run() (EventLoop.cpp:251)
+           n0: 65536 0x10EE7F: main (main.cpp:155)
+        n0: 0 in 3 places, all below massif's threshold (1.00%)
+       n0: 0 in 3 places, all below massif's threshold (1.00%)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 72704 0x48FB939: ??? (in /home/fbenalla/.capt/root/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n1: 72704 0x400647D: call_init.part.0 (dl-init.c:70)
+   n1: 72704 0x4006567: call_init (dl-init.c:33)
+    n1: 72704 0x4006567: _dl_init (dl-init.c:117)
+     n1: 72704 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+      n1: 72704 0x1: ???
+       n1: 72704 0x1FFEFFD6CE: ???
+        n0: 72704 0x1FFEFFD6D8: ???
+ n0: 8726 in 27 places, all below massif's threshold (1.00%)
+ n1: 8192 0x4966023: std::basic_filebuf<char, std::char_traits<char> >::_M_allocate_internal_buffer() (in /home/fbenalla/.capt/root/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n2: 8192 0x496A015: std::basic_filebuf<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /home/fbenalla/.capt/root/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+   n1: 8192 0x496A213: std::basic_ofstream<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /home/fbenalla/.capt/root/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+    n1: 8192 0x121061: Logger::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (Logger.cpp:146)
+     n0: 8192 0x10EC57: main (main.cpp:113)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2976 0x11B328: __gnu_cxx::new_allocator<std::_Rb_tree_node<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::allocate(unsigned long, void const*) (new_allocator.h:127)
+  n1: 2976 0x11B1E7: __gnu_cxx::__alloc_traits<std::allocator<std::_Rb_tree_node<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >, std::_Rb_tree_node<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::allocate(std::allocator<std::_Rb_tree_node<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >&, unsigned long) (alloc_traits.h:133)
+   n1: 2976 0x11B0C6: std::_Rb_tree<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::_M_get_node() (stl_tree.h:561)
+    n1: 2976 0x11B017: std::_Rb_tree<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::_M_create_node(std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > const&) (stl_tree.h:583)
+     n1: 2976 0x11AEFD: std::_Rb_tree_node<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >* std::_Rb_tree<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::_Alloc_node::operator()<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >(std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > const&) const (stl_tree.h:529)
+      n1: 2976 0x11AA7A: std::_Rb_tree_iterator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > std::_Rb_tree<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::_M_insert_<std::_Rb_tree<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::_Alloc_node>(std::_Rb_tree_node_base*, std::_Rb_tree_node_base*, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > const&, std::_Rb_tree<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::_Alloc_node&) (stl_tree.h:1784)
+       n1: 2976 0x11A4B1: std::_Rb_tree_iterator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > std::_Rb_tree<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::_M_insert_unique_<std::_Rb_tree<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::_Alloc_node>(std::_Rb_tree_const_iterator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > const&, std::_Rb_tree<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::_Alloc_node&) (stl_tree.h:2237)
+        n1: 2976 0x11A0F5: std::_Rb_tree<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::_M_insert_unique_(std::_Rb_tree_const_iterator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > const&) (stl_tree.h:1146)
+         n1: 2976 0x119961: std::map<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::insert(std::_Rb_tree_iterator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > const&) (stl_map.h:864)
+          n1: 2976 0x11913C: std::map<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::operator[](std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (stl_map.h:505)
+           n0: 2976 in 26 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=54
+#-----------
+time=41249627073
+mem_heap_B=67266798
+mem_heap_extra_B=5410
+mem_stacks_B=0
+heap_tree=empty
