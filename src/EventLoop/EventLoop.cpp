@@ -8,6 +8,7 @@ EventLoop::EventLoop()
     : _epoll_fd(-1)
     , _manager(NULL)
     , _running(false)
+    , _stopped(false)
 {
     _epoll_fd = ::epoll_create(1);
     if (_epoll_fd < 0)
@@ -22,26 +23,42 @@ EventLoop::EventLoop()
 
 EventLoop::~EventLoop()
 {
+    // Clean up all CGI stdin jobs first
+    for (std::map<int, CgiJob*>::iterator sit = _cgi_stdin_jobs.begin();
+         sit != _cgi_stdin_jobs.end(); ++sit)
+    {
+        if (sit->first >= 0)
+            ::close(sit->first);
+    }
+    _cgi_stdin_jobs.clear();
+
+    // Clean up all CGI jobs - close result_fd and kill child processes
     for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
          it != _cgi_jobs.end(); ++it)
     {
         CgiJob* job = it->second;
+        
+        // Close the CGI result fd (read end of pipe)
+        if (it->first >= 0)
+            ::close(it->first);
+        
+        // Kill and reap child process
         if (job->child_pid > 0)
         {
             kill(job->child_pid, SIGKILL);
             int status;
             waitpid(job->child_pid, &status, 0);
         }
+        
+        // Close stdin fd if still open
         if (job->stdin_fd >= 0)
             ::close(job->stdin_fd);
-        std::map<int, CgiJob*>::iterator sit = _cgi_stdin_jobs.find(job->stdin_fd);
-        if (sit != _cgi_stdin_jobs.end())
-            _cgi_stdin_jobs.erase(sit);
+            
         delete job;
     }
     _cgi_jobs.clear();
-    _cgi_stdin_jobs.clear();
 
+    // Clean up all event refs
     for (std::map<int, EventRef*>::iterator it = _event_refs.begin();
          it != _event_refs.end(); ++it)
     {
@@ -49,21 +66,47 @@ EventLoop::~EventLoop()
     }
     _event_refs.clear();
 
+    // Clean up stale refs
     for (size_t i = 0; i < _stale_refs.size(); ++i)
         delete _stale_refs[i];
     _stale_refs.clear();
 
+    // Clean up pending reaps - try to reap all remaining zombies
+    for (size_t i = 0; i < _pending_reap.size(); ++i)
+    {
+        pid_t pid = _pending_reap[i].first;
+        int status;
+        // Try to reap, using WNOHANG to not block
+        pid_t ret = waitpid(pid, &status, WNOHANG);
+        if (ret == 0)
+        {
+            // Still running after WNOHANG, send SIGKILL
+            kill(pid, SIGKILL);
+            // Try to reap a few times in a non-blocking way
+            for (int j = 0; j < 10; ++j)
+            {
+                ret = waitpid(pid, &status, WNOHANG);
+                if (ret != 0)
+                    break;
+            }
+        }
+    }
     _pending_reap.clear();
 
-    for (size_t i = 0; i < _server_fds.size(); ++i)
-        ::close(_server_fds[i]);
+    for (size_t i = 0; i < _server_fds.size(); ++i) {
+        if (_server_fds[i] >= 0) {
+            ::close(_server_fds[i]);
+            _server_fds[i] = -1;
+        }
+    }
     _server_fds.clear();
 
     delete _manager;
-    if (_epoll_fd >= 0)
+    if (_epoll_fd >= 0) {
         ::close(_epoll_fd);
+        _epoll_fd = -1;
+    }
 }
-    
 
 void EventLoop::_unregisterEventFd(int fd)
 {
@@ -151,8 +194,10 @@ void EventLoop::_reapPending()
 
 void EventLoop::_dispatch(const epoll_event& ev)
 {
-    extern void enforce_memory_limit();
-    enforce_memory_limit();
+    if (_stopped)
+        return;
+    // extern void enforce_memory_limit();
+    // enforce_memory_limit();
     EventRef* ref = static_cast<EventRef*>(ev.data.ptr);
     if (!ref || ref->kind == EV_INVALID)
         return;
@@ -200,6 +245,9 @@ void EventLoop::run()
                       << std::strerror(errno) << "\n";
             break;
         }
+        // If stop() was called, don't process more events
+        if (_stopped)
+            break;
         for (int i = 0; i < n; ++i)
             _dispatch(events[i]);
 

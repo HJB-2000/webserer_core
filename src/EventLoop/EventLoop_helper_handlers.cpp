@@ -77,8 +77,8 @@ void EventLoop::_handleRead(Connection* conn)
                 if (_responder.resolveCgiRequest(conn->request(), *conn->config(), cgi))
                 {
                     _ApiStartCgi(conn, cgi);
-                    extern void enforce_memory_limit();
-                    enforce_memory_limit();
+                    // extern void enforce_memory_limit();
+                    // enforce_memory_limit();
                     return;
                 }
 

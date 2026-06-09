@@ -46,29 +46,41 @@ void EventLoop::addServerSocket(int server_fd, const ServerConfig* config)
 }
 
 
-void EventLoop::stop() {
+void EventLoop::stop() 
+{
     _running = false;
+    _stopped = true;
+    
+    // Don't delete EventRefs here - just mark them invalid
+    // The destructor will handle deletion
     for (size_t i = 0; i < _server_fds.size(); ++i) {
         int fd = _server_fds[i];
-        
         if (fd >= 0) {
-            epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-            close(fd);
+            ::epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+            ::close(fd);
+            // Mark as closed to prevent double-close in destructor
+            _server_fds[i] = -1;
+            // Mark EventRef as invalid but don't delete it
+            // (EventRefs may still be referenced by pending events)
             if (_event_refs.count(fd) && _event_refs[fd] != NULL) {
-                delete _event_refs[fd];
-                _event_refs[fd] = NULL;
-                _event_refs.erase(fd);
+                _event_refs[fd]->kind = EV_INVALID;
+                // Don't delete here - destructor will clean up
             }
-            
         }
     }
 
+    for (std::map<int, EventRef*>::iterator it = _event_refs.begin();
+         it != _event_refs.end(); ++it)
+    {
+        if (it->second && it->second->kind != EV_INVALID)
+            it->second->kind = EV_INVALID;
+    }
+
     if (_epoll_fd >= 0) {
-        close(_epoll_fd);
+        ::close(_epoll_fd);
         _epoll_fd = -1;
     }
 }
-
 
 int EventLoop::setNonBlocking(int fd)
 {

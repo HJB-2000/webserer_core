@@ -1,0 +1,18 @@
+printf "%s\n" {1..20} | xargs -P 20 -I {} sh -c '         
+  worker_id="{}"                                  
+  i=1                             
+  payload_path="./100mb_body.txt"
+
+  while [ $i -le 5 ]; do
+    curl -X POST \
+         -H "Content-Type: application/octet-stream" \
+         --data-binary @100mb_body.txt \
+         "http://10.11.5.14:5500/directory/youpla.bla" \
+         -o /dev/null -s -w "Worker $worker_id: Request $i - Status: %{http_code} - Time: %{time_total}s\n"
+    i=$((i + 1))
+  done
+'
+
+curl -X POST http://10.11.5.14:5500/directory/youpla.bla \                                                   130 ↵
+     -H "Content-Type: application/octet-stream" \
+     --data-binary @100mb_body.txt

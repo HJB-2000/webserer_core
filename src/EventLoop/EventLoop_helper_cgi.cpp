@@ -320,20 +320,14 @@ void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
  
 void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
 {
+    if (_stopped)
+        return;
     std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
     if (it == _cgi_jobs.end()) {
-        // std::cerr << "[CGI-DBG] _handleCgiEvent: result_fd=" << result_fd << " NOT IN MAP\n";
         return;
     }
     CgiJob*     job  = it->second;
     Connection* conn = _manager->get(job->client_fd);
- 
-    // std::cerr << "[CGI-DBG] enter: result_fd=" << result_fd
-    //           << " client_fd=" << job->client_fd
-    //           << " headers_sent=" << job->headers_sent
-    //           << " body_written=" << job->body_written
-    //           << " wbuf=" << (conn ? (int)conn->writeBuffer().size() : -1)
-    //           << " events=" << events << "\n";
  
     if (events & (EPOLLERR | EPOLLHUP))
         // std::cerr << "[CGI-DBG] EPOLLERR|EPOLLHUP on result_fd=" << result_fd << "\n";
@@ -415,7 +409,8 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
                 //           << " body_written=" << job->body_written << "\n";
                 return;
             }
- 
+            if (_stopped)
+                return;
             // std::cerr << "[CGI-DBG] read error: result_fd=" << result_fd
             //           << " errno=" << errno << "\n";
             _failCgiJob(result_fd, 502);
@@ -424,6 +419,8 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
     }
     catch (const BodyLimitException&)
     {
+        if (_stopped)
+            return;
         // std::cerr << "[CGI-DBG] BodyLimitException (header > 64KB): result_fd=" << result_fd << "\n";
         _failCgiJob(result_fd, 502);
     }
