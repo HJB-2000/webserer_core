@@ -54,3 +54,11 @@ You call malloc_trim(0) explicitly
 Summary in one sentence
 When you stop the tester, all 20 connection bodies are correctly freed through the destructor chain, the large mmap'd chunks go back to the kernel immediately (hence the big RSS drop), but ~270 MB of smaller arena allocations stay mapped in glibc's heap until malloc_trim(0) or OS pressure forces them back — this is allocator behavior, not a memory leak.
 */
+
+
+/*
+For _handleDelete is the correct way
+    nginx typically disables DELETE by default and requires explicit configuration to enable it. When enabled, it just calls unlink the same way you do — it relies on the OS permission model, not custom permission checking.
+So your implementation is correct — it matches nginx's behavior. The EACCES/EPERM cases in your errno handling would trigger if:
+
+*/
