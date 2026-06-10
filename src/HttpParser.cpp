@@ -233,6 +233,12 @@ void HttpParser::feed(Connection *conn)
     if (conn->request().parse_state == PSTATE_HEADERS)
         _parseHeaders(conn->readBuffer(), conn->request()); 
 
+    if (conn->request().parse_state == PSTATE_HEADERS_DONE)
+    {
+        // Transition to body parsing state - body bytes will be parsed in subsequent calls
+        conn->request().parse_state = PSTATE_BODY;
+    }
+
     if (conn->request().parse_state == PSTATE_BODY) {
         if (conn->request().chunked)
             _parseChunked(conn->readBuffer(), conn->request());
@@ -568,7 +574,7 @@ void HttpParser::_parseHeaders(Buffer& buf, HttpRequest& req)
     if (!req.chunked && req.content_length == 0)
         req.parse_state = PSTATE_COMPLETE;
     else
-        req.parse_state = PSTATE_BODY;
+        req.parse_state = PSTATE_HEADERS_DONE;
 }
 
 void HttpParser::_parseBody(Buffer& buf, HttpRequest& req)

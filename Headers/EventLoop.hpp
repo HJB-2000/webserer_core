@@ -83,6 +83,7 @@ private:
 
     void _handleCgiStdinEvent(int stdin_fd, uint32_t events);
     void _closeCgiStdin(CgiJob* job);
+    void _tryFlushToCgiStdin(CgiJob* job, Connection* conn);
 
     std::map<int, CgiJob*> _cgi_stdin_jobs;
 

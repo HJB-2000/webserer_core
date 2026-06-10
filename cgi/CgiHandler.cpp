@@ -138,15 +138,16 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
         (request.query_string.empty() ? "" : "?" + request.query_string));
     env.push_back("DOCUMENT_ROOT=" + server.getRoot());
 
-    if (!request.body.empty())
+    if (request.content_length > 0)
     {
         std::ostringstream content_length_ss;
-        content_length_ss << request.body.size();
+        content_length_ss << request.content_length;
         env.push_back("CONTENT_TYPE="   + request.header("content-type"));
         env.push_back("CONTENT_LENGTH=" + content_length_ss.str());
     }
-    else
+    else if (request.chunked)
     {
+        // CGI spec: for chunked, pass content-type but omit CONTENT_LENGTH
         std::string ct = request.header("content-type");
         if (!ct.empty())
             env.push_back("CONTENT_TYPE=" + ct);
@@ -280,7 +281,7 @@ bool CgiHandler::startCgi(int write_end)
     if (!validate_env_contract())
     { _error_code = 500; _state = CGI_ERROR; return false; }
 
-    bool need_stdin = !_request.body.empty();
+    bool need_stdin = (_request.content_length > 0 || _request.chunked);
     
     if (need_stdin)
     {

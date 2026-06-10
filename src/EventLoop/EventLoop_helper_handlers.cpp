@@ -30,6 +30,62 @@ void EventLoop::_handleError(Connection* conn)
 }
 
 
+void EventLoop::_tryFlushToCgiStdin(CgiJob* job, Connection* conn)
+{
+    if (!job || job->stdin_fd < 0)
+        return;
+
+    Buffer& body = conn->request().body;
+    while (body.size() > 0)
+    {
+        const char*  data = body.data();
+        const size_t left = body.size();
+
+        ssize_t n = ::write(job->stdin_fd, data, left);
+
+        if (n > 0)
+        {
+            body.consume(static_cast<size_t>(n));
+            job->body_written += static_cast<size_t>(n);
+            continue;
+        }
+
+        if (n < 0)
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                // pipe full — register EV_CGI_STDIN if not already registered
+                if (_cgi_stdin_jobs.find(job->stdin_fd) == _cgi_stdin_jobs.end())
+                {
+                    _cgi_stdin_jobs[job->stdin_fd] = job;
+                    try {
+                        _registerEventFd(job->stdin_fd, EV_CGI_STDIN,
+                                         EPOLLOUT | EPOLLET | EPOLLERR | EPOLLHUP);
+                    }
+                    catch (const std::exception& ex)
+                    {
+                        std::cerr << "[EventLoop] failed to register CGI stdin fd "
+                                  << job->stdin_fd << ": " << ex.what() << "\n";
+                        _closeCgiStdin(job);
+                    }
+                }
+                return;
+            }
+            // write error: close stdin
+            _closeCgiStdin(job);
+            return;
+        }
+    }
+
+    // body fully flushed
+    // if parse is complete and body is done, close stdin
+    if (conn->request().parse_state == PSTATE_COMPLETE)
+    {
+        _closeCgiStdin(job);
+    }
+}
+
+
 void EventLoop::_handleRead(Connection* conn)
 {
     const int fd = conn->fd();
@@ -42,6 +98,13 @@ void EventLoop::_handleRead(Connection* conn)
 
             if (n == 0)
             {
+                // If CGI is running, the client just closed its write side.
+                // Don't kill the CGI - wait for it to produce output.
+                if (conn->state() == CSTATE_CGI_RUNNING)
+                {
+                    conn->setPeerHalfClosed();
+                    break;
+                }
                 _closeClient(fd);
                 return;
             }
@@ -58,7 +121,9 @@ void EventLoop::_handleRead(Connection* conn)
 
             _parser.feed(conn);
 
-            if (conn->request().parse_state == PSTATE_ERROR)
+            ParseState ps = conn->request().parse_state;
+
+            if (ps == PSTATE_ERROR)
             {
                 std::cerr << "[EventLoop] parse error " << conn->request().error_code
                           << " on fd " << fd << "\n";
@@ -69,17 +134,45 @@ void EventLoop::_handleRead(Connection* conn)
                 _rearmClient(fd);
                 return;
             }
-            
-            if (conn->request().parse_state == PSTATE_COMPLETE)
+
+            // Fork CGI as soon as we know it's a CGI request,
+            // whether headers-only (GET) or headers+partial body (POST)
+            if ((ps == PSTATE_HEADERS_DONE || ps == PSTATE_COMPLETE)
+                && conn->state() != CSTATE_CGI_RUNNING)
             {
                 conn->setProcessing();
                 CgiRequestInfo cgi;
                 if (_responder.resolveCgiRequest(conn->request(), *conn->config(), cgi))
                 {
                     _ApiStartCgi(conn, cgi);
-                    return;
+                    // fall through — don't return
                 }
+            }
 
+            if (conn->state() == CSTATE_CGI_RUNNING)
+            {
+                // pump whatever body bytes the parser just decoded into stdin
+                CgiJob* job = NULL;
+                for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
+                     it != _cgi_jobs.end(); ++it)
+                {
+                    if (it->second->client_fd == fd)
+                    {
+                        job = it->second;
+                        break;
+                    }
+                }
+                if (job) _tryFlushToCgiStdin(job, conn);
+                // Only close stdin when body is empty AND parse is complete.
+                // If body not empty, _handleCgiStdinEvent will flush remaining data.
+                if (ps == PSTATE_COMPLETE && job && conn->request().body.size() == 0)
+                    _closeCgiStdin(job);   // signal EOF to child
+                continue;
+            }
+
+            if (ps == PSTATE_COMPLETE)
+            {
+                // non-CGI path
                 _responder.handle(conn->request(),
                                 *conn->config(),
                                 conn->writeBuffer());
@@ -103,7 +196,7 @@ void EventLoop::_handleRead(Connection* conn)
 void EventLoop::_handleWrite(Connection* conn)
 {
     const int fd = conn->fd();
- 
+
     while (!conn->writeBuffer().empty())
     {
         ssize_t n = conn->send();
@@ -190,7 +283,8 @@ void EventLoop::_handleClientEvent(int client_fd, uint32_t events)
 
     if (events & EPOLLRDHUP)
     {
-        if (conn->writeBuffer().empty())
+        // Don't close if CGI is running — we need to wait for CGI output
+        if (conn->writeBuffer().empty() && conn->state() != CSTATE_CGI_RUNNING)
             _closeClient(client_fd);
         else
             conn->setPeerHalfClosed();
@@ -250,5 +344,8 @@ void EventLoop::_handleCgiStdinEvent(int stdin_fd, uint32_t events)
         _closeCgiStdin(job);
         return;
     }
-    _closeCgiStdin(job);
+    // body temporarily empty — more data may still be in flight.
+    // Only close stdin when body is empty AND parse is complete.
+    if (conn->request().parse_state == PSTATE_COMPLETE)
+        _closeCgiStdin(job);
 }

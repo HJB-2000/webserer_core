@@ -132,10 +132,10 @@ void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
         _cgi_jobs[result_read_fd] = job;
     }
     catch (const std::exception& ex) { delete job; throw; }
- 
+
     conn->setCgiRunning();
     _rearmClient(conn->fd());
- 
+
     CgiHandler cgi(conn->request(), *conn->config(), *info.location,
                    info.script_path, conn->get_clientIp());
     bool ok = cgi.startCgi(result_write_fd);
@@ -144,17 +144,9 @@ void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
         int stdin_fd   = cgi.releaseStdinFd();
         if (stdin_fd >= 0) {
             _setCloexec(stdin_fd, "cgi-stdin");
-            job->stdin_fd     = stdin_fd;
-            _cgi_stdin_jobs[stdin_fd] = job;
-            try {
-                _registerEventFd(stdin_fd, EV_CGI_STDIN,
-                                 EPOLLOUT | EPOLLET | EPOLLERR | EPOLLHUP);
-            }
-            catch (const std::exception& ex) {
-                std::cerr << "[EventLoop] failed to register CGI stdin fd "
-                          << stdin_fd << ": " << ex.what() << "\n";
-                _closeCgiStdin(job);
-            }
+            job->stdin_fd = stdin_fd;
+            // Do NOT register EV_CGI_STDIN here - it's done lazily in _tryFlushToCgiStdin
+            // only if the pipe backs up (EAGAIN/EWOULDBLOCK)
         }
     }
     ::close(result_write_fd);
@@ -197,8 +189,15 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
                 {
                     job->result_buffer.append(buf, static_cast<size_t>(n));
                     size_t body_start = findHeaderEnd(job->result_buffer);
+                    // body_start == std::string::npos means no header end yet
+                    // body_start == buf.size() means headers complete but no body yet
+                    // When body_start == buffer.size(), original code falls through
+                    // correctly - flush headers, leftover=0, done.
                     if (body_start == std::string::npos)
+                    {
+                        // Not enough data yet - wait for more
                         continue;
+                    }
                     if (!conn) { _closeCgiJob(result_fd); return; }
                     flushCgiHeaders(job->result_buffer.data(), body_start,
                                     conn->request(), *conn->config(), conn->writeBuffer());
@@ -228,6 +227,33 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
  
             if (n == 0)
             {
+                // CGI process closed stdout.
+                // If we have headers in buffer but haven't flushed them yet,
+                // flush them now (handles headers-only CGI response).
+                if (!job->headers_sent && !job->result_buffer.empty())
+                {
+                    size_t body_start = findHeaderEnd(job->result_buffer);
+                    // body_start != npos means header separator found
+                    // body_start == buffer.size() means headers but no body
+                    // body_start < buffer.size() means headers with body
+                    if (body_start != std::string::npos)
+                    {
+                        // Valid headers found - flush them
+                        if (conn)
+                        {
+                            flushCgiHeaders(job->result_buffer.data(), body_start,
+                                            conn->request(), *conn->config(), conn->writeBuffer());
+                            job->headers_sent = true;
+                            size_t leftover = job->result_buffer.size() - body_start;
+                            if (leftover > 0 && conn->request().method != "HEAD")
+                                writeChunk(conn->writeBuffer(),
+                                           job->result_buffer.data() + body_start, leftover);
+                            job->body_written += leftover;
+                            job->result_buffer.earase();
+                        }
+                    }
+                }
+                // _finishCgiJob handles the terminator, conn rearming, and job cleanup.
                 _finishCgiJob(result_fd);
                 return;
             }
