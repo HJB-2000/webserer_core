@@ -13,7 +13,6 @@ bool EventLoop::_setCloexec(int fd, const char* label)
 
 void EventLoop::_registerEventFd(int fd, EventKind kind, uint32_t events)
 {
-    //we have this problem of leaks
     EventRef* ref = NULL;
     try {
         ref = new EventRef(kind, fd);
@@ -50,21 +49,15 @@ void EventLoop::stop()
 {
     _running = false;
     _stopped = true;
-    
-    // Don't delete EventRefs here - just mark them invalid
-    // The destructor will handle deletion
+
     for (size_t i = 0; i < _server_fds.size(); ++i) {
         int fd = _server_fds[i];
         if (fd >= 0) {
             ::epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
             ::close(fd);
-            // Mark as closed to prevent double-close in destructor
             _server_fds[i] = -1;
-            // Mark EventRef as invalid but don't delete it
-            // (EventRefs may still be referenced by pending events)
             if (_event_refs.count(fd) && _event_refs[fd] != NULL) {
                 _event_refs[fd]->kind = EV_INVALID;
-                // Don't delete here - destructor will clean up
             }
         }
     }

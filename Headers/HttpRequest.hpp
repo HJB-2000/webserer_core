@@ -26,7 +26,6 @@ public:
 
     std::map<std::string, std::string> headers;
 
-    // std::string body;
     Buffer body;
 
     ParseState  parse_state;

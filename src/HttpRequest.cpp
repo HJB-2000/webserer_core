@@ -21,7 +21,6 @@ void HttpRequest::reset()
     version.clear();
     headers.clear();
     body.reset();
-    // { std::string _empty; _empty.swap(body); }
     parse_state     = PSTATE_IDLE;
     content_length  = 0;
     chunked         = false;

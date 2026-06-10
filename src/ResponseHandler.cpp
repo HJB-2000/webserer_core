@@ -118,7 +118,7 @@ void ResponseHandler::handle(
             return;
         }
 
-        if (req.method != "GET" /*&& req.method != "HEAD"*/)
+        if (req.method != "GET")
         {
             _sendErrorInternal(405, req, cfg, wb);
             return;
@@ -219,7 +219,7 @@ void ResponseHandler::handle(
             }
         }
     }
-    if (req.method == "GET"/* || req.method == "HEAD"*/)
+    if (req.method == "GET")
     {
         _serveStaticFile(req, fs_path, cfg, wb);
     }
@@ -423,7 +423,6 @@ void ResponseHandler::_handlePost(
         return;
     }
 
-    // const std::string& body_data = req.body;
     size_t             written   = 0;
     while (written < req.body.size())
     {
@@ -462,11 +461,8 @@ void ResponseHandler::_handleDelete(
     const HttpRequest&  req,
     const ServerConfig& cfg,
     Buffer&             wb)
-{   
-    /*
-        C89/C90 standard (ISO/IEC 9899:1990):
-        4.9.4.1 The remove function
-    */
+{
+
     if (std::remove(fs_path.c_str()) != 0)
     {
         if (errno == ENOENT)

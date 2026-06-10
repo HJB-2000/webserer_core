@@ -1,4 +1,3 @@
-
 #include "Headers/ResponseHandler.hpp"
 
 bool ResponseHandler::resolveCgiRequest(

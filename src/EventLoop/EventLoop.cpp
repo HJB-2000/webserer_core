@@ -23,7 +23,6 @@ EventLoop::EventLoop()
 
 EventLoop::~EventLoop()
 {
-    // Clean up all CGI stdin jobs first
     for (std::map<int, CgiJob*>::iterator sit = _cgi_stdin_jobs.begin();
          sit != _cgi_stdin_jobs.end(); ++sit)
     {
@@ -32,17 +31,14 @@ EventLoop::~EventLoop()
     }
     _cgi_stdin_jobs.clear();
 
-    // Clean up all CGI jobs - close result_fd and kill child processes
     for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
-         it != _cgi_jobs.end(); ++it)
+            it != _cgi_jobs.end(); ++it)
     {
         CgiJob* job = it->second;
         
-        // Close the CGI result fd (read end of pipe)
         if (it->first >= 0)
             ::close(it->first);
         
-        // Kill and reap child process
         if (job->child_pid > 0)
         {
             kill(job->child_pid, SIGKILL);
@@ -50,7 +46,6 @@ EventLoop::~EventLoop()
             waitpid(job->child_pid, &status, 0);
         }
         
-        // Close stdin fd if still open
         if (job->stdin_fd >= 0)
             ::close(job->stdin_fd);
             
@@ -58,7 +53,6 @@ EventLoop::~EventLoop()
     }
     _cgi_jobs.clear();
 
-    // Clean up all event refs
     for (std::map<int, EventRef*>::iterator it = _event_refs.begin();
          it != _event_refs.end(); ++it)
     {
@@ -66,23 +60,18 @@ EventLoop::~EventLoop()
     }
     _event_refs.clear();
 
-    // Clean up stale refs
     for (size_t i = 0; i < _stale_refs.size(); ++i)
         delete _stale_refs[i];
     _stale_refs.clear();
 
-    // Clean up pending reaps - try to reap all remaining zombies
     for (size_t i = 0; i < _pending_reap.size(); ++i)
     {
         pid_t pid = _pending_reap[i].first;
         int status;
-        // Try to reap, using WNOHANG to not block
         pid_t ret = waitpid(pid, &status, WNOHANG);
         if (ret == 0)
         {
-            // Still running after WNOHANG, send SIGKILL
             kill(pid, SIGKILL);
-            // Try to reap a few times in a non-blocking way
             for (int j = 0; j < 10; ++j)
             {
                 ret = waitpid(pid, &status, WNOHANG);
@@ -124,7 +113,7 @@ void EventLoop::_modifyEventFd(int fd, EventKind kind, uint32_t events)
 {
     std::map<int, EventRef*>::iterator it = _event_refs.find(fd);
     if (it == _event_refs.end()) return;
-    if (it->second->kind == EV_INVALID) return; // This silently skips the modify if the fd is already being torn down, 
+    if (it->second->kind == EV_INVALID) return;
     (void)kind;
     epoll_event ev;
     std::memset(&ev, 0, sizeof(ev));
@@ -151,9 +140,6 @@ void EventLoop::_closeClient(int fd)
     _closeCgiJobsForClient(fd);
     _unregisterEventFd(fd);
     _manager->closeConnection(fd);
-    // extern void enforce_memory_limit();
-    // enforce_memory_limit();
-
 }
 
 void EventLoop::_closeTimedOutClients()
@@ -200,8 +186,6 @@ void EventLoop::_dispatch(const epoll_event& ev)
 {
     if (_stopped)
         return;
-    // extern void enforce_memory_limit();
-    // enforce_memory_limit();
     EventRef* ref = static_cast<EventRef*>(ev.data.ptr);
     if (!ref || ref->kind == EV_INVALID)
         return;
@@ -257,7 +241,6 @@ void EventLoop::run()
         for (size_t i = 0; i < _stale_refs.size(); ++i)
             delete _stale_refs[i];
         _stale_refs.clear();
-        // Now RSS reflects fully-collected state for this iteration
         extern void enforce_memory_limit(); // uncomment this to see the role of malloc_trim
         enforce_memory_limit();
         _closeTimedOutClients();

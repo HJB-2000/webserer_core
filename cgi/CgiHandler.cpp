@@ -355,7 +355,7 @@ bool CgiHandler::startCgi(int write_end)
         _exit(127);
     }
 
-    // parent: close body_fd — child has its own fd via dup2
+
     if (need_stdin)
     {
         close_fd(_cgi_in_pipe[0]);
