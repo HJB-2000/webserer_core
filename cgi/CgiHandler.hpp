@@ -38,7 +38,8 @@ class CgiHandler
         bool        validate_env_contract() const;
         void        log_env_once();
 
-        HttpRequest&   _request;
+        HttpRequest&         _request;
+        const Server&        _server;
         const Location&      _location;
         std::string          _script_path;
         pid_t   _child_pid;
