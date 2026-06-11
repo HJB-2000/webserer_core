@@ -94,6 +94,14 @@ void EventLoop::_handleRead(Connection* conn)
     {
         while (true)
         {
+            // Check HWM BEFORE reading more data - prevents unbounded body growth
+            if (conn->state() == CSTATE_CGI_RUNNING)
+            {
+                static const size_t CGI_BODY_HWM = 256 * 1024;
+                if (conn->request().body.size() >= CGI_BODY_HWM)
+                    break;  // Stop reading, let _handleCgiStdinEvent drain first
+            }
+
             ssize_t n = conn->recv();
 
             if (n == 0)
@@ -162,20 +170,13 @@ void EventLoop::_handleRead(Connection* conn)
                         break;
                     }
                 }
-                if (job) _tryFlushToCgiStdin(job, conn);
+                _tryFlushToCgiStdin(job, conn);
                 // Only close stdin when body is empty AND parse is complete.
                 // If body not empty, _handleCgiStdinEvent will flush remaining data.
                 if (ps == PSTATE_COMPLETE && job && conn->request().body.size() == 0)
                     _closeCgiStdin(job);   // signal EOF to child
 
-                // Body high-water-mark: stop draining socket if body buffer
-                // gets too large. This prevents unbounded memory growth when
-                // CGI pipe is backed up. The _handleCgiStdinEvent handler
-                // will resume draining when body drops below LWM.
-                static const size_t CGI_BODY_HWM = 256 * 1024;
-                if (conn->request().body.size() >= CGI_BODY_HWM)
-                    break;  // stop draining socket
-
+                // HWM check is at the top of the while loop - continue to flush
                 continue;
             }
 
