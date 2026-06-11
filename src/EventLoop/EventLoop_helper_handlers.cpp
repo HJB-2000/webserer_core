@@ -190,12 +190,24 @@ void EventLoop::_handleClientEvent(int client_fd, uint32_t events)
 
     if (events & EPOLLRDHUP)
     {
-        if (conn->writeBuffer().empty())
-            _closeClient(client_fd);
+        bool has_active_cgi = false;
+        for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
+            it != _cgi_jobs.end(); ++it)
+        {
+            if (it->second->client_fd == client_fd) 
+            { 
+                has_active_cgi = true; 
+                break; 
+            }
+        }
+        if (conn->writeBuffer().empty() || has_active_cgi)
+            _closeClient(client_fd);   // -> _closeCgiJobsForClientById -> kill+reap+close pipes
         else
             conn->setPeerHalfClosed();
+
         return;
     }
+
 
     if (events & EPOLLIN)
     {
