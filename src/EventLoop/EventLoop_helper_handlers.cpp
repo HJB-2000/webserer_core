@@ -176,10 +176,16 @@ void EventLoop::_handleRead(Connection* conn)
                 if (ps == PSTATE_COMPLETE && job && conn->request().body.size() == 0)
                     _closeCgiStdin(job);   // signal EOF to child
 
-                // HWM check is at the top of the while loop - continue to flush
+                // HWM check AFTER flush - body may have grown during _parser.feed()
+                // This is the critical check that prevents unbounded body growth
+                static const size_t CGI_BODY_HWM = 256 * 1024;
+                if (conn->request().body.size() >= CGI_BODY_HWM)
+                    break;  // Stop draining socket, _handleCgiStdinEvent will resume
+
                 continue;
             }
 
+            // Remove debug - no longer needed
             if (ps == PSTATE_COMPLETE)
             {
                 // non-CGI path
