@@ -363,6 +363,10 @@ bool CgiHandler::startCgi(int write_end)
         int flags = fcntl(_cgi_in_pipe[1], F_GETFL, 0);
         if (flags != -1)
             fcntl(_cgi_in_pipe[1], F_SETFL, flags | O_NONBLOCK);
+
+        // Increase pipe buffer from default 64KB to 1MB to reduce EAGAIN
+        // round-trips when flushing large POST bodies to CGI stdin
+        ::fcntl(_cgi_in_pipe[1], F_SETPIPE_SZ, 1024 * 1024);
     }
 
     _state = CGI_WAITING;
