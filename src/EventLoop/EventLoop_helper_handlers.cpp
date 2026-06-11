@@ -244,7 +244,15 @@ void EventLoop::_handleWrite(Connection* conn)
  
     if (has_active_cgi)
     {
-        if (conn->writeBuffer().size() < CGI_STREAM_LWM)
+        // Check HWM before reading more CGI output - prevents writeBuffer
+        // from growing unbounded when client is slow to drain
+        static const size_t CGI_STREAM_HWM = 256 * 1024;
+        if (conn->writeBuffer().size() >= CGI_STREAM_HWM)
+        {
+            // writeBuffer is backed up - do not read more from CGI yet
+            // The client needs to drain (send) before we read more
+        }
+        else if (conn->writeBuffer().size() < CGI_STREAM_LWM)
         {
             _modifyEventFd(active_cgi_fd, EV_CGI,
                            EPOLLIN | EPOLLET | EPOLLHUP | EPOLLERR);
@@ -252,10 +260,8 @@ void EventLoop::_handleWrite(Connection* conn)
             if (!_manager->get(fd))
                 return;
         }
- 
         conn->setWriting();
         _rearmClient(fd);
- 
         return;
     }
  
