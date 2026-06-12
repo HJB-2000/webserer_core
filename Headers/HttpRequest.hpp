@@ -47,7 +47,9 @@ public:
     bool        keepAlive()                    const;
     bool opened;
     int opened_file;
+    std::string tmp_body_path;
     size_t written;
+    size_t body_file_written;
 };
 
 #endif

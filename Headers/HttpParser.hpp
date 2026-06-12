@@ -13,6 +13,7 @@ public:
 
 private:
 
+    void _applyLocationBodyLimit(Connection* conn);
     void _parseRequestLine(Buffer& buf, HttpRequest& req);
 
     void _parseHeaders(Buffer& buf, HttpRequest& req);

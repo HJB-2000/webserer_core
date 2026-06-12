@@ -42,7 +42,7 @@ static std::string normalizePath(const std::string& path)
             segments.push_back(seg);  
         }  
     }  
-  
+
     std::string result = "/";  
     for (size_t i = 0; i < segments.size(); ++i) {  
         result += segments[i];  
@@ -205,12 +205,12 @@ void ResponseHandler::handle(
         _sendErrorInternal(404, req, cfg, wb);
         return;
     }
-    if (loc && !loc->getCGI_extensions().empty())
+    if (loc && !loc->getCGI_map().empty())
     {
-        const std::vector<std::string>& exts = loc->getCGI_extensions();
-        for (size_t ei = 0; ei < exts.size(); ++ei)
+        const std::map<std::string, std::string>& cgi_map = loc->getCGI_map();
+        for (std::map<std::string, std::string>::const_iterator it = cgi_map.begin(); it != cgi_map.end(); ++it)
         {
-            const std::string& ext = exts[ei];
+            const std::string& ext = it->first;
             if (req.path.size() >= ext.size()
                 && req.path.compare(req.path.size() - ext.size(), ext.size(), ext) == 0)
             {
@@ -272,7 +272,7 @@ void ResponseHandler::_serveStaticFile(
 
     _writeHeaders(200, ct, file_size, "", req, wb);
 
-    
+
     if (req.method == "HEAD")
     {
         ::close(fd);

@@ -139,10 +139,10 @@ void httpConfig::parseDirective(Location &location, const std::string &directive
     }
     else if (directive == "cgi_path")
     {
-        if (values.size() != 1)
+        if (values.empty())
             report_parse_error("Syntax Error: directive", stream, i,
-                "'cgi_path expects a single value' in parseDirective of Location");
-        location.setCGI_path(values[0]);
+                "'cgi_path expects at least one literal value' in parseDirective of Location");
+        location.setCGI_paths(values);
     }
     else if (directive == "cgi_ext")
     {
@@ -181,12 +181,12 @@ void httpConfig::parseDirective(Location &location, const std::string &directive
             if (!safe_strtol(values[j], code_long))
                 report_parse_error("Syntax Error: directive", stream, i,
                     "'Invalid error code' in parseDirective of Location");
-            
+
             int code = static_cast<int>(code_long);
             if (code < 300 || code > 599)
                 report_parse_error("Syntax Error: directive", stream, i,
                     "'Invalid error code' in parseDirective of Location");
-            
+
             location.set_error_page_loc(code, error_path);
         }
     }
@@ -195,12 +195,12 @@ void httpConfig::parseDirective(Location &location, const std::string &directive
         if (values.size() != 2)
             report_parse_error("Syntax Error: directive", stream, i,
                 "'return expects exactly a code and a URL' in parseDirective of Location");
-        
+
         long code_long;
         if (!safe_strtol(values[0], code_long))
             report_parse_error("Syntax Error: directive", stream, i,
                 "'Invalid return code' in parseDirective of Location");
-        
+
         int code = static_cast<int>(code_long);
         if (code < 300 || code >= 400)
             report_parse_error("Syntax Error: directive", stream, i,

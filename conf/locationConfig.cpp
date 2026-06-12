@@ -3,8 +3,9 @@
 Location::Location() :  _path(""),
                         _root(""),
                         _autoindex(false),
-                        _cgi_path(""),
+                        _cgi_paths(),
                         _cgi_extensions(),
+                        _cgi_map(),
                         _upload(""),
                         _return_code(-1),
                         _return_value(""),
@@ -19,8 +20,9 @@ Location::Location(const Location& obj)
     this->_root = obj._root;
     this->_index_Files = obj._index_Files;
     this->_autoindex = obj._autoindex;
-    this->_cgi_path = obj._cgi_path;
+    this->_cgi_paths = obj._cgi_paths;
     this->_cgi_extensions = obj._cgi_extensions;
+    this->_cgi_map = obj._cgi_map;
     this->_upload = obj._upload;
     this->_return_code = obj._return_code;
     this->_return_value = obj._return_value;
@@ -38,8 +40,9 @@ Location::Location(const Server& obj_server)
 
     this->_path = "";
     this->_autoindex = false;
-    this->_cgi_path = "";
+    this->_cgi_paths.clear();
     this->_cgi_extensions.clear();
+    this->_cgi_map.clear();
     this->_upload = "";
     this->_return_code = -1;
     this->_return_value = "";
@@ -56,8 +59,9 @@ Location& Location::operator=(const Location& obj)
         this->_root = obj._root;
         this->_index_Files = obj._index_Files;
         this->_autoindex = obj._autoindex;
-        this->_cgi_path = obj._cgi_path;
+        this->_cgi_paths = obj._cgi_paths;
         this->_cgi_extensions = obj._cgi_extensions;
+        this->_cgi_map = obj._cgi_map;
         this->_upload = obj._upload;
         this->_return_code = obj._return_code;
         this->_return_value = obj._return_value;
@@ -79,8 +83,24 @@ void Location::setIndex_s(const std::string& idx)  { this->_index_Files.push_bac
 void Location::setCGI_extensions(const std::vector<std::string>& extensions)
 {
     this->_cgi_extensions = extensions;
+    this->_cgi_map.clear();
+    if (this->_cgi_paths.size() == this->_cgi_extensions.size())
+    {
+        for (size_t i = 0; i < this->_cgi_extensions.size(); ++i)
+            this->_cgi_map[this->_cgi_extensions[i]] = this->_cgi_paths[i];
+    }
 }
-void Location::setCGI_path(const std::string& path)      { this->_cgi_path = path; }
+void Location::setCGI_paths(const std::vector<std::string>& paths)
+{
+    this->_cgi_paths = paths;
+    this->_cgi_map.clear();
+    if (this->_cgi_paths.size() == this->_cgi_extensions.size())
+    {
+        for (size_t i = 0; i < this->_cgi_extensions.size(); ++i)
+            this->_cgi_map[this->_cgi_extensions[i]] = this->_cgi_paths[i];
+    }
+}
+
 void Location::setUploadStore(const std::string& upload) { this->_upload = upload; }
 void Location::setClientMaxBodySize(long long size)
 {
@@ -110,8 +130,14 @@ std::vector<std::string> Location::getMethods() const             { return _allo
 std::string              Location::getRoot() const                 { return _root; }
 std::vector<std::string> Location::getIndex_s() const             { return _index_Files; }
 bool                     Location::getAutoindex() const            { return _autoindex; }
-const std::vector<std::string>& Location::getCGI_extensions() const { return _cgi_extensions; }
-std::string              Location::getCGI_path() const             { return _cgi_path; }
+const std::map<std::string, std::string>& Location::getCGI_map() const { return _cgi_map; }
+bool                     Location::hasPartialCGIConfig() const
+{
+    if (_cgi_paths.empty() && _cgi_extensions.empty())
+        return false;
+    return _cgi_paths.size() != _cgi_extensions.size()
+        || _cgi_map.size() != _cgi_paths.size();
+}
 std::string              Location::getUploadStore() const          { return _upload; }
 size_t                   Location::getClientMaxBodySize() const    { return static_cast<size_t>(this->_client_max_body_size); }
 int                      Location::getReturnRedirection_code() const   { return _return_code; }
@@ -133,8 +159,9 @@ void Location::set_default_conf(int num)
         this->_autoindex = true;
         this->_allowed_methods.push_back("GET");
         this->_allowed_methods.push_back("POST");
-        this->_cgi_path = "";
+        this->_cgi_paths.clear();
         this->_cgi_extensions.clear();
+        this->_cgi_map.clear();
         this->_upload = "";
         this->_return_code = -1;
         this->_return_value = "";
@@ -152,8 +179,9 @@ void Location::set_default_conf(int num)
         this->_autoindex = false;
         this->_allowed_methods.push_back("POST");
         this->_allowed_methods.push_back("DELETE");
-        this->_cgi_path = "";
+        this->_cgi_paths.clear();
         this->_cgi_extensions.clear();
+        this->_cgi_map.clear();
         this->_upload = "/tmp/uploads";
         this->_return_code = -1;
         this->_return_value = "";
@@ -170,8 +198,9 @@ void Location::set_default_conf(int num)
         this->_index_Files.push_back("index.html");
         this->_autoindex = false;
         this->_allowed_methods.push_back("GET");
-        this->_cgi_path = "";
+        this->_cgi_paths.clear();
         this->_cgi_extensions.clear();
+        this->_cgi_map.clear();
         this->_upload = "";
         this->_return_code = 301;
         this->_return_value = "/";
@@ -190,9 +219,12 @@ void Location::set_default_conf(int num)
         this->_autoindex = false;
         this->_allowed_methods.push_back("GET");
         this->_allowed_methods.push_back("POST");
-        this->_cgi_path = "/usr/bin/python3";
+        this->_cgi_paths.clear();
+        this->_cgi_paths.push_back("/usr/bin/python3");
         this->_cgi_extensions.clear();
         this->_cgi_extensions.push_back(".py");
+        this->_cgi_map.clear();
+        this->_cgi_map[".py"] = "/usr/bin/python3";
         this->_upload = "";
         this->_return_code = -1;
         this->_return_value = "";

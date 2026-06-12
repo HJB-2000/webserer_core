@@ -51,6 +51,7 @@ private:
     void _handleError(Connection* conn);
     void _handleRead(Connection* conn);
     void _handleWrite(Connection* conn);
+    bool _tryDispatchComplete(Connection* conn);
 
     bool                _isServerFd(int fd) const;
     const ServerConfig* _configForServer(int fd) const;

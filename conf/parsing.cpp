@@ -13,11 +13,11 @@
 void check_valid_content(std::stringstream &buff)
 {
     std::string str = buff.str();
-    
+
     for (size_t i = 0; i < str.size(); i++)
     {
         unsigned char c = static_cast<unsigned char>(str[i]);
-        
+
         if (c == 9 || c == 10 || c == 13 || (c >= 32 && c <= 126))
             continue;
         buff.clear();
@@ -210,7 +210,7 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
         {
             Location& loc = locs[l];
             std::string loc_id = server_id + " [" + loc.getPath() + "]";
-            
+
             if (!is_directory(loc.getRoot())) 
             {
                 throw std::runtime_error(std::string("[fatal]" + server_id + ": Location root not found: " + loc.getRoot()));
@@ -224,7 +224,7 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
                 std::cerr << "[WARN] at [-------location--------] " << loc_id
                           << ": Client_max_body_size missing, inheriting " << inherited << std::endl;
             }
-            
+
             std::vector<std::string> idxs = loc.getIndex_s();
             for (size_t i = 0; i < idxs.size(); ++i) 
             {
@@ -234,15 +234,24 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
                 }
             }
 
-            if (!loc.getCGI_path().empty() || !loc.getCGI_extensions().empty()) 
+            if (loc.hasPartialCGIConfig())
             {
-                if (loc.getCGI_path().empty() || loc.getCGI_extensions().empty()) 
+                throw std::runtime_error(std::string("[fatal]" + loc_id + ": CGI requires the same number of paths and extensions."));
+            }
+
+            const std::map<std::string, std::string>& cgi_map = loc.getCGI_map();
+            for (std::map<std::string, std::string>::const_iterator it = cgi_map.begin(); it != cgi_map.end(); ++it)
+            {
+                std::string ext = it->first;
+                std::string path = it->second;
+
+                if (ext.empty() || path.empty())
                 {
-                    throw std::runtime_error(std::string("[fatal]" + loc_id + ": CGI requires both path and extension."));
+                    throw std::runtime_error(std::string("[fatal]" + loc_id + ": CGI map contains an empty extension or binary path."));
                 }
-                if (!is_executable(loc.getCGI_path())) 
+                if (!is_executable(path))
                 {
-                    throw std::runtime_error(std::string("[fatal]" + loc_id + ": CGI binary not executable: " + loc.getCGI_path()));
+                    throw std::runtime_error(std::string("[fatal]" + loc_id + ": CGI binary not executable for " + ext + " : " + path));
                 }
             }
 
@@ -268,7 +277,7 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
                     if (!has_post)
                        throw std::runtime_error(std::string("[fatal]" + loc_id + ": upload_path requires POST in allowed_methods"));
                 }
-                
+
             }
             std::map<int, std::string> l_errs = loc.get_error_page_loc();
             for (std::map<int, std::string>::const_iterator it = l_errs.begin(); it != l_errs.end(); ++it) 

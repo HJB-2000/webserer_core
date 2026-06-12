@@ -31,6 +31,12 @@ void EventLoop::_handleError(Connection* conn)
 
 #include <string>
 #include <sstream>
+#include <fcntl.h>
+#include <unistd.h>
+#include <ctime>
+#include <cstdio>
+#include <cerrno>
+#include <cstring>
 
 std::string int_to_string(int number) {
     std::ostringstream oss;
@@ -38,9 +44,227 @@ std::string int_to_string(int number) {
     return oss.str();
 }
 
+static bool pathRequiresCgiBodySpool(const HttpRequest& req,
+                                     const ServerConfig& cfg)
+{
+    const Location* loc = cfg.matchLocation(req.path);
+    if (!loc || loc->getCGI_map().empty())
+    { 
+        return false; 
+    }
+
+    const std::map<std::string, std::string>& exts = loc->getCGI_map();
+    for (std::map<std::string, std::string>::const_iterator it = exts.begin(); it != exts.end(); ++it)
+    {
+        const std::string& ext = it->first;
+        if (req.path.size() >= ext.size()
+            && req.path.compare(req.path.size() - ext.size(), ext.size(), ext) == 0)
+            return true;
+    }
+    return false;
+}
+
+static bool isBodyFullySpooled(Connection* conn)
+{
+    const HttpRequest& req = conn->request();
+
+    if (!req.expectsBody())
+        return true;
+
+    if (pathRequiresCgiBodySpool(req, *conn->config()))
+    {
+        if (!req.body.empty())
+            return false;
+        if (req.parse_state != PSTATE_COMPLETE)
+            return false;
+        if (req.body_file_written == 0 || req.body_file_written != req.written)
+            return false;
+        if (req.content_length > 0 && req.body_file_written < req.content_length)
+            return false;
+        return true;
+    }
+
+    if (req.chunked)
+        return req.parse_state == PSTATE_COMPLETE;
+    if (req.content_length > 0)
+        return req.written >= req.content_length;
+    if (req.method == "POST")
+        return req.parse_state == PSTATE_COMPLETE && req.written > 0;
+    return true;
+}
+
+static void cleanupBodyTmpFile(HttpRequest& req)
+{
+    if (req.opened_file >= 0)
+    {
+        ::close(req.opened_file);
+        req.opened_file = -1;
+    }
+    if (!req.tmp_body_path.empty())
+    {
+        ::unlink(req.tmp_body_path.c_str());
+        req.tmp_body_path.clear();
+    }
+    req.opened = false;
+}
+
+static void finalizeBodyTmpFile(Connection* conn)
+{
+    HttpRequest& req = conn->request();
+
+    if (!req.opened || req.opened_file < 0 || req.body_file_written == 0)
+        return;
+
+    if (::ftruncate(req.opened_file,
+                    static_cast<off_t>(req.body_file_written)) < 0)
+    {
+        std::cerr << "[CGI-Pipeline] ftruncate failed: "
+                  << std::strerror(errno) << "\n";
+    }
+    ::lseek(req.opened_file, 0, SEEK_SET);
+}
+
+static void resumeBodyIfNeeded(Connection* conn)
+{
+    HttpRequest& req = conn->request();
+
+    if (req.parse_state != PSTATE_COMPLETE)
+        return;
+
+    if (req.content_length > 0 && req.body_file_written < req.content_length)
+    {
+        std::cerr << "[CGI-Pipeline] Resuming body capture ("
+                  << req.body_file_written << "/" << req.content_length
+                  << " bytes on disk).\n";
+        req.parse_state = PSTATE_BODY;
+        return;
+    }
+
+    if (!req.chunked && req.content_length == 0
+        && (req.method == "POST")
+        && !conn->readBuffer().empty())
+    {
+        std::cerr << "[CGI-Pipeline] Resuming POST body capture from read buffer.\n";
+        req.parse_state = PSTATE_BODY;
+    }
+}
+
+static void maybeCompletePostWithoutLength(Connection* conn)
+{
+    HttpRequest& req = conn->request();
+
+    if (req.parse_state != PSTATE_BODY || req.chunked || req.content_length > 0)
+        return;
+    if (req.method != "POST")
+        return;
+    if (req.written == 0 || !conn->readBuffer().empty())
+        return;
+
+    req.parse_state = PSTATE_COMPLETE;
+}
+
+static void flushRequestBodyToTmpFile(Connection* conn)
+{
+    HttpRequest& req = conn->request();
+
+    if (req.body.empty())
+        return;
+
+    if (req.max_body_size > 0
+        && req.body_file_written + req.body.size() > req.max_body_size)
+    {
+        req.parse_state = PSTATE_ERROR;
+        req.error_code  = 413;
+        return;
+    }
+
+    if (!req.opened)
+    {
+        std::ostringstream name;
+        name << "/tmp/webserv_" << static_cast<long>(::getpid())
+             << "_" << conn->conn_num
+             << "_" << static_cast<long>(std::time(NULL));
+        req.tmp_body_path = name.str();
+        req.opened_file = ::open(req.tmp_body_path.c_str(),
+                                 O_RDWR | O_CREAT | O_TRUNC, 0600);
+        if (req.opened_file < 0)
+        {
+            std::cerr << "[EventLoop] tmp file open failed: "
+                      << std::strerror(errno) << "\n";
+            req.tmp_body_path.clear();
+            std::exit(112);
+        }
+        req.opened = true;
+    }
+
+    size_t offset = 0;
+    while (offset < req.body.size())
+    {
+        ssize_t n = ::write(req.opened_file,
+                            req.body.data() + offset,
+                            req.body.size() - offset);
+        if (n < 0)
+        {
+            std::cerr << "[EventLoop] tmp file write failed: "
+                      << std::strerror(errno) << "\n";
+            std::exit(112);
+        }
+        if (n == 0)
+            break;
+        offset += static_cast<size_t>(n);
+    }
+    req.body_file_written += offset;
+    req.body.reset(); //  the problem was here should be restet not earase
+    // std::cerr << "[CGI-Pipeline] Written chunk to temp file. Total processed so far: "
+    //           << req.body_file_written << " bytes.\n";
+}
+
+bool EventLoop::_tryDispatchComplete(Connection* conn)
+{
+    const int fd = conn->fd();
+
+    if (conn->request().parse_state != PSTATE_COMPLETE)
+        return false;
+    if (!isBodyFullySpooled(conn))
+        return false;
+
+    conn->setProcessing();
+    if (pathRequiresCgiBodySpool(conn->request(), *conn->config()))
+        finalizeBodyTmpFile(conn);
+
+    CgiRequestInfo cgi;
+    if (_responder.resolveCgiRequest(conn->request(), *conn->config(), cgi))
+    {
+        if (conn->request().body_file_written > 0
+            && conn->request().opened_file < 0)
+        {
+            std::cerr << "[CGI-Pipeline] ERROR: body expected but no temp file fd.\n";
+            _responder.sendError(500, *conn->config(), conn->writeBuffer());
+            conn->setWriting();
+            _rearmClient(fd);
+            return true;
+        }
+        std::cerr << "[CGI-Pipeline] Body spooled: " << conn->request().body_file_written
+                  << " bytes. Passing fd = " << conn->request().opened_file
+                  << " to CgiHandler.\n";
+        _ApiStartCgi(conn, cgi);
+        return true;
+    }
+
+    cleanupBodyTmpFile(conn->request());
+
+    _responder.handle(conn->request(), *conn->config(), conn->writeBuffer());
+    conn->setWriting();
+    _rearmClient(fd);
+    return true;
+}
+
 void EventLoop::_handleRead(Connection* conn)
 {
     const int fd = conn->fd();
+
+    if (conn->state() == CSTATE_CGI_RUNNING)
+        return;
 
     try
     {
@@ -50,6 +274,16 @@ void EventLoop::_handleRead(Connection* conn)
 
             if (n == 0)
             {
+                HttpRequest& req = conn->request();
+                if (req.parse_state == PSTATE_BODY && !req.chunked
+                    && req.content_length == 0 && req.written > 0
+                    && pathRequiresCgiBodySpool(req, *conn->config()))
+                {
+                    flushRequestBodyToTmpFile(conn);
+                    req.parse_state = PSTATE_COMPLETE;
+                    if (_tryDispatchComplete(conn))
+                        return;
+                }
                 _closeClient(fd);
                 return;
             }
@@ -57,13 +291,19 @@ void EventLoop::_handleRead(Connection* conn)
             if (n < 0)
             {
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
+                {
+                    maybeCompletePostWithoutLength(conn);
+                    if (pathRequiresCgiBodySpool(conn->request(), *conn->config()))
+                        flushRequestBodyToTmpFile(conn);
                     break;
+                }
                 std::cerr << "[EventLoop] recv error on fd " << fd
                           << ": " << std::strerror(errno) << "\n";
                 _closeClient(fd);
                 return;
             }
 
+            resumeBodyIfNeeded(conn);
             _parser.feed(conn);
 
             if (conn->request().parse_state == PSTATE_ERROR)
@@ -78,67 +318,25 @@ void EventLoop::_handleRead(Connection* conn)
                 return;
             }
 
-            if (conn->request().parse_state == PSTATE_BODY)
+            if ((conn->request().parse_state == PSTATE_BODY ||
+                 conn->request().parse_state == PSTATE_COMPLETE)
+                && pathRequiresCgiBodySpool(conn->request(), *conn->config()))
             {
-                if (!conn->request().opened)
-                {
-                    std::string name = "tmp_" + int_to_string(conn->conn_num);
-                    std::cerr << "====> " << name << std::endl;
-                    conn->request().opened_file = ::open(name.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0600);
-                    if (conn->request().opened_file < 0)
-                    {
-                        std::cerr << "[ResponseHandler] tmp file open failed: "
-                                << std::strerror(errno) << "\n";
-                        std::exit(112);
-                    }
-                    conn->request().opened = true;
-                }
-                
-                if(conn->request().opened)
-                {
-
-                    size_t n = ::write(conn->request().opened_file, conn->request().body.data(), conn->request().body.size());
-                    if (n < 0)
-                    {
-                            std::cerr << "[ResponseHandler] tmp file open failed: "
-                            << std::strerror(errno) << "\n";
-                            std::exit(112);
-                    }
-                    else if(n > 0)
-                    {
-                        // conn->request().body.reset();
-                    }
-                }
+                flushRequestBodyToTmpFile(conn);
             }
 
+            maybeCompletePostWithoutLength(conn);
 
-            if (conn->request().parse_state == PSTATE_COMPLETE)
-            {
-                conn->setProcessing();
-                lseek(conn->request().opened_file, 0, SEEK_SET);
-                CgiRequestInfo cgi;
-                if (_responder.resolveCgiRequest(conn->request(), *conn->config(), cgi))
-                {
-                    _ApiStartCgi(conn, cgi);
-                    ::close(conn->request().opened_file);
-                    conn->request().opened = false;
-                    conn->request().opened_file = -1;
-                    return;
-                }
-
-                _responder.handle(conn->request(),
-                                *conn->config(),
-                                conn->writeBuffer());
-
-                conn->setWriting();
-                _rearmClient(fd);
+            if (_tryDispatchComplete(conn))
                 return;
-            }
         }
+
+        if (_tryDispatchComplete(conn))
+            return;
     }
     catch (const BodyLimitException&)
     {
-        std::cerr << "[EventLoop] body limit exceeded on fd " << fd << "\n";
+        std::cerr << "-------[EventLoop] body limit exceeded on fd---------- " << fd << "\n";
         conn->request().headers["connection"] = "close";
         _responder.sendError(413, *conn->config(), conn->writeBuffer());
         conn->setWriting();
