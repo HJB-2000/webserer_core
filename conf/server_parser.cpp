@@ -197,7 +197,7 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
             report_parse_error("Syntax Error: directive ", stream, i,
                 "'client_max_body_size expects a single value' in parseDirective of server");
         long long tmp = parse_cl_mx_bd_sz(values[0]);
-        
+
         if (tmp == -1 || tmp > MAX_CLIENT_BODY_SIZE_LIMIT)
         {
             report_parse_error("Syntax Error", stream, i,
@@ -214,7 +214,7 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
         if (!safe_strtol(values[0], tmp_long))
             report_parse_error("Syntax Error: directive ", stream, i,
                 "'Invalid value of timeout' in parseDirective of server");
-        
+
         int tmp = static_cast<int>(tmp_long);
         if (tmp <= 0 || tmp > 3600)
             report_parse_error("Syntax Error: directive ", stream, i,
@@ -233,7 +233,7 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
             if (!safe_strtol(values[j], code_long))
                 report_parse_error("Syntax Error: directive ", stream, i,
                     "'Invalid error code' in parseDirective of server");
-            
+
             int code = static_cast<int>(code_long);
             if (code < 300 || code > 599)
                 report_parse_error("Syntax Error: directive ", stream, i,
@@ -329,7 +329,7 @@ void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexem
     for (size_t idx = 0; idx < locs.size(); ++idx)
     {
         bool is_redirect = (locs[idx].getReturnRedirection_code() != -1);
-        bool is_cgi      = (!locs[idx].getCGI_path().empty() && !locs[idx].getCGI_extensions().empty());
+        bool is_cgi      = (!locs[idx].getCGI_map().empty());
         if (!is_redirect && !is_cgi)
             validate_index_filenames(locs[idx].getIndex_s(), stream_lexems, i,
                                      ("parsServer/location[" + locs[idx].getPath() + "]/index").c_str());

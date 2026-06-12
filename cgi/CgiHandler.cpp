@@ -138,10 +138,16 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
         (request.query_string.empty() ? "" : "?" + request.query_string));
     env.push_back("DOCUMENT_ROOT=" + server.getRoot());
 
-    if (!request.body.empty())
+    size_t payload_size = request.body_file_written;
+    if (payload_size == 0)
+        payload_size = request.written;
+    if (payload_size == 0 && !request.body.empty())
+        payload_size = request.body.size();
+
+    if (payload_size > 0 || request.expectsBody())
     {
         std::ostringstream content_length_ss;
-        content_length_ss << request.body.size();
+        content_length_ss << payload_size;
         env.push_back("CONTENT_TYPE="   + request.header("content-type"));
         env.push_back("CONTENT_LENGTH=" + content_length_ss.str());
     }
@@ -176,7 +182,13 @@ CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const L
 {
     _cgi_in_pipe[0] = -1;
     _cgi_in_pipe[1] = -1;
+    _body_fd = -1;
     filling_meta_variables(request, config, location);
+}
+
+void CgiHandler::setBodyFd(int fd)
+{
+    _body_fd = fd;
 }
 
 void CgiHandler::close_fd(int& fd_pipe)
@@ -246,8 +258,29 @@ static bool resolve_path(const std::string& path,
 
 bool CgiHandler::startCgi(int write_end)
 {
-    std::string cgi_path = _location.getCGI_path();
-    if (cgi_path.empty()) { _error_code = 500; _state = CGI_ERROR; return false; }
+    // std::string cgi_path = _location.getCGI_path();
+    // if (cgi_path.empty()) { _error_code = 500; _state = CGI_ERROR; return false; }
+
+
+    size_t dot_pos = _script_path.find_last_of(".");
+    if (dot_pos == std::string::npos)
+    {
+        _error_code = 400;
+        _state = CGI_ERROR;
+        return false; 
+    }
+    std::string script_ext = _script_path.substr(dot_pos);
+    const std::map<std::string, std::string>& cgi_map = _location.getCGI_map();
+    std::map<std::string, std::string>::const_iterator it = cgi_map.find(script_ext);
+    if (it == cgi_map.end())
+    {
+        _error_code = 501;
+        _state = CGI_ERROR; 
+        return false; 
+    }
+    std::string cgi_path = it->second;
+    // std::cerr << "---cgi_path" << cgi_path << "!!!" << "\n";
+
 
     // Resolve cgi_path - try location root first, then server root
     std::string resolved_cgi;
@@ -280,29 +313,8 @@ bool CgiHandler::startCgi(int write_end)
     if (!validate_env_contract())
     { _error_code = 500; _state = CGI_ERROR; return false; }
 
-    bool need_stdin = (_request.chunked || _request.content_length > 0);
-    
-    // if (need_stdin)
-    // {
-        // if (::pipe(_cgi_in_pipe) == -1)
-        // {
-        //     _error_code = 500;
-        //     _state = CGI_ERROR;
-        //     return false;
-        // }
-        
-        // if (::fcntl(_cgi_in_pipe[0], F_SETFD, FD_CLOEXEC) == -1 ||
-        // ::fcntl(_cgi_in_pipe[1], F_SETFD, FD_CLOEXEC) == -1)
-        // {
-        //     ::close(_cgi_in_pipe[0]);
-        //     ::close(_cgi_in_pipe[1]);
-        //     _cgi_in_pipe[0] = -1;
-        //     _cgi_in_pipe[1] = -1;
-        //     _error_code = 500;
-        //     _state = CGI_ERROR;
-        //     return false;
-        // }
-    // }
+    bool need_stdin = (_request.chunked || _request.content_length > 0
+                       || _request.body_file_written > 0 || _body_fd >= 0);
 
     _child_pid = fork();
     if (_child_pid < 0) {
@@ -323,15 +335,37 @@ bool CgiHandler::startCgi(int write_end)
 
         if (dup2(write_end, STDOUT_FILENO) == -1) _exit(1);
 
-        int devnull_w = open("/dev/null", O_WRONLY);
-        if (devnull_w < 0) _exit(1);
-        if (dup2(devnull_w, STDERR_FILENO) == -1) { close(devnull_w); _exit(1); }
-        close(devnull_w);
-
-        if (need_stdin)
+        if (need_stdin && _body_fd >= 0)
         {
-            if (dup2(_request.opened_file, STDIN_FILENO) == -1)
+            struct stat sb;
+            if (fstat(_body_fd, &sb) == 0) {
+                std::cerr << "[CGI-Child] TEMP FILE DEBUG:" << std::endl;
+                std::cerr << "[CGI-Child]   - fd: " << _body_fd << std::endl;
+                std::cerr << "[CGI-Child]   - file size: " << sb.st_size << " bytes" << std::endl;
+                std::cerr << "[CGI-Child]   - st_blocks: " << sb.st_blocks << " (512-byte blocks)" << std::endl;
+                std::cerr << "[CGI-Child]   - bytes on disk: " << (sb.st_blocks * 512) << " bytes" << std::endl;
+            }
+            std::cerr << "[CGI-Child] Calling dup2(temp_fd=" << _body_fd << ", STDIN)" << std::endl;
+            if (dup2(_body_fd, STDIN_FILENO) == -1)
                 _exit(1);
+            std::cerr << "[CGI-Child] dup2 succeeded, STDIN now points to temp file fd" << std::endl;
+            if (_body_fd != STDIN_FILENO) {
+                ::close(_body_fd);
+                std::cerr << "[CGI-Child] Closed original temp fd " << _body_fd << std::endl;
+            }
+            std::cerr << "[CGI-Child] About to execute CGI script..." << std::endl;
+        }
+        else if (need_stdin)
+        {
+            int devnull_r = open("/dev/null", O_RDONLY);
+            if (devnull_r < 0)
+                _exit(1);
+            if (dup2(devnull_r, STDIN_FILENO) == -1)
+            {
+                close(devnull_r);
+                _exit(1);
+            }
+            close(devnull_r);
         }
         else
         {
@@ -346,6 +380,11 @@ bool CgiHandler::startCgi(int write_end)
             close(devnull_r);
         }
 
+        int devnull_w = open("/dev/null", O_WRONLY);
+        if (devnull_w < 0) _exit(1);
+        if (dup2(devnull_w, STDERR_FILENO) == -1) { close(devnull_w); _exit(1); }
+        close(devnull_w);
+
         close(write_end);
         char* argv[3];
         argv[0] = const_cast<char*>(cgi_path.c_str());
@@ -356,14 +395,6 @@ bool CgiHandler::startCgi(int write_end)
         _exit(127);
     }
 
-
-    // if (need_stdin)
-    // {
-    //     close_fd(_cgi_in_pipe[0]);
-    //     int flags = fcntl(_cgi_in_pipe[1], F_GETFL, 0);
-    //     if (flags != -1)
-    //         fcntl(_cgi_in_pipe[1], F_SETFL, flags | O_NONBLOCK);
-    // }
 
     _state = CGI_WAITING;
     return true;

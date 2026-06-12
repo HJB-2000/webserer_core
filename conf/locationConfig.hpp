@@ -21,8 +21,8 @@ class Location
         void setPath(std::string path);
         void setMethods(std::string method);
         void setRoot(const std::string& root);
-    void setCGI_extensions(const std::vector<std::string>& extensions);
-        void setCGI_path(const std::string& path);
+        void setCGI_extensions(const std::vector<std::string>& extensions);
+        void setCGI_paths(const std::vector<std::string>& paths);
         void setIndex_s(const std::string& index_s);
         void setAutoindex(const std::string& autoindex);
         void setUploadStore(const std::string& upload);
@@ -35,8 +35,8 @@ class Location
         std::string getRoot() const;
         std::vector<std::string> getIndex_s() const;
         bool getAutoindex() const;
-    const std::vector<std::string>& getCGI_extensions() const;
-        std::string getCGI_path() const;
+        const std::map<std::string, std::string>& getCGI_map() const;
+        bool hasPartialCGIConfig() const;
         std::string getUploadStore() const;
         size_t getClientMaxBodySize() const;
         int getReturnRedirection_code() const;
@@ -53,8 +53,9 @@ class Location
         std::vector<std::string> _index_Files;
         bool _autoindex;
         std::vector<std::string> _allowed_methods;
-        std::string _cgi_path;
+        std::vector<std::string> _cgi_paths;
         std::vector<std::string> _cgi_extensions;
+        std::map<std::string, std::string> _cgi_map;
         std::string _upload;
         int _return_code;
         std::string _return_value;

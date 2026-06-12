@@ -1,5 +1,6 @@
 #include "Headers/HttpRequest.hpp"
 #include <cctype>
+#include <unistd.h>
 
 HttpRequest::HttpRequest(size_t client_max_body_size)
     : body(client_max_body_size)
@@ -14,6 +15,7 @@ HttpRequest::HttpRequest(size_t client_max_body_size)
     , opened(false)
     , opened_file(-1)
     , written(0)
+    , body_file_written(0)
 {}
 
 void HttpRequest::reset()
@@ -24,6 +26,18 @@ void HttpRequest::reset()
     version.clear();
     headers.clear();
     body.reset();
+    if (opened_file >= 0)
+    {
+        ::close(opened_file);
+        opened_file = -1;
+    }
+    if (!tmp_body_path.empty())
+    {
+        ::unlink(tmp_body_path.c_str());
+        tmp_body_path.clear();
+    }
+    opened            = false;
+    body_file_written = 0;
     parse_state     = PSTATE_IDLE;
     content_length  = 0;
     chunked         = false;
@@ -32,6 +46,7 @@ void HttpRequest::reset()
     _chunk_trailing = false;
     _chunk_done     = false;
     max_body_size   = 0;
+    written         = 0;
 }
 
 std::string HttpRequest::header(const std::string& key) const
@@ -43,7 +58,11 @@ std::string HttpRequest::header(const std::string& key) const
 
 bool HttpRequest::expectsBody() const
 {
-    return (content_length > 0 || chunked);
+    if (content_length > 0 || chunked)
+        return true;
+    if (method == "POST" || method == "PUT" || method == "PATCH")
+        return true;
+    return false;
 }
 
 bool HttpRequest::keepAlive() const

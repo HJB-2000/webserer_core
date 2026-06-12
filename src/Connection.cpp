@@ -62,6 +62,7 @@ void Connection::reset()
     _read_buffer.setMaxSize(server_default);  
     _write_buffer.setMaxSize(server_default);  
     _request.reset();
+    _request.body.setMaxSize(server_default);
     _state             = CSTATE_READING;
     _peer_half_closed  = false;
     _touchActive();

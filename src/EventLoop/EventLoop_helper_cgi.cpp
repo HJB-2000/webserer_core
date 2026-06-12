@@ -1,6 +1,7 @@
 #include "Headers/EventLoop.hpp"
 #include "cgi/CgiHandler.hpp"
 #include <sstream>
+#include <unistd.h>
  
 static const size_t CGI_HEADER_BUF_LIMIT = 64 * 1024;
 static const size_t CGI_STREAM_HWM       = 256 * 1024;
@@ -132,14 +133,40 @@ void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
         _cgi_jobs[result_read_fd] = job;
     }
     catch (const std::exception& ex) { delete job; throw; }
- 
+
     conn->setCgiRunning();
     _rearmClient(conn->fd());
- 
+
+    int body_fd_to_pass = conn->request().opened_file;
+    std::cerr << "[CGI-Setup] Passing temp fd " << body_fd_to_pass 
+              << " to child for client fd " << conn->fd() << "\n";
+
     CgiHandler cgi(conn->request(), *conn->config(), *info.location,
                    info.script_path, conn->get_clientIp());
+    if (body_fd_to_pass >= 0)
+        cgi.setBodyFd(body_fd_to_pass);
     bool ok = cgi.startCgi(result_write_fd);
-    ::close(result_write_fd);  // ← always close write end in parent
+    
+    // Parent closes its end of CGI stdout pipe
+    ::close(result_write_fd);
+    std::cerr << "[CGI-Setup] Parent closed CGI stdout write end (fd " << result_write_fd << ")\n";
+
+    // Parent closes the temp file fd - this is the key cleanup!
+    if (body_fd_to_pass >= 0)
+    {
+        ::close(body_fd_to_pass);
+        std::cerr << "[CGI-Setup] Parent closed temp file fd " << body_fd_to_pass 
+                  << " (was passed to child via dup2)\n";
+        conn->request().opened_file = -1;
+        conn->request().opened      = false;
+    }
+    if (!conn->request().tmp_body_path.empty())
+    {
+        ::unlink(conn->request().tmp_body_path.c_str());
+        std::cerr << "[CGI-Setup] Parent unlinked temp file: " 
+                  << conn->request().tmp_body_path << "\n";
+        conn->request().tmp_body_path.clear();
+    }
 
     if (ok) {
         job->child_pid = cgi.getChildPid();

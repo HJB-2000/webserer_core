@@ -207,6 +207,26 @@ bool validate_host(std::string& host_value, uint16_t& port_out)
 }
 
 #include <iostream>
+
+void HttpParser::_applyLocationBodyLimit(Connection* conn)
+{
+    HttpRequest& req = conn->request();
+    if (req.path.empty())
+        return;
+
+    size_t limit = conn->config()->getMaxBody();
+    const Location* loc = conn->config()->matchLocation(req.path);
+    if (loc && loc->getClientMaxBodySize() > 0)
+        limit = loc->getClientMaxBodySize();
+
+    if (limit == 0)
+        limit = 1048576;
+
+    req.max_body_size = limit;
+    req.body.setMaxSize(limit);
+    conn->readBuffer().setMaxSize(limit);
+}
+
 void HttpParser::feed(Connection *conn)
 {
     if (conn->request().parse_state == PSTATE_COMPLETE ||
@@ -219,21 +239,15 @@ void HttpParser::feed(Connection *conn)
     if (conn->request().parse_state == PSTATE_REQUEST_LINE)
     {
         _parseRequestLine(conn->readBuffer(), conn->request());
-        const Location* loc = conn->config()->matchLocation(conn->request().path);    
-        if (loc && loc->getClientMaxBodySize() > 0)  
-        {
-            conn->request().max_body_size = loc->getClientMaxBodySize();    
-        }  
-        else
-        {
-            conn->request().max_body_size = conn->config()->getMaxBody();  
-        }    
+        if (conn->request().parse_state != PSTATE_REQUEST_LINE)
+            _applyLocationBodyLimit(conn);
     }
 
     if (conn->request().parse_state == PSTATE_HEADERS)
-        _parseHeaders(conn->readBuffer(), conn->request()); 
+        _parseHeaders(conn->readBuffer(), conn->request());
 
     if (conn->request().parse_state == PSTATE_BODY) {
+        _applyLocationBodyLimit(conn);
         if (conn->request().chunked)
             _parseChunked(conn->readBuffer(), conn->request());
         else
@@ -566,7 +580,12 @@ void HttpParser::_parseHeaders(Buffer& buf, HttpRequest& req)
     }
 
     if (!req.chunked && req.content_length == 0)
-        req.parse_state = PSTATE_COMPLETE;
+    {
+        if (req.method == "POST" || req.method == "PUT" || req.method == "PATCH")
+            req.parse_state = PSTATE_BODY;
+        else
+            req.parse_state = PSTATE_COMPLETE;
+    }
     else
         req.parse_state = PSTATE_BODY;
 }
@@ -575,12 +594,29 @@ void HttpParser::_parseBody(Buffer& buf, HttpRequest& req)
 {
     if (buf.size() == 0) return;
 
+    if (req.content_length == 0 && !req.chunked)
+    {
+        size_t to_read = buf.size();
+        if (req.written + to_read > req.max_body_size)
+        {
+            std::cerr << "---------------------[HttpParser] body limit exceeded on fd 11111 ----------------" << "\n";
+            req.parse_state = PSTATE_ERROR;
+            req.error_code  = 413;
+            return;
+        }
+        req.body.append(buf.data(), to_read);
+        buf.consume(to_read);
+        req.written += to_read;
+        return;
+    }
+    
     size_t already   = req.written;
     size_t needed    = req.content_length - already;
     size_t available = buf.size();
     size_t to_read   = (needed < available) ? needed : available;
     if (req.written + to_read > req.max_body_size)  
     {  
+        std::cerr << "---------------------[HttpParser] body limit exceeded on fd 222222 ----------------"  << "\n";
         req.parse_state = PSTATE_ERROR;  
         req.error_code = 413;  
         return;  
@@ -637,6 +673,8 @@ void HttpParser::_parseChunked(Buffer& buf, HttpRequest& req)
                 }
                 const size_t MAX_ALLOWED_CHUNK = 1073741824ULL; 
                 if (chunk_sz > (MAX_ALLOWED_CHUNK / 16)) {
+                std::cerr << "---------------------[HttpParser] body limit exceeded on fd 9999999 ----------------" << "\n";
+
                     req.parse_state = PSTATE_ERROR; 
                     req.error_code = 413; 
                     return;  
@@ -681,8 +719,12 @@ void HttpParser::_parseChunked(Buffer& buf, HttpRequest& req)
 
         size_t to_read =
             (req._chunk_size < buf.size()) ? req._chunk_size : buf.size();
-        if (req.body.size() + to_read > req.max_body_size)  
-        {  
+        
+        if (req.written + to_read > req.max_body_size)  
+        {
+            std::cerr << "req.max_body_size |||| = " << req.max_body_size << "\n";
+            std::cerr << "req.written + to_read |||| = " << req.written + to_read<< "\n";
+            std::cerr << "---------------------[HttpParser] body limit exceeded on fd 333333 ----------------"<< "\n";
             req.parse_state = PSTATE_ERROR;  
             req.error_code = 413;  
             return;  

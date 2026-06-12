@@ -24,6 +24,7 @@ class CgiHandler
         CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path, const std::string& client_ip);
         ~CgiHandler();
 
+        void      setBodyFd(int fd);
         bool      startCgi(int write_end);
         CgiState  getState()        const;
         int       getErrorCode()    const;
@@ -44,6 +45,7 @@ class CgiHandler
         std::string          _script_path;
         pid_t   _child_pid;
         int     _cgi_in_pipe[2];
+        int     _body_fd;
         CgiState     _state;
         int          _error_code;
         std::vector<std::string>  _meta_env;
