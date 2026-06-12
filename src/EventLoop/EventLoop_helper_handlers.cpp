@@ -29,6 +29,14 @@ void EventLoop::_handleError(Connection* conn)
     _closeClient(fd);
 }
 
+#include <string>
+#include <sstream>
+
+std::string int_to_string(int number) {
+    std::ostringstream oss;
+    oss << number;
+    return oss.str();
+}
 
 void EventLoop::_handleRead(Connection* conn)
 {
@@ -69,14 +77,52 @@ void EventLoop::_handleRead(Connection* conn)
                 _rearmClient(fd);
                 return;
             }
-            
+
+            if (conn->request().parse_state == PSTATE_BODY)
+            {
+                if (!conn->request().opened)
+                {
+                    std::string name = "tmp_" + int_to_string(conn->conn_num);
+                    std::cerr << "====> " << name << std::endl;
+                    conn->request().opened_file = ::open(name.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0600);
+                    if (conn->request().opened_file < 0)
+                    {
+                        std::cerr << "[ResponseHandler] tmp file open failed: "
+                                << std::strerror(errno) << "\n";
+                        std::exit(112);
+                    }
+                    conn->request().opened = true;
+                }
+                
+                if(conn->request().opened)
+                {
+
+                    size_t n = ::write(conn->request().opened_file, conn->request().body.data(), conn->request().body.size());
+                    if (n < 0)
+                    {
+                            std::cerr << "[ResponseHandler] tmp file open failed: "
+                            << std::strerror(errno) << "\n";
+                            std::exit(112);
+                    }
+                    else if(n > 0)
+                    {
+                        // conn->request().body.reset();
+                    }
+                }
+            }
+
+
             if (conn->request().parse_state == PSTATE_COMPLETE)
             {
                 conn->setProcessing();
+                lseek(conn->request().opened_file, 0, SEEK_SET);
                 CgiRequestInfo cgi;
                 if (_responder.resolveCgiRequest(conn->request(), *conn->config(), cgi))
                 {
                     _ApiStartCgi(conn, cgi);
+                    ::close(conn->request().opened_file);
+                    conn->request().opened = false;
+                    conn->request().opened_file = -1;
                     return;
                 }
 

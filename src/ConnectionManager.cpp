@@ -46,6 +46,7 @@ ConnectionManager::~ConnectionManager()
 
 int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
 {
+    static int counter = 0;
     struct sockaddr_storage client_addr;
     socklen_t addr_len = sizeof(client_addr);
 
@@ -70,7 +71,9 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
         ::close(client_fd);
         return -1;
     }
-    Connection* conn = new Connection(client_fd, config);   
+    Connection* conn = new Connection(client_fd, config);
+    conn->conn_num =  counter;
+    counter++;
     std::string client_ip = addrToString(client_addr);
     conn->setClientIp(client_ip);
     if (_connections.count(client_fd))

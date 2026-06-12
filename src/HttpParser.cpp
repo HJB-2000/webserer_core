@@ -575,11 +575,11 @@ void HttpParser::_parseBody(Buffer& buf, HttpRequest& req)
 {
     if (buf.size() == 0) return;
 
-    size_t already   = req.body.size();
+    size_t already   = req.written;
     size_t needed    = req.content_length - already;
     size_t available = buf.size();
     size_t to_read   = (needed < available) ? needed : available;
-    if (req.body.size() + to_read > req.max_body_size)  
+    if (req.written + to_read > req.max_body_size)  
     {  
         req.parse_state = PSTATE_ERROR;  
         req.error_code = 413;  
@@ -587,8 +587,8 @@ void HttpParser::_parseBody(Buffer& buf, HttpRequest& req)
     } 
     req.body.append(buf.data(), to_read);
     buf.consume(to_read);
-    
-    if (req.body.size() == req.content_length)
+    req.written += to_read;
+    if (req.written == req.content_length)
     {
         buf.earase();
         req.parse_state = PSTATE_COMPLETE;
@@ -689,6 +689,7 @@ void HttpParser::_parseChunked(Buffer& buf, HttpRequest& req)
         }  
         req.body.append(buf.data(), to_read);
         buf.consume(to_read);
+        req.written += to_read;
         req._chunk_size -= to_read;
 
         if (req._chunk_size == 0) {

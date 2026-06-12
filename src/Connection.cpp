@@ -4,7 +4,8 @@
 #include <iostream>
 
 Connection::Connection(int fd, const ServerConfig* config)
-    : _fd(fd)
+    : conn_num(0)
+    , _fd(fd)
     , _config(config)
     , _read_buffer(config->getMaxBody())
     , _write_buffer(config->getMaxBody())

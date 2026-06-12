@@ -45,6 +45,9 @@ public:
     std::string header(const std::string& key) const;
     bool        expectsBody()                  const;
     bool        keepAlive()                    const;
+    bool opened;
+    int opened_file;
+    size_t written;
 };
 
 #endif

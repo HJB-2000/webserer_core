@@ -11,6 +11,9 @@ HttpRequest::HttpRequest(size_t client_max_body_size)
     , _chunk_size(0)
     , _chunk_trailing(false)
     , _chunk_done(false)
+    , opened(false)
+    , opened_file(-1)
+    , written(0)
 {}
 
 void HttpRequest::reset()

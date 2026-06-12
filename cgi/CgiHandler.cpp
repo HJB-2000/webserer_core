@@ -280,32 +280,33 @@ bool CgiHandler::startCgi(int write_end)
     if (!validate_env_contract())
     { _error_code = 500; _state = CGI_ERROR; return false; }
 
-    bool need_stdin = !_request.body.empty();
+    bool need_stdin = (_request.chunked || _request.content_length > 0);
     
-    if (need_stdin)
-    {
-        if (::pipe(_cgi_in_pipe) == -1)
-        {
-            _error_code = 500;
-            _state = CGI_ERROR;
-            return false;
-        }
+    // if (need_stdin)
+    // {
+        // if (::pipe(_cgi_in_pipe) == -1)
+        // {
+        //     _error_code = 500;
+        //     _state = CGI_ERROR;
+        //     return false;
+        // }
         
-        if (::fcntl(_cgi_in_pipe[0], F_SETFD, FD_CLOEXEC) == -1 ||
-        ::fcntl(_cgi_in_pipe[1], F_SETFD, FD_CLOEXEC) == -1)
-        {
-            ::close(_cgi_in_pipe[0]);
-            ::close(_cgi_in_pipe[1]);
-            _cgi_in_pipe[0] = -1;
-            _cgi_in_pipe[1] = -1;
-            _error_code = 500;
-            _state = CGI_ERROR;
-            return false;
-        }
-    }
+        // if (::fcntl(_cgi_in_pipe[0], F_SETFD, FD_CLOEXEC) == -1 ||
+        // ::fcntl(_cgi_in_pipe[1], F_SETFD, FD_CLOEXEC) == -1)
+        // {
+        //     ::close(_cgi_in_pipe[0]);
+        //     ::close(_cgi_in_pipe[1]);
+        //     _cgi_in_pipe[0] = -1;
+        //     _cgi_in_pipe[1] = -1;
+        //     _error_code = 500;
+        //     _state = CGI_ERROR;
+        //     return false;
+        // }
+    // }
 
     _child_pid = fork();
-    if (_child_pid < 0) { _error_code = 500; _state = CGI_ERROR; return false; }
+    if (_child_pid < 0) {
+         _error_code = 500; _state = CGI_ERROR; return false; }
 
     if (_child_pid == 0)
     {
@@ -329,7 +330,7 @@ bool CgiHandler::startCgi(int write_end)
 
         if (need_stdin)
         {
-            if (dup2(_cgi_in_pipe[0], STDIN_FILENO) == -1)
+            if (dup2(_request.opened_file, STDIN_FILENO) == -1)
                 _exit(1);
         }
         else
@@ -356,13 +357,13 @@ bool CgiHandler::startCgi(int write_end)
     }
 
 
-    if (need_stdin)
-    {
-        close_fd(_cgi_in_pipe[0]);
-        int flags = fcntl(_cgi_in_pipe[1], F_GETFL, 0);
-        if (flags != -1)
-            fcntl(_cgi_in_pipe[1], F_SETFL, flags | O_NONBLOCK);
-    }
+    // if (need_stdin)
+    // {
+    //     close_fd(_cgi_in_pipe[0]);
+    //     int flags = fcntl(_cgi_in_pipe[1], F_GETFL, 0);
+    //     if (flags != -1)
+    //         fcntl(_cgi_in_pipe[1], F_SETFL, flags | O_NONBLOCK);
+    // }
 
     _state = CGI_WAITING;
     return true;

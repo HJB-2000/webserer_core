@@ -139,58 +139,133 @@ void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
     CgiHandler cgi(conn->request(), *conn->config(), *info.location,
                    info.script_path, conn->get_clientIp());
     bool ok = cgi.startCgi(result_write_fd);
+    ::close(result_write_fd);  // ← always close write end in parent
+
     if (ok) {
         job->child_pid = cgi.getChildPid();
-        int stdin_fd   = cgi.releaseStdinFd();
-        if (stdin_fd >= 0) {
-            _setCloexec(stdin_fd, "cgi-stdin");
-            job->stdin_fd     = stdin_fd;
-            _cgi_stdin_jobs[stdin_fd] = job;
-            try {
-                _registerEventFd(stdin_fd, EV_CGI_STDIN,
-                                 EPOLLOUT | EPOLLET | EPOLLERR | EPOLLHUP);
-            }
-            catch (const std::exception& ex) {
-                std::cerr << "[EventLoop] failed to register CGI stdin fd "
-                          << stdin_fd << ": " << ex.what() << "\n";
-                _closeCgiStdin(job);
-            }
-        }
-    }
-    ::close(result_write_fd);
-    if (!ok) {
+    } else {
         _closeCgiJob(result_read_fd);
         _responder.sendError(500, *conn->config(), conn->writeBuffer());
-        conn->setWriting(); _rearmClient(conn->fd());
+        conn->setWriting();
+        _rearmClient(conn->fd());
     }
 }
+
+// void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
+// {
+//     if (_stopped)
+//         return;
+//     std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
+//     if (it == _cgi_jobs.end()) {
+//         return;
+//     }
+//     CgiJob*     job  = it->second;
+//     Connection* conn = _manager->get(job->client_fd);
+    
+//     if (events & (EPOLLERR | EPOLLHUP))
+ 
+//     if (conn && job->headers_sent &&
+//         conn->writeBuffer().size() >= CGI_STREAM_HWM)
+//     {
+//         return;
+//     }
+ 
+//     char buf[16 * 1024];
+//     try
+//     {
+//         while (true)
+//         {
+//             ssize_t n = ::read(result_fd, buf, sizeof(buf));
+ 
+//             if (n > 0)
+//             {
+//                 if (!job->headers_sent)
+//                 {
+//                     job->result_buffer.append(buf, static_cast<size_t>(n));
+//                     size_t body_start = findHeaderEnd(job->result_buffer);
+//                     if (body_start == std::string::npos)
+//                         continue;
+//                     if (!conn) { _closeCgiJob(result_fd); return; }
+//                     flushCgiHeaders(job->result_buffer.data(), body_start,
+//                                     conn->request(), *conn->config(), conn->writeBuffer());
+//                     job->headers_sent = true;
+//                     size_t leftover = job->result_buffer.size() - body_start;
+//                     if (leftover > 0 && conn->request().method != "HEAD")
+//                         writeChunk(conn->writeBuffer(),
+//                                    job->result_buffer.data() + body_start, leftover);
+//                     job->body_written += leftover;
+//                     job->result_buffer.earase();
+//                     conn->setWriting();
+//                     _rearmClient(conn->fd());
+//                 }
+//                 else
+//                 {
+//                     if (!conn) { _closeCgiJob(result_fd); return; }
+//                     if (conn->request().method != "HEAD")
+//                         writeChunk(conn->writeBuffer(), buf, static_cast<size_t>(n));
+//                     job->body_written += static_cast<size_t>(n);
+//                     if (conn->writeBuffer().size() >= CGI_STREAM_HWM)
+//                     {
+//                         return;
+//                     }
+//                 }
+//                 continue;
+//             }
+ 
+//             if (n == 0)
+//             {
+//                 _finishCgiJob(result_fd);
+//                 return;
+//             }
+ 
+//             if (errno == EAGAIN || errno == EWOULDBLOCK)
+//             {
+//                 return;
+//             }
+//             if (_stopped)
+//                 return;
+//             _failCgiJob(result_fd, 502);
+//             return;
+//         }
+//     }
+//     catch (const BodyLimitException&)
+//     {
+//         if (_stopped)
+//             return;
+//         _failCgiJob(result_fd, 502);
+//     }
+// }
  
 void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
 {
     if (_stopped)
         return;
+
     std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
-    if (it == _cgi_jobs.end()) {
+    if (it == _cgi_jobs.end())
         return;
-    }
+
     CgiJob*     job  = it->second;
     Connection* conn = _manager->get(job->client_fd);
- 
+
+    if (!conn) { _closeCgiJob(result_fd); return; }
+
     if (events & (EPOLLERR | EPOLLHUP))
- 
-    if (conn && job->headers_sent &&
-        conn->writeBuffer().size() >= CGI_STREAM_HWM)
     {
-        return;
+        // drain remaining data, then read returns 0 -> _finishCgiJob
     }
- 
+
+    if (job->headers_sent &&
+        conn->writeBuffer().size() >= CGI_STREAM_HWM)
+        return;
+
     char buf[16 * 1024];
     try
     {
         while (true)
         {
             ssize_t n = ::read(result_fd, buf, sizeof(buf));
- 
+
             if (n > 0)
             {
                 if (!job->headers_sent)
@@ -199,45 +274,52 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
                     size_t body_start = findHeaderEnd(job->result_buffer);
                     if (body_start == std::string::npos)
                         continue;
-                    if (!conn) { _closeCgiJob(result_fd); return; }
+
                     flushCgiHeaders(job->result_buffer.data(), body_start,
-                                    conn->request(), *conn->config(), conn->writeBuffer());
+                                    conn->request(), *conn->config(),
+                                    conn->writeBuffer());
                     job->headers_sent = true;
+
                     size_t leftover = job->result_buffer.size() - body_start;
                     if (leftover > 0 && conn->request().method != "HEAD")
                         writeChunk(conn->writeBuffer(),
-                                   job->result_buffer.data() + body_start, leftover);
+                                   job->result_buffer.data() + body_start,
+                                   leftover);
                     job->body_written += leftover;
                     job->result_buffer.earase();
                     conn->setWriting();
                     _rearmClient(conn->fd());
+
+                    if (conn->writeBuffer().size() >= CGI_STREAM_HWM)
+                        return;
                 }
                 else
                 {
-                    if (!conn) { _closeCgiJob(result_fd); return; }
                     if (conn->request().method != "HEAD")
-                        writeChunk(conn->writeBuffer(), buf, static_cast<size_t>(n));
+                        writeChunk(conn->writeBuffer(), buf,
+                                   static_cast<size_t>(n));
                     job->body_written += static_cast<size_t>(n);
+                    conn->setWriting();
+                    _rearmClient(conn->fd());
+
                     if (conn->writeBuffer().size() >= CGI_STREAM_HWM)
-                    {
                         return;
-                    }
                 }
                 continue;
             }
- 
+
             if (n == 0)
             {
                 _finishCgiJob(result_fd);
                 return;
             }
- 
+
             if (errno == EAGAIN || errno == EWOULDBLOCK)
-            {
                 return;
-            }
+
             if (_stopped)
                 return;
+
             _failCgiJob(result_fd, 502);
             return;
         }
@@ -249,4 +331,3 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
         _failCgiJob(result_fd, 502);
     }
 }
- 

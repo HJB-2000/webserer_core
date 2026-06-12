@@ -202,11 +202,11 @@ void EventLoop::_dispatch(const epoll_event& ev)
         return;
     }
 
-    if (ref->kind == EV_CGI_STDIN)
-    {
-        _handleCgiStdinEvent(ref->fd, ev.events);
-        return;
-    }
+    // if (ref->kind == EV_CGI_STDIN)
+    // {
+    //     _handleCgiStdinEvent(ref->fd, ev.events);
+    //     return;
+    // }
 
     if (ref->kind == EV_CLIENT)
     {
