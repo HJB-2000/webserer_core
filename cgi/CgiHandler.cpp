@@ -287,38 +287,38 @@ bool CgiHandler::startCgi(int write_end)
     std::string loc_root = _location.getRoot();
     std::string srv_root = _server.getRoot();
     if (!resolve_path(cgi_path, loc_root, srv_root, resolved_cgi))
-    { _error_code = 500; _state = CGI_ERROR; return false; }
+    { _request.error_code = 500; _state = CGI_ERROR; return false; }
     cgi_path = resolved_cgi;
 
     struct stat sb_cgi;
     if (stat(cgi_path.c_str(), &sb_cgi) != 0 || !S_ISREG(sb_cgi.st_mode) ||
         access(cgi_path.c_str(), X_OK) != 0)
-    { _error_code = 500; _state = CGI_ERROR; return false; }
+    { _request.error_code = 500; _state = CGI_ERROR; return false; }
 
     std::string script_file = _script_path;
-    if (script_file.empty()) { _error_code = 404; _state = CGI_ERROR; return false; }
+    if (script_file.empty()) { _request.error_code = 404; _state = CGI_ERROR; return false; }
 
     // Resolve script_file - try location root first, then server root
     std::string resolved_script;
     if (!resolve_path(script_file, loc_root, srv_root, resolved_script))
-    { _error_code = 404; _state = CGI_ERROR; return false; }
+    { _request.error_code = 404; _state = CGI_ERROR; return false; }
     script_file = resolved_script;
 
     struct stat sb_script;
     if (stat(script_file.c_str(), &sb_script) != 0)
-    { _error_code = 404; _state = CGI_ERROR; return false; }
+    { _request.error_code = 404; _state = CGI_ERROR; return false; }
     if (!S_ISREG(sb_script.st_mode) || access(script_file.c_str(), R_OK) != 0)
-    { _error_code = 403; _state = CGI_ERROR; return false; }
+    { _request.error_code = 403; _state = CGI_ERROR; return false; }
 
     if (!validate_env_contract())
-    { _error_code = 500; _state = CGI_ERROR; return false; }
+    { _request.error_code = 500; _state = CGI_ERROR; return false; }
 
     bool need_stdin = (_request.chunked || _request.content_length > 0
                        || _request.body_file_written > 0 || _body_fd >= 0);
 
     _child_pid = fork();
     if (_child_pid < 0) {
-         _error_code = 500; _state = CGI_ERROR; return false; }
+         _request.error_code = 500; _state = CGI_ERROR; return false; }
 
     if (_child_pid == 0)
     {

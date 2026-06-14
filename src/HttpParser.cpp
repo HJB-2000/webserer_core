@@ -221,7 +221,13 @@ void HttpParser::_applyLocationBodyLimit(Connection* conn)
 
     if (limit == 0)
         limit = 1048576;
-
+    // if (conn->request().content_length
+    //     && conn->request().content_length > limit)
+    // {
+    //     conn->request().parse_state = PSTATE_ERROR;
+    //     conn->request().error_code = 413;
+    //     return;
+    // }
     req.max_body_size = limit;
     req.body.setMaxSize(limit);
     conn->readBuffer().setMaxSize(limit);
@@ -245,9 +251,10 @@ void HttpParser::feed(Connection *conn)
 
     if (conn->request().parse_state == PSTATE_HEADERS)
         _parseHeaders(conn->readBuffer(), conn->request());
-
+    _applyLocationBodyLimit(conn);
+    // if(conn->request().parse_state == PSTATE_ERROR)
+    //     return;
     if (conn->request().parse_state == PSTATE_BODY) {
-        _applyLocationBodyLimit(conn);
         if (conn->request().chunked)
             _parseChunked(conn->readBuffer(), conn->request());
         else
@@ -453,7 +460,7 @@ void HttpParser::_parseRequestLine(Buffer& buf, HttpRequest& req)
         req.query_string.clear();
     }
     if (req.path.empty()) req.path = "/";
-
+    
     buf.consume(static_cast<size_t>(p - cursor));
     req.parse_state = PSTATE_HEADERS;
 }

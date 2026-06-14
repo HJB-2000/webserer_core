@@ -106,6 +106,4 @@ void EventLoop::_closeCgiStdin(CgiJob* job)
     _unregisterEventFd(fd);
     ::close(fd);
     job->stdin_fd     = -1;
-    // job->stdin_offset = 0;
-    // { std::string _empty; _empty.swap(job->stdin_body); }
 }

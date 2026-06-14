@@ -95,6 +95,11 @@ void ConnectionManager::closeConnection(int fd)
                   << ") — fd not in map\n";
         return;
     }
+    if(_connections[fd]->request().opened_file > 0)
+    {
+        ::close(_connections[fd]->request().opened_file);
+        ::remove(_connections[fd]->request().tmp_body_path.c_str());
+    }
     ::epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
     _destroy(fd);
     std::cerr << "[ConnectionManager] closed fd " << fd << "\n";

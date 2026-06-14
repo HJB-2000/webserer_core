@@ -3,6 +3,7 @@
 #include "Headers/EventLoop.hpp"
 #include "Headers/HttpParser.hpp"
 #include "Headers/ResponseHandler.hpp"
+#include <cstdio>        
 
 EventLoop::EventLoop()
     : _epoll_fd(-1)
@@ -53,9 +54,17 @@ EventLoop::~EventLoop()
     }
     _cgi_jobs.clear();
 
+    
     for (std::map<int, EventRef*>::iterator it = _event_refs.begin();
          it != _event_refs.end(); ++it)
     {
+        Connection* conn = _manager->get(it->second->fd);
+        if (conn && conn->request().opened_file > 0)
+        {
+            
+            std::remove(conn->request().tmp_body_path.c_str());
+            ::close(conn->request().opened_file);
+        }
         delete it->second;
     }
     _event_refs.clear();
@@ -149,6 +158,7 @@ void EventLoop::_closeTimedOutClients()
     {
         std::cerr << "[EventLoop] timeout — closing client fd " << stale[i] << "\n";
         _closeClient(stale[i]);
+        
     }
 }
 

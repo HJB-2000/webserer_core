@@ -172,7 +172,7 @@ void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
         job->child_pid = cgi.getChildPid();
     } else {
         _closeCgiJob(result_read_fd);
-        _responder.sendError(500, *conn->config(), conn->writeBuffer());
+        _responder.sendError(conn->request().error_code, *conn->config(), conn->writeBuffer());
         conn->setWriting();
         _rearmClient(conn->fd());
     }

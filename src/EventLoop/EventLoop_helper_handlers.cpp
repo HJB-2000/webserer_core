@@ -115,13 +115,10 @@ static void finalizeBodyTmpFile(Connection* conn)
     if (!req.opened || req.opened_file < 0 || req.body_file_written == 0)
         return;
 
-    if (::ftruncate(req.opened_file,
-                    static_cast<off_t>(req.body_file_written)) < 0)
-    {
-        std::cerr << "[CGI-Pipeline] ftruncate failed: "
-                  << std::strerror(errno) << "\n";
-    }
-    ::lseek(req.opened_file, 0, SEEK_SET);
+    ::close(req.opened_file);
+    req.opened_file = ::open(req.tmp_body_path.c_str(), O_RDONLY);
+    if (req.opened_file < 0)
+        std::cerr << "[CGI-Pipeline] open failed: " << std::strerror(errno) << "\n";
 }
 
 static void resumeBodyIfNeeded(Connection* conn)
@@ -324,7 +321,7 @@ void EventLoop::_handleRead(Connection* conn)
             {
                 flushRequestBodyToTmpFile(conn);
             }
-
+            
             maybeCompletePostWithoutLength(conn);
 
             if (_tryDispatchComplete(conn))
@@ -445,7 +442,9 @@ void EventLoop::_handleClientEvent(int client_fd, uint32_t events)
             }
         }
         if (conn->writeBuffer().empty() || has_active_cgi)
+        {
             _closeClient(client_fd);   // -> _closeCgiJobsForClientById -> kill+reap+close pipes
+        }
         else
             conn->setPeerHalfClosed();
 
