@@ -24,7 +24,7 @@ class Server
         std::string getHost() const;
         int getPort() const;
         std::vector<std::string> getIndex_s() const;
-        std::vector<std::string> getServerNames() const;
+        std::string getServerName() const;
         std::vector<Location>& getLocations();
         const std::vector<Location>& get_locations() const;
         const Location* matchLocation(const std::string& path) const;
@@ -32,7 +32,7 @@ class Server
 
         void setHost(const std::string& host);
         void setPort(int &port);
-        void setServerNames(std::vector<std::string>& names);
+        void setServerName(const std::string& name);
         void setRoot(std::string& root);
         void setIndex_s(const std::string& index_s);
         void setMaxBodySize(long long size);
@@ -47,7 +47,7 @@ class Server
         std::string _root;
         long long _client_max_body_size;
         std::vector<std::string> _index_Files;
-        std::vector<std::string> _server_names;
+        std::string _server_name;
         std::map<int, std::string> _error_page;
         std::vector<Location> _locations;
 

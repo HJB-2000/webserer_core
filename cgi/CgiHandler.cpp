@@ -339,21 +339,21 @@ bool CgiHandler::startCgi(int write_end)
         {
             struct stat sb;
             if (fstat(_body_fd, &sb) == 0) {
-                std::cerr << "[CGI-Child] TEMP FILE DEBUG:" << std::endl;
-                std::cerr << "[CGI-Child]   - fd: " << _body_fd << std::endl;
-                std::cerr << "[CGI-Child]   - file size: " << sb.st_size << " bytes" << std::endl;
-                std::cerr << "[CGI-Child]   - st_blocks: " << sb.st_blocks << " (512-byte blocks)" << std::endl;
-                std::cerr << "[CGI-Child]   - bytes on disk: " << (sb.st_blocks * 512) << " bytes" << std::endl;
+                // std::cerr << "[CGI-Child] TEMP FILE DEBUG:" << std::endl;
+                // std::cerr << "[CGI-Child]   - fd: " << _body_fd << std::endl;
+                // std::cerr << "[CGI-Child]   - file size: " << sb.st_size << " bytes" << std::endl;
+                // std::cerr << "[CGI-Child]   - st_blocks: " << sb.st_blocks << " (512-byte blocks)" << std::endl;
+                // std::cerr << "[CGI-Child]   - bytes on disk: " << (sb.st_blocks * 512) << " bytes" << std::endl;
             }
-            std::cerr << "[CGI-Child] Calling dup2(temp_fd=" << _body_fd << ", STDIN)" << std::endl;
+            // std::cerr << "[CGI-Child] Calling dup2(temp_fd=" << _body_fd << ", STDIN)" << std::endl;
             if (dup2(_body_fd, STDIN_FILENO) == -1)
                 _exit(1);
-            std::cerr << "[CGI-Child] dup2 succeeded, STDIN now points to temp file fd" << std::endl;
+            // std::cerr << "[CGI-Child] dup2 succeeded, STDIN now points to temp file fd" << std::endl;
             if (_body_fd != STDIN_FILENO) {
                 ::close(_body_fd);
-                std::cerr << "[CGI-Child] Closed original temp fd " << _body_fd << std::endl;
+                // std::cerr << "[CGI-Child] Closed original temp fd " << _body_fd << std::endl;
             }
-            std::cerr << "[CGI-Child] About to execute CGI script..." << std::endl;
+            // std::cerr << "[CGI-Child] About to execute CGI script..." << std::endl;
         }
         else if (need_stdin)
         {

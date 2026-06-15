@@ -3,9 +3,10 @@
 #include <iostream>
 #include <cstdlib>
 #include <stdexcept>
-
+// will check if this a dead code  
 const Server* matchServer(const std::vector<Server>& servers, const std::string& host_header, int port)
 {
+    std::cerr << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
     std::string host_only = host_header;
     size_t colon_pos = host_only.find(':');
     if (colon_pos != std::string::npos)
@@ -14,11 +15,16 @@ const Server* matchServer(const std::vector<Server>& servers, const std::string&
     {
         if (servers[i].getPort() == port)
         {
-            std::vector<std::string> names = servers[i].getServerNames();
-            for (size_t j = 0; j < names.size(); ++j)
+            const std::string& server_name = servers[i].getServerName();
+            // for (size_t j = 0; j < names.size(); ++j)
+            // {
+            //     if (names[j] == host_only)
+            //         return &servers[i];
+            // }
+            if(server_name == host_only)
             {
-                if (names[j] == host_only)
-                    return &servers[i];
+                std::cerr << "!!!!!" +  server_name + "!!!!!"<< std::endl;
+                return &servers[i];
             }
         }
     }
@@ -74,7 +80,7 @@ Server::Server(const Server& obj)
     this->_timeout_seconds = obj._timeout_seconds;
     this->_root = obj._root;
     this->_index_Files = obj._index_Files;
-    this->_server_names = obj._server_names;
+    this->_server_name = obj._server_name;
     this->_client_max_body_size = obj._client_max_body_size;
     this->_error_page = obj._error_page;
     this->_locations = obj._locations;
@@ -88,7 +94,7 @@ Server::Server(const httpConfig& obj_http)
     this->_port = -1;
     this->_timeout_seconds = 0;
     this->_root = "";
-    this->_server_names.clear();
+    this->_server_name = "";
     this->_locations.clear();
 }
 
@@ -102,7 +108,7 @@ Server& Server::operator=(const Server& obj)
         this->_root = obj._root;
         this->_client_max_body_size = obj._client_max_body_size;
         this->_index_Files = obj._index_Files;
-        this->_server_names = obj._server_names;
+        this->_server_name = obj._server_name;
         this->_error_page = obj._error_page;
         this->_locations = obj._locations;
     }
@@ -121,7 +127,7 @@ int         Server::get_timeout_seconds() const { return _timeout_seconds; }
 
 std::map<int, std::string> Server::getErrorPageMap() const { return _error_page; }
 std::vector<std::string>   Server::getIndex_s() const      { return _index_Files; }
-std::vector<std::string>   Server::getServerNames() const  { return _server_names; }
+std::string   Server::getServerName() const  { return _server_name; }
 const std::vector<Location>& Server::get_locations() const { return _locations; }
 std::vector<Location>& Server::getLocations() { return _locations; }
 void Server::setHost(const std::string& host)        { this->_host = host; }
@@ -146,9 +152,9 @@ void Server::setPort(int &port)
     }
 }
 
-void Server::setServerNames(std::vector<std::string>& names)
+void Server::setServerName(const std::string& name)
 {
-    this->_server_names = names;
+    this->_server_name = name;
 }
 
 void Server::setErrorPage(int code, std::string& path)
@@ -163,8 +169,7 @@ void Server::set_default_conf()
     _root = "./www/html";
     _client_max_body_size = 10485760;
     _index_Files.push_back("index.html");
-    _server_names.push_back("example.com");
-    _server_names.push_back("www.example.com");
+    _server_name = "example.com";
     _error_page[400] = "./errors/400.html";
     _error_page[500] = "./errors/500.html";
     Location locations_block;

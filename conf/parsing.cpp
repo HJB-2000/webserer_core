@@ -169,10 +169,21 @@ static bool is_readable(const std::string& path)
 
 void validate_final_config(std::vector<Server>& servers, long long http_default_cmbs)
 {
+    std::set<std::pair<int, std::string> > seen_virtual_servers;
     for (size_t s = 0; s < servers.size(); ++s) 
     {
         const Server& server = servers[s];
         std::string server_id = "Server on port " + port_to_str(server.getPort());
+        int tmp_port = server.getPort();
+        std::string tmp_server_name = server.getServerName();
+        std::pair<int, std::string> current_server = std::make_pair(tmp_port, tmp_server_name);
+        if(seen_virtual_servers.find(current_server) != seen_virtual_servers.end())
+                throw std::runtime_error("[fatal] " + server_id + 
+                                 " : duplicate server_name '" + tmp_server_name + 
+                                 "' defined on the same port.");
+        seen_virtual_servers.insert(current_server);
+
+
 
 
         std::string s_root = server.getRoot();
