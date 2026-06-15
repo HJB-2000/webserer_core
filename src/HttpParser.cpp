@@ -248,12 +248,12 @@ void HttpParser::feed(Connection *conn)
     {
         // _parseRequestLine(conn->readBuffer(), conn->request());
         _parseRequestLine(conn);
-        if (conn->request().parse_state == PSTATE_ERROR)
-        {
+        // if (conn->request().parse_state == PSTATE_ERROR)
+        // {
             
 
-            return;
-        }
+        //     return;
+        // }
         if (conn->request().parse_state != PSTATE_REQUEST_LINE)
             _applyLocationBodyLimit(conn);
     }
@@ -471,8 +471,8 @@ void HttpParser::_parseRequestLine(Connection* conn)
         req.query_string.clear();
     }
     if (req.path.empty()) req.path = "/";
-    req.parse_state = PSTATE_HEADERS;
     buf.consume(static_cast<size_t>(p - cursor));
+    req.parse_state = PSTATE_HEADERS;
 }
 
 static std::set<std::string> init_singleton_headers() {
@@ -600,8 +600,9 @@ void HttpParser::_parseHeaders(Buffer& buf, HttpRequest& req)
     {
         if (req.method == "POST" || req.method == "PUT" || req.method == "PATCH")
         {
-            req.parse_state = PSTATE_ERROR;
-            req.error_code = 201;
+            req.parse_state = PSTATE_BODY;
+            // req.parse_state = PSTATE_ERROR;
+            // req.error_code = 201;
         }
         else
             req.parse_state = PSTATE_COMPLETE;

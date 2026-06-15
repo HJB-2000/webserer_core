@@ -189,8 +189,9 @@ static void flushRequestBodyToTmpFile(Connection* conn)
             std::cerr << "[EventLoop] tmp file open failed: "
                       << std::strerror(errno) << "\n";
             req.tmp_body_path.clear();
-            req.parse_state = PSTATE_ERROR;
-            req.error_code  = 503;
+            // req.parse_state = PSTATE_ERROR;
+            // req.error_code  = 503;
+            std::exit(112);
         }
         req.opened = true;
     }
@@ -205,9 +206,10 @@ static void flushRequestBodyToTmpFile(Connection* conn)
         {
             std::cerr << "[EventLoop] tmp file write failed: "
                       << std::strerror(errno) << "\n";
-            req.parse_state = PSTATE_ERROR;
-            req.error_code  = 503;
-            return;
+            // req.parse_state = PSTATE_ERROR;
+            // req.error_code  = 503;
+            // return;
+            std::exit(112);
         }
         if (n == 0)
             break;
