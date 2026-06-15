@@ -189,7 +189,8 @@ static void flushRequestBodyToTmpFile(Connection* conn)
             std::cerr << "[EventLoop] tmp file open failed: "
                       << std::strerror(errno) << "\n";
             req.tmp_body_path.clear();
-            std::exit(112);
+            req.parse_state = PSTATE_ERROR;
+            req.error_code  = 503;
         }
         req.opened = true;
     }
@@ -204,16 +205,16 @@ static void flushRequestBodyToTmpFile(Connection* conn)
         {
             std::cerr << "[EventLoop] tmp file write failed: "
                       << std::strerror(errno) << "\n";
-            std::exit(112);
+            req.parse_state = PSTATE_ERROR;
+            req.error_code  = 503;
+            return;
         }
         if (n == 0)
             break;
         offset += static_cast<size_t>(n);
     }
     req.body_file_written += offset;
-    req.body.reset(); //  the problem was here should be restet not earase
-    // std::cerr << "[CGI-Pipeline] Written chunk to temp file. Total processed so far: "
-    //           << req.body_file_written << " bytes.\n";
+    req.body.reset();
 }
 
 bool EventLoop::_tryDispatchComplete(Connection* conn)
@@ -236,7 +237,7 @@ bool EventLoop::_tryDispatchComplete(Connection* conn)
             && conn->request().opened_file < 0)
         {
             std::cerr << "[CGI-Pipeline] ERROR: body expected but no temp file fd.\n";
-            _responder.sendError(500, *conn->config(), conn->writeBuffer());
+            _responder.sendError(503, *conn->config(), conn->writeBuffer());
             conn->setWriting();
             _rearmClient(fd);
             return true;

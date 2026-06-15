@@ -5,6 +5,8 @@
 #include <map>
 #include <set>
 #include <string>
+#include <sys/stat.h>
+
 
 namespace {
 
@@ -244,7 +246,14 @@ void HttpParser::feed(Connection *conn)
 
     if (conn->request().parse_state == PSTATE_REQUEST_LINE)
     {
-        _parseRequestLine(conn->readBuffer(), conn->request());
+        // _parseRequestLine(conn->readBuffer(), conn->request());
+        _parseRequestLine(conn);
+        if (conn->request().parse_state == PSTATE_ERROR)
+        {
+            
+
+            return;
+        }
         if (conn->request().parse_state != PSTATE_REQUEST_LINE)
             _applyLocationBodyLimit(conn);
     }
@@ -262,8 +271,10 @@ void HttpParser::feed(Connection *conn)
     }
 }
 
-void HttpParser::_parseRequestLine(Buffer& buf, HttpRequest& req)
+void HttpParser::_parseRequestLine(Connection* conn)
 {
+    Buffer& buf = conn->readBuffer();
+    HttpRequest& req = conn->request();
     const char* const cursor   = buf.data();
     const size_t      readable = buf.size();
 
@@ -460,9 +471,8 @@ void HttpParser::_parseRequestLine(Buffer& buf, HttpRequest& req)
         req.query_string.clear();
     }
     if (req.path.empty()) req.path = "/";
-    
-    buf.consume(static_cast<size_t>(p - cursor));
     req.parse_state = PSTATE_HEADERS;
+    buf.consume(static_cast<size_t>(p - cursor));
 }
 
 static std::set<std::string> init_singleton_headers() {
@@ -589,12 +599,18 @@ void HttpParser::_parseHeaders(Buffer& buf, HttpRequest& req)
     if (!req.chunked && req.content_length == 0)
     {
         if (req.method == "POST" || req.method == "PUT" || req.method == "PATCH")
-            req.parse_state = PSTATE_BODY;
+        {
+            req.parse_state = PSTATE_ERROR;
+            req.error_code = 201;
+        }
         else
             req.parse_state = PSTATE_COMPLETE;
     }
     else
         req.parse_state = PSTATE_BODY;
+
+    
+
 }
 
 void HttpParser::_parseBody(Buffer& buf, HttpRequest& req)

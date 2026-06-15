@@ -157,8 +157,10 @@ void EventLoop::_closeTimedOutClients()
     for (size_t i = 0; i < stale.size(); ++i)
     {
         std::cerr << "[EventLoop] timeout — closing client fd " << stale[i] << "\n";
+        Connection* conn = _manager->get(stale[i]);
+        _responder.sendError(408, *conn->config(), conn->writeBuffer());
+        _handleWrite(conn);
         _closeClient(stale[i]);
-        
     }
 }
 
