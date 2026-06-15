@@ -238,7 +238,7 @@ bool EventLoop::_tryDispatchComplete(Connection* conn)
         if (conn->request().body_file_written > 0
             && conn->request().opened_file < 0)
         {
-            std::cerr << "[CGI-Pipeline] ERROR: body expected but no temp file fd.\n";
+            // std::cerr << "[CGI-Pipeline] ERROR: body expected but no temp file fd.\n";
             _responder.sendError(503, *conn->config(), conn->writeBuffer());
             conn->setWriting();
             _rearmClient(fd);
