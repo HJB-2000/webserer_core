@@ -242,8 +242,11 @@ bool EventLoop::_tryDispatchComplete(Connection* conn)
         }
         _ApiStartCgi(conn, cgi);
         conn->request().opened = false;
-        ::close(conn->request().opened_file);
-        conn->request().opened_file = -1; 
+        if(conn->request().opened_file > 0)
+        {
+            ::close(conn->request().opened_file);
+            conn->request().opened_file = -1; 
+        }
         return true;
     }
 

@@ -61,7 +61,7 @@ EventLoop::~EventLoop()
         Connection* conn = _manager->get(it->second->fd);
         if (conn && conn->request().opened_file > 0)
         {
-            // std::remove(conn->request().tmp_body_path.c_str());
+            std::remove(conn->request().tmp_body_path.c_str());
             ::close(conn->request().opened_file);
         }
         delete it->second;
