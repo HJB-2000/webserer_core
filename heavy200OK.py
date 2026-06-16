@@ -39,6 +39,7 @@ async def send_throttled_post(session, url, payload, worker_id, request_num):
             "error": str(e)
         }
 
+
 async def worker_loop(session, url, payload, worker_id, req_count, results_list):
     """A single worker running requests sequentially."""
     for i in range(1, req_count + 1):
