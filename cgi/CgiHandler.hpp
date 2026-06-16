@@ -30,6 +30,8 @@ class CgiHandler
         int       getErrorCode()    const;
         pid_t     getChildPid()     const;
         int       releaseStdinFd();
+        std::vector<std::string> buildCgiArgs(const std::string& cgi_path,
+            const std::string& script_file, const std::string& query_string);
 
     private:
         void filling_meta_variables(const HttpRequest& request, const Server& config, const Location& location);

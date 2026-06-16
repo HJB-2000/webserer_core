@@ -1,7 +1,7 @@
 #include "Headers/HttpRequest.hpp"
 #include <cctype>
 #include <unistd.h>
-
+#include <cstdio>
 HttpRequest::HttpRequest(size_t client_max_body_size)
     : body(client_max_body_size)
     , parse_state(PSTATE_IDLE)
@@ -33,7 +33,7 @@ void HttpRequest::reset()
     }
     if (!tmp_body_path.empty())
     {
-        ::unlink(tmp_body_path.c_str());
+        std::remove(tmp_body_path.c_str());
         tmp_body_path.clear();
     }
     opened            = false;

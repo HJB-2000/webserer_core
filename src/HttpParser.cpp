@@ -86,6 +86,7 @@ std::string pctDecode(const std::string& s)
         else
             out += s[i];
     }
+
     return out;
 }
 
@@ -209,6 +210,67 @@ bool validate_host(std::string& host_value, uint16_t& port_out)
 }
 
 #include <iostream>
+static std::string cleanPath(const std::string& path) {
+    std::string result;
+    bool lastWasSlash = false;
+
+    for (size_t i = 0; i < path.size(); i++) {
+        if (path[i] == '/') {
+            if (!lastWasSlash) result += path[i];
+            lastWasSlash = true;
+        } else {
+            result += path[i];
+            lastWasSlash = false;
+        }
+    }
+
+    // Strip trailing slash (unless root)
+    if (result.size() > 1 && result[result.size() - 1] == '/')
+        result.erase(result.size() - 1, 1);
+
+    return result;
+}
+
+std::string HttpParser::_validatePath(Connection* conn)
+{
+    std::string root = conn->config()->getRoot();
+    std::string uri  = conn->request().path;
+    const Location* loc = conn->config()->matchLocation(uri);
+
+    if (loc && !loc->getRoot().empty())
+    {
+        root = loc->getRoot();
+
+        std::string loc_path = loc->getPath();
+        if (uri.compare(0, loc_path.size(), loc_path) == 0)
+        {
+            std::string stripped = uri.substr(loc_path.size());
+            if (!stripped.empty())
+            {
+                if (stripped[0] != '/')
+                    stripped = loc_path + stripped;
+                uri = stripped;
+            }
+        }
+    }
+
+    while (!root.empty() && root[root.size() - 1] == '/')
+        root.erase(root.size() - 1);
+
+    if (loc && !loc->getRoot().empty())
+    {
+        std::string loc_path = loc->getPath();
+        if (uri == loc_path)
+        {
+            size_t last_slash = uri.rfind('/');
+            if (last_slash != std::string::npos)
+                uri = uri.substr(last_slash);
+        }
+    }
+
+    return root + uri;
+}
+
 
 void HttpParser::_applyLocationBodyLimit(Connection* conn)
 {
@@ -223,13 +285,6 @@ void HttpParser::_applyLocationBodyLimit(Connection* conn)
 
     if (limit == 0)
         limit = 1048576;
-    // if (conn->request().content_length
-    //     && conn->request().content_length > limit)
-    // {
-    //     conn->request().parse_state = PSTATE_ERROR;
-    //     conn->request().error_code = 413;
-    //     return;
-    // }
     req.max_body_size = limit;
     req.body.setMaxSize(limit);
     conn->readBuffer().setMaxSize(limit);
@@ -246,14 +301,7 @@ void HttpParser::feed(Connection *conn)
 
     if (conn->request().parse_state == PSTATE_REQUEST_LINE)
     {
-        // _parseRequestLine(conn->readBuffer(), conn->request());
         _parseRequestLine(conn);
-        // if (conn->request().parse_state == PSTATE_ERROR)
-        // {
-            
-
-        //     return;
-        // }
         if (conn->request().parse_state != PSTATE_REQUEST_LINE)
             _applyLocationBodyLimit(conn);
     }
@@ -462,6 +510,8 @@ void HttpParser::_parseRequestLine(Connection* conn)
         else
             raw_uri = raw_uri.substr(path_start);
     }
+
+
     size_t qmark = raw_uri.find('?');
     if (qmark != std::string::npos) {
         req.path         = pctDecode(raw_uri.substr(0, qmark));
@@ -471,8 +521,35 @@ void HttpParser::_parseRequestLine(Connection* conn)
         req.query_string.clear();
     }
     if (req.path.empty()) req.path = "/";
+    
+    std::cerr << "=======befor======> " << req.path << std::endl;
+    
+    req.path = cleanPath(req.path);
+
+    std::cerr << "======after=======> " << req.path << std::endl;
+
+    std::string abs_path = _validatePath(conn);
+    std::cerr << "=============> " << abs_path << std::endl;
+    struct stat info;
+    
+    if (stat(abs_path.c_str(), &info) != 0)
+    {
+        if (errno == EACCES)
+        {
+            conn->request().error_code = 403;
+            conn->request().parse_state = PSTATE_ERROR;
+        }
+        else
+        {
+            conn->request().error_code = 404;
+            conn->request().parse_state = PSTATE_ERROR;
+        }
+    }
+    else
+    {
+        req.parse_state = PSTATE_HEADERS;
+    }
     buf.consume(static_cast<size_t>(p - cursor));
-    req.parse_state = PSTATE_HEADERS;
 }
 
 static std::set<std::string> init_singleton_headers() {
@@ -592,17 +669,16 @@ void HttpParser::_parseHeaders(Buffer& buf, HttpRequest& req)
     if (it != req.headers.end()) {
         if (str_tolower(it->second) == "chunked") {
             req.chunked        = true;
-            req.content_length = 0; // irrelevant when chunked
+            req.content_length = 0;
         }
     }
 
     if (!req.chunked && req.content_length == 0)
     {
-        if (req.method == "POST" || req.method == "PUT" || req.method == "PATCH")
+        if (req.method == "POST")
         {
-            req.parse_state = PSTATE_BODY;
-            // req.parse_state = PSTATE_ERROR;
-            // req.error_code = 201;
+            req.parse_state = PSTATE_ERROR;
+            req.error_code = 411;
         }
         else
             req.parse_state = PSTATE_COMPLETE;
@@ -623,7 +699,6 @@ void HttpParser::_parseBody(Buffer& buf, HttpRequest& req)
         size_t to_read = buf.size();
         if (req.written + to_read > req.max_body_size)
         {
-            std::cerr << "---------------------[HttpParser] body limit exceeded on fd 11111 ----------------" << "\n";
             req.parse_state = PSTATE_ERROR;
             req.error_code  = 413;
             return;
@@ -640,7 +715,6 @@ void HttpParser::_parseBody(Buffer& buf, HttpRequest& req)
     size_t to_read   = (needed < available) ? needed : available;
     if (req.written + to_read > req.max_body_size)  
     {  
-        std::cerr << "---------------------[HttpParser] body limit exceeded on fd 222222 ----------------"  << "\n";
         req.parse_state = PSTATE_ERROR;  
         req.error_code = 413;  
         return;  

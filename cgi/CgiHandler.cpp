@@ -256,12 +256,32 @@ static bool resolve_path(const std::string& path,
     return false;
 }
 
+std::vector<std::string> CgiHandler::buildCgiArgs(const std::string& cgi_path,
+    const std::string& script_file, const std::string& query_string)
+{
+    std::vector<std::string> args;
+    args.push_back(cgi_path);
+    args.push_back(script_file);
+
+    if (!query_string.empty() && query_string.find('=') == std::string::npos)
+    {
+        std::string::size_type start = 0;
+        std::string::size_type plus_pos;
+        
+        while ((plus_pos = query_string.find('+', start)) != std::string::npos)
+        {
+            args.push_back(query_string.substr(start, plus_pos - start));
+            start = plus_pos + 1;
+        }
+        args.push_back(query_string.substr(start));
+    }
+    
+    return args;
+}
+
+
 bool CgiHandler::startCgi(int write_end)
 {
-    // std::string cgi_path = _location.getCGI_path();
-    // if (cgi_path.empty()) { _error_code = 500; _state = CGI_ERROR; return false; }
-
-
     size_t dot_pos = _script_path.find_last_of(".");
     if (dot_pos == std::string::npos)
     {
@@ -279,10 +299,6 @@ bool CgiHandler::startCgi(int write_end)
         return false; 
     }
     std::string cgi_path = it->second;
-    // std::cerr << "---cgi_path" << cgi_path << "!!!" << "\n";
-
-
-    // Resolve cgi_path - try location root first, then server root
     std::string resolved_cgi;
     std::string loc_root = _location.getRoot();
     std::string srv_root = _server.getRoot();
@@ -386,13 +402,22 @@ bool CgiHandler::startCgi(int write_end)
         close(devnull_w);
 
         close(write_end);
-        char* argv[3];
-        argv[0] = const_cast<char*>(cgi_path.c_str());
-        argv[1] = const_cast<char*>(script_file.c_str());
-        argv[2] = NULL;
+        std::vector<std::string> dynamic_args = buildCgiArgs(cgi_path, script_file, _request.query_string);
+        std::vector<char*> argv;
+        for (size_t i = 0; i < dynamic_args.size(); ++i) {
+            argv.push_back(const_cast<char*>(dynamic_args[i].c_str()));
+        }
+        argv.push_back(NULL);
         if (_env_ptrs.empty() || _env_ptrs.back() != NULL) _exit(127);
-        execve(cgi_path.c_str(), argv, &_env_ptrs[0]);
+        execve(cgi_path.c_str(), &argv[0], &_env_ptrs[0]);
         _exit(127);
+        // char* argv[3];
+        // argv[0] = const_cast<char*>(cgi_path.c_str());
+        // argv[1] = const_cast<char*>(script_file.c_str());
+        // argv[2] = NULL;
+        // if (_env_ptrs.empty() || _env_ptrs.back() != NULL) _exit(127);
+        // execve(cgi_path.c_str(), argv, &_env_ptrs[0]);
+        // _exit(127);
     }
 
 

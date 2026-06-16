@@ -1,4 +1,12 @@
 #include "Headers/EventLoop.hpp"
+#include <string>
+#include <sstream>
+#include <fcntl.h>
+#include <unistd.h>
+#include <ctime>
+#include <cstdio>
+#include <cerrno>
+#include <cstring>
 
 void EventLoop::_handleAccept(int server_fd)
 {
@@ -29,14 +37,6 @@ void EventLoop::_handleError(Connection* conn)
     _closeClient(fd);
 }
 
-#include <string>
-#include <sstream>
-#include <fcntl.h>
-#include <unistd.h>
-#include <ctime>
-#include <cstdio>
-#include <cerrno>
-#include <cstring>
 
 std::string int_to_string(int number) {
     std::ostringstream oss;
@@ -102,7 +102,7 @@ static void cleanupBodyTmpFile(HttpRequest& req)
     }
     if (!req.tmp_body_path.empty())
     {
-        ::unlink(req.tmp_body_path.c_str());
+        std::remove(req.tmp_body_path.c_str());
         req.tmp_body_path.clear();
     }
     req.opened = false;
@@ -118,7 +118,10 @@ static void finalizeBodyTmpFile(Connection* conn)
     ::close(req.opened_file);
     req.opened_file = ::open(req.tmp_body_path.c_str(), O_RDONLY);
     if (req.opened_file < 0)
-        std::cerr << "[CGI-Pipeline] open failed: " << std::strerror(errno) << "\n";
+    {
+        conn->request().parse_state = PSTATE_ERROR;
+        conn->request().error_code = 500;
+    }
 }
 
 static void resumeBodyIfNeeded(Connection* conn)
@@ -130,9 +133,6 @@ static void resumeBodyIfNeeded(Connection* conn)
 
     if (req.content_length > 0 && req.body_file_written < req.content_length)
     {
-        std::cerr << "[CGI-Pipeline] Resuming body capture ("
-                  << req.body_file_written << "/" << req.content_length
-                  << " bytes on disk).\n";
         req.parse_state = PSTATE_BODY;
         return;
     }
@@ -141,7 +141,6 @@ static void resumeBodyIfNeeded(Connection* conn)
         && (req.method == "POST")
         && !conn->readBuffer().empty())
     {
-        std::cerr << "[CGI-Pipeline] Resuming POST body capture from read buffer.\n";
         req.parse_state = PSTATE_BODY;
     }
 }
@@ -183,15 +182,14 @@ static void flushRequestBodyToTmpFile(Connection* conn)
              << "_" << static_cast<long>(std::time(NULL));
         req.tmp_body_path = name.str();
         req.opened_file = ::open(req.tmp_body_path.c_str(),
-                                 O_RDWR | O_CREAT | O_TRUNC, 0600);
+                                 O_RDWR | O_CREAT | O_TRUNC | O_EXCL, 0600);
         if (req.opened_file < 0)
         {
             std::cerr << "[EventLoop] tmp file open failed: "
                       << std::strerror(errno) << "\n";
             req.tmp_body_path.clear();
-            // req.parse_state = PSTATE_ERROR;
-            // req.error_code  = 503;
-            std::exit(112);
+            req.parse_state = PSTATE_ERROR;
+            req.error_code  = 503;
         }
         req.opened = true;
     }
@@ -206,10 +204,9 @@ static void flushRequestBodyToTmpFile(Connection* conn)
         {
             std::cerr << "[EventLoop] tmp file write failed: "
                       << std::strerror(errno) << "\n";
-            // req.parse_state = PSTATE_ERROR;
-            // req.error_code  = 503;
-            // return;
-            std::exit(112);
+            req.parse_state = PSTATE_ERROR;
+            req.error_code  = 503;
+            return;
         }
         if (n == 0)
             break;
@@ -238,16 +235,15 @@ bool EventLoop::_tryDispatchComplete(Connection* conn)
         if (conn->request().body_file_written > 0
             && conn->request().opened_file < 0)
         {
-            // std::cerr << "[CGI-Pipeline] ERROR: body expected but no temp file fd.\n";
-            _responder.sendError(503, *conn->config(), conn->writeBuffer());
+            _responder.sendError(conn->request().error_code, *conn->config(), conn->writeBuffer());
             conn->setWriting();
             _rearmClient(fd);
             return true;
         }
-        std::cerr << "[CGI-Pipeline] Body spooled: " << conn->request().body_file_written
-                  << " bytes. Passing fd = " << conn->request().opened_file
-                  << " to CgiHandler.\n";
         _ApiStartCgi(conn, cgi);
+        conn->request().opened = false;
+        ::close(conn->request().opened_file);
+        conn->request().opened_file = -1; 
         return true;
     }
 
@@ -446,7 +442,7 @@ void EventLoop::_handleClientEvent(int client_fd, uint32_t events)
         }
         if (conn->writeBuffer().empty() || has_active_cgi)
         {
-            _closeClient(client_fd);   // -> _closeCgiJobsForClientById -> kill+reap+close pipes
+            _closeClient(client_fd);
         }
         else
             conn->setPeerHalfClosed();

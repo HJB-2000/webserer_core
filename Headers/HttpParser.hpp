@@ -15,6 +15,7 @@ private:
 
     void _applyLocationBodyLimit(Connection* conn);
     void _parseRequestLine(Connection* conn);
+    std::string _validatePath(Connection* conn);
 
     void _parseHeaders(Buffer& buf, HttpRequest& req);
 
