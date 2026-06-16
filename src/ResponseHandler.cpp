@@ -205,20 +205,7 @@ void ResponseHandler::handle(
         _sendErrorInternal(404, req, cfg, wb);
         return;
     }
-    if (loc && !loc->getCGI_map().empty())
-    {
-        const std::map<std::string, std::string>& cgi_map = loc->getCGI_map();
-        for (std::map<std::string, std::string>::const_iterator it = cgi_map.begin(); it != cgi_map.end(); ++it)
-        {
-            const std::string& ext = it->first;
-            if (req.path.size() >= ext.size()
-                && req.path.compare(req.path.size() - ext.size(), ext.size(), ext) == 0)
-            {
-                _stubCgi(req, cfg, wb);
-                return;
-            }
-        }
-    }
+    
     if (req.method == "GET")
     {
         _serveStaticFile(req, fs_path, cfg, wb);
@@ -545,13 +532,4 @@ std::string ResponseHandler::_resolveFsPath(
     }
 
     return root + uri;
-}
-
-void ResponseHandler::_stubCgi( 
-    const HttpRequest&  req,
-    const ServerConfig& cfg,
-    Buffer&             wb)
-{
-    std::cerr << "[ResponseHandler] CGI requested — Phase 4 not yet integrated\n";
-    _sendErrorInternal(501, req, cfg, wb);
 }

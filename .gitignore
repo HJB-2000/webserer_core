@@ -1,6 +1,7 @@
 a.out
 *.gch
 *.o
+*.d
 webserv
 webserv.log
 *.md

@@ -1,9 +1,11 @@
 NAME    = webserv
 
-CXX      = c++
-CXXFLAGS = -g3 -o2 -std=c++98 -Wall -Wextra -Werror  -I. -I conf #-fsanitize=address 
-# CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -fsanitize=undefined -I, -I conf #-fsanitize=address,undefined -I. -I conf
-# ── your sources ──────────────────────────────────────────────
+CXX     = c++
+CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -Werror -MMD -MP -I. -I conf
+
+OBJ_DIR = objects
+
+# ── sources ──────────────────────────────────────────────
 SRCS    = src/main.cpp \
           src/make_listener.cpp \
           src/API_conf.cpp \
@@ -26,9 +28,7 @@ SRCS    = src/main.cpp \
           src/ResponseHandler_helper.cpp \
           src/ResponseLoader.cpp \
           src/enforce_memory_limit.cpp \
-
-# ── teammate config-parser sources (Phase 1) ──────────────────
-SRCS   += conf/parsing.cpp \
+          conf/parsing.cpp \
           conf/LexerConfig.cpp \
           conf/eventsConfig.cpp \
           conf/serverConfig.cpp \
@@ -38,44 +38,28 @@ SRCS   += conf/parsing.cpp \
           conf/server_parser.cpp \
           conf/location_parser.cpp 
 
-OBJS    = $(SRCS:.cpp=.o)
+# ── objects ──────────────────────────────────────────────
+OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
 
-# ── headers ─────────────────────────────────
-HEADERS = Headers/API_conf.hpp \
-          Headers/Logger.hpp \
-          Headers/EventLoop.hpp \
-          Headers/CgiStarter.hpp \
-          Headers/CgiRequestInfo.hpp \
-          Headers/ResponseHandler.hpp \
-          Headers/ConnectionManager.hpp \
-          Headers/EventRef.hpp \
-          Headers/HttpRequest.hpp \
-          Headers/ConnectionState.hpp \
-          Headers/CgiJob.hpp \
-          Headers/HttpParser.hpp \
-          Headers/Connection.hpp \
-          Headers/buffer.hpp \
-          cgi/CgiHandler.hpp \
-          conf/serverConfig.hpp \
-          conf/LexerConfig.hpp \
-          conf/parserConf.hpp \
-          conf/locationConfig.hpp \
-          conf/eventsConfig.hpp \
-          conf/parsing.hpp \
-          conf/httpConfig.hpp
-
-# ── targets ───────────────────────────────────────────────────
+# ── targets ──────────────────────────────────────────────
 
 all: $(NAME)
 
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)
 
-%.o: %.cpp $(HEADERS)
+
+$(OBJ_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+# include dependency files
+-include $(OBJS:.o=.d)
+
+# ── cleaning ─────────────────────────────────────────────
+
 clean:
-	rm -f $(OBJS)
+	rm -rf $(OBJ_DIR)
 
 fclean: clean
 	rm -f $(NAME)

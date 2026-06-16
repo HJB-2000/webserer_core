@@ -522,14 +522,11 @@ void HttpParser::_parseRequestLine(Connection* conn)
     }
     if (req.path.empty()) req.path = "/";
     
-    std::cerr << "=======befor======> " << req.path << std::endl;
     
     req.path = cleanPath(req.path);
 
-    std::cerr << "======after=======> " << req.path << std::endl;
 
     std::string abs_path = _validatePath(conn);
-    std::cerr << "=============> " << abs_path << std::endl;
     struct stat info;
     
     if (stat(abs_path.c_str(), &info) != 0)

@@ -125,12 +125,6 @@ private:
     void _appendStr(Buffer& wb, const std::string& s);
     void _appendStr(Buffer& wb, const char* data, size_t len);
 
-    void _stubCgi(
-        const HttpRequest&  req,
-        const ServerConfig& cfg,
-        Buffer&             wb
-    );
-
     std::map<std::string, std::string> _mime;
 };
 
