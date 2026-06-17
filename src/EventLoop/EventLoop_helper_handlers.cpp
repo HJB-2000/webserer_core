@@ -288,20 +288,12 @@ void EventLoop::_handleRead(Connection* conn)
                 _closeClient(fd);
                 return;
             }
-
             if (n < 0)
             {
-                if (errno == EAGAIN || errno == EWOULDBLOCK)
-                {
-                    maybeCompletePostWithoutLength(conn);
-                    if (pathRequiresCgiBodySpool(conn->request(), *conn->config()))
-                        flushRequestBodyToTmpFile(conn);
-                    break;
-                }
-                std::cerr << "[EventLoop] recv error on fd " << fd
-                          << ": " << std::strerror(errno) << "\n";
-                _closeClient(fd);
-                return;
+                maybeCompletePostWithoutLength(conn);
+                if (pathRequiresCgiBodySpool(conn->request(), *conn->config()))
+                    flushRequestBodyToTmpFile(conn);
+                break;
             }
 
             resumeBodyIfNeeded(conn);
@@ -337,7 +329,7 @@ void EventLoop::_handleRead(Connection* conn)
     }
     catch (const BodyLimitException&)
     {
-        std::cerr << "-------[EventLoop] body limit exceeded on fd---------- " << fd << "\n";
+        std::cerr << "[EventLoop] body limit exceeded on fd " << fd << "\n";
         conn->request().headers["connection"] = "close";
         _responder.sendError(413, *conn->config(), conn->writeBuffer());
         conn->setWriting();
@@ -354,12 +346,7 @@ void EventLoop::_handleWrite(Connection* conn)
         ssize_t n = conn->send();
         if (n < 0)
         {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                break;
-            std::cerr << "[EventLoop] send error on fd " << fd
-                      << ": " << std::strerror(errno) << "\n";
-            _closeClient(fd);
-            return;
+            break;
         }
     }
 
@@ -467,47 +454,4 @@ void EventLoop::_handleClientEvent(int client_fd, uint32_t events)
         _handleWrite(conn);
         return;
     }
-}
-
-void EventLoop::_handleCgiStdinEvent(int stdin_fd, uint32_t events)
-{
-    std::map<int, CgiJob*>::iterator it = _cgi_stdin_jobs.find(stdin_fd);
-    if (it == _cgi_stdin_jobs.end())
-        return;
-
-    CgiJob* job = it->second;
-    Connection* conn = _manager->get(job->client_fd);
-    if (!conn)
-    {
-        _closeCgiStdin(job);
-        return;
-    }
-    Buffer& body = conn->request().body;
-    if (events & (EPOLLERR | EPOLLHUP))
-    {
-        _closeCgiStdin(job);
-        return;
-    }
-
-    while (body.size() > 0)
-    {
-        const char*  data = body.data();
-        const size_t left = body.size();
-
-        ssize_t n = ::write(stdin_fd, data, left);
-
-        if (n > 0)
-        {
-            body.consume(static_cast<size_t>(n));
-            job->body_written += static_cast<size_t>(n);
-            continue;
-        }
-
-        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
-            return;
-
-        _closeCgiStdin(job);
-        return;
-    }
-    _closeCgiStdin(job);
 }

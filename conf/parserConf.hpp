@@ -1,12 +1,6 @@
 #ifndef PARSER_CONF_HPP
 #define PARSER_CONF_HPP
-/*
-    ParserConf — top-level config parser.
 
-    Handles the http { } block, events { } block, and server/location sub-blocks.
-    Events directives (event model, worker_connections) are parsed and stored
-    in ParserConf for future integration.
-*/
 #include "locationConfig.hpp"
 #include "serverConfig.hpp"
 #include "LexerConfig.hpp"

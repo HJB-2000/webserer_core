@@ -1,39 +1,34 @@
 #include "serverConfig.hpp"
-// #include <string>
-// #include <iostream>
-// #include <cstdlib>
-// #include <stdexcept>
-// will check if this a dead code  
-const Server* matchServer(const std::vector<Server>& servers, const std::string& host_header, int port)
-{
-    std::string host_only = host_header;
-    size_t colon_pos = host_only.find(':');
-    if (colon_pos != std::string::npos)
-        host_only = host_only.substr(0, colon_pos);
-    for (size_t i = 0; i < servers.size(); ++i)
-    {
-        if (servers[i].getPort() == port)
-        {
-            const std::string& server_name = servers[i].getServerName();
-            // for (size_t j = 0; j < names.size(); ++j)
-            // {
-            //     if (names[j] == host_only)
-            //         return &servers[i];
-            // }
-            if(server_name == host_only)
-            {
-                // std::cerr << "!!!!!" +  server_name + "!!!!!"<< std::endl;
-                return &servers[i];
-            }
-        }
-    }
-    for (size_t i = 0; i < servers.size(); ++i)
-    {
-        if (servers[i].getPort() == port)
-            return &servers[i];
-    }
-    return NULL;
-}
+
+// const Server* matchServer(const std::vector<Server>& servers, const std::string& host_header, int port)
+// {
+//     std::string host_only = host_header;
+//     size_t colon_pos = host_only.find(':');
+//     if (colon_pos != std::string::npos)
+//         host_only = host_only.substr(0, colon_pos);
+//     for (size_t i = 0; i < servers.size(); ++i)
+//     {
+//         if (servers[i].getPort() == port)
+//         {
+//             const std::string& server_name = servers[i].getServerName();
+//             // for (size_t j = 0; j < names.size(); ++j)
+//             // {
+//             //     if (names[j] == host_only)
+//             //         return &servers[i];
+//             // }
+//             if(server_name == host_only)
+//             {
+//                 return &servers[i];
+//             }
+//         }
+//     }
+//     for (size_t i = 0; i < servers.size(); ++i)
+//     {
+//         if (servers[i].getPort() == port)
+//             return &servers[i];
+//     }
+//     return NULL;
+// }
 
 const Location* Server::matchLocation(const std::string& path) const
 {
