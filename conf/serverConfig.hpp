@@ -8,7 +8,8 @@ class httpConfig;
 #include <vector>
 #include "locationConfig.hpp"
 #include "httpConfig.hpp"
-
+#include <iostream>
+#include <stdexcept>
 class Server
 {
     public :

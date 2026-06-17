@@ -168,7 +168,6 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
         if (values.size() != 1)
             report_parse_error("Syntax Error: directive ", stream, i,
                 "'root expects a single value' in parseDirective of server");
-        // std::cerr << "\n{this is the conf} : " << values[0] << std::endl;
         server.setRoot(values[0]);
     }
     else if (directive == "index")

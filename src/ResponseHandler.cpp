@@ -391,17 +391,15 @@ void ResponseHandler::_handlePost(
     if (upload_dir.empty() || upload_dir[upload_dir.size() - 1] != '/')
         upload_dir += '/';
 
-    static int counter = 0;
+    static unsigned long counter = 0;
     ++counter;
-    time_t now = ::time(NULL);
+    time_t now = std::time(NULL);
     std::ostringstream name_oss;
-    name_oss << "upload_" << static_cast<long>(now)
-             << "_" << static_cast<int>(::getpid())
-             << "_" << counter;
+    name_oss << "upload_" << static_cast<long>(now) << "_" << counter;
     std::string filename = name_oss.str();
     std::string filepath = upload_dir + filename;
 
-    int fd = ::open(filepath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    int fd = ::open(filepath.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_EXCL, 0644);
     if (fd < 0)
     {
         std::cerr << "[ResponseHandler] POST upload open failed: "

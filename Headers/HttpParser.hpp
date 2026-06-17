@@ -3,7 +3,7 @@
 
 #include "buffer.hpp"
 #include "HttpRequest.hpp"
-#include "Headers/Connection.hpp"
+#include "Connection.hpp"
 
 class HttpParser
 {

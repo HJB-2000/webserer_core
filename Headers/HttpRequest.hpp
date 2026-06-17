@@ -1,6 +1,6 @@
 #ifndef HTTP_REQUEST_HPP
 #define HTTP_REQUEST_HPP
-#include "../Headers/buffer.hpp"
+#include "buffer.hpp"
 #include <string>
 #include <map>
 #include <cstddef>
