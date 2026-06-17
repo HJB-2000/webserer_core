@@ -173,11 +173,12 @@ static void flushRequestBodyToTmpFile(Connection* conn)
         req.error_code  = 413;
         return;
     }
-
+    static unsigned long counter = 0;
     if (!req.opened)
     {
+        counter++;
         std::ostringstream name;
-        name << "/tmp/webserv_" << static_cast<long>(::getpid())
+        name << "/tmp/webserv_" << counter
              << "_" << conn->conn_num
              << "_" << static_cast<long>(std::time(NULL));
         req.tmp_body_path = name.str();
@@ -215,6 +216,7 @@ static void flushRequestBodyToTmpFile(Connection* conn)
     req.body_file_written += offset;
     req.body.reset();
 }
+
 
 bool EventLoop::_tryDispatchComplete(Connection* conn)
 {

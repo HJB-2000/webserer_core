@@ -65,7 +65,7 @@ void appendTwoDigits(std::ostringstream& oss, int value)
 std::string formatUtcTimestamp()
 {
 	int year, mon, mday, hour, min, sec;
-	splitUtc(::time(NULL), year, mon, mday, hour, min, sec);
+	splitUtc(std::time(NULL), year, mon, mday, hour, min, sec);
 
 	std::ostringstream oss;
 	oss << '[' << year << '-';
@@ -212,11 +212,11 @@ const std::string& Logger::path() const
 	return _path;
 }
 
-Logger::Stopwatch::Stopwatch() : _start(::time(NULL)) {}
+Logger::Stopwatch::Stopwatch() : _start(std::time(NULL)) {}
 
 double Logger::Stopwatch::elapsed_ms() const
 {
-	time_t now = ::time(NULL);
+	time_t now = std::time(NULL);
 	return static_cast<double>(now - _start) * 1000.0;
 }
 
@@ -229,7 +229,7 @@ std::string Logger::Stopwatch::str() const
 
 void Logger::Stopwatch::reset()
 {
-	_start = ::time(NULL);
+	_start = std::time(NULL);
 }
 
 void Logger::_writeTagged(const char* tag, const std::string& msg)

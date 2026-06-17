@@ -6,7 +6,7 @@ class Server;
 #include <string>
 #include <map>
 #include <vector>
-#include "serverConfig.hpp"
+// #include "serverConfig.hpp"
 
 
 class Location

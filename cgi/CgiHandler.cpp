@@ -342,14 +342,14 @@ bool CgiHandler::startCgi(int write_end)
         if (stat(cgi_path.c_str(), &verify_cgi) != 0
             || verify_cgi.st_ino != sb_cgi.st_ino
             || verify_cgi.st_dev != sb_cgi.st_dev)
-            _exit(127);
+            std::exit(127);
         struct stat verify_script;
         if (stat(script_file.c_str(), &verify_script) != 0
             || verify_script.st_ino != sb_script.st_ino
             || verify_script.st_dev != sb_script.st_dev)
-            _exit(127);
+            std::exit(127);
 
-        if (dup2(write_end, STDOUT_FILENO) == -1) _exit(1);
+        if (dup2(write_end, STDOUT_FILENO) == -1) std::exit(1);
 
         if (need_stdin && _body_fd >= 0)
         {
@@ -363,7 +363,7 @@ bool CgiHandler::startCgi(int write_end)
             }
             // std::cerr << "[CGI-Child] Calling dup2(temp_fd=" << _body_fd << ", STDIN)" << std::endl;
             if (dup2(_body_fd, STDIN_FILENO) == -1)
-                _exit(1);
+                std::exit(1);
             // std::cerr << "[CGI-Child] dup2 succeeded, STDIN now points to temp file fd" << std::endl;
             if (_body_fd != STDIN_FILENO) {
                 ::close(_body_fd);
@@ -375,11 +375,11 @@ bool CgiHandler::startCgi(int write_end)
         {
             int devnull_r = open("/dev/null", O_RDONLY);
             if (devnull_r < 0)
-                _exit(1);
+                std::exit(1);
             if (dup2(devnull_r, STDIN_FILENO) == -1)
             {
                 close(devnull_r);
-                _exit(1);
+                std::exit(1);
             }
             close(devnull_r);
         }
@@ -387,18 +387,18 @@ bool CgiHandler::startCgi(int write_end)
         {
             int devnull_r = open("/dev/null", O_RDONLY);
             if (devnull_r < 0)
-                _exit(1);
+                std::exit(1);
             if (dup2(devnull_r, STDIN_FILENO) == -1)
             {
                 close(devnull_r);
-                _exit(1);
+                std::exit(1);
             }
             close(devnull_r);
         }
 
         int devnull_w = open("/dev/null", O_WRONLY);
-        if (devnull_w < 0) _exit(1);
-        if (dup2(devnull_w, STDERR_FILENO) == -1) { close(devnull_w); _exit(1); }
+        if (devnull_w < 0) std::exit(1);
+        if (dup2(devnull_w, STDERR_FILENO) == -1) { close(devnull_w); std::exit(1); }
         close(devnull_w);
 
         close(write_end);
@@ -408,16 +408,16 @@ bool CgiHandler::startCgi(int write_end)
             argv.push_back(const_cast<char*>(dynamic_args[i].c_str()));
         }
         argv.push_back(NULL);
-        if (_env_ptrs.empty() || _env_ptrs.back() != NULL) _exit(127);
+        if (_env_ptrs.empty() || _env_ptrs.back() != NULL) std::exit(127);
         execve(cgi_path.c_str(), &argv[0], &_env_ptrs[0]);
-        _exit(127);
+        std::exit(127);
         // char* argv[3];
         // argv[0] = const_cast<char*>(cgi_path.c_str());
         // argv[1] = const_cast<char*>(script_file.c_str());
         // argv[2] = NULL;
-        // if (_env_ptrs.empty() || _env_ptrs.back() != NULL) _exit(127);
+        // if (_env_ptrs.empty() || _env_ptrs.back() != NULL) std::exit(127);
         // execve(cgi_path.c_str(), argv, &_env_ptrs[0]);
-        // _exit(127);
+        // std::exit(127);
     }
 
 

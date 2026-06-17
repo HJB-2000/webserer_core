@@ -1,12 +1,11 @@
 #include "serverConfig.hpp"
-#include <string>
-#include <iostream>
-#include <cstdlib>
-#include <stdexcept>
+// #include <string>
+// #include <iostream>
+// #include <cstdlib>
+// #include <stdexcept>
 // will check if this a dead code  
 const Server* matchServer(const std::vector<Server>& servers, const std::string& host_header, int port)
 {
-    std::cerr << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
     std::string host_only = host_header;
     size_t colon_pos = host_only.find(':');
     if (colon_pos != std::string::npos)
@@ -23,7 +22,7 @@ const Server* matchServer(const std::vector<Server>& servers, const std::string&
             // }
             if(server_name == host_only)
             {
-                std::cerr << "!!!!!" +  server_name + "!!!!!"<< std::endl;
+                // std::cerr << "!!!!!" +  server_name + "!!!!!"<< std::endl;
                 return &servers[i];
             }
         }
@@ -142,14 +141,14 @@ void Server::set_timeout_seconds(int time_out)       { this->_timeout_seconds = 
 
 void Server::setPort(int &port)
 {
-    if(_port == -1)
-        this->_port = port;
-    else
-    {
-        std::cerr << "|" << this->_port << "|" << std::endl;
-        std::cerr << "Duplicate port in the directive listen" << std::endl;
-        throw std::runtime_error("Duplicate port in the directive listen");
-    }
+    // if(_port == -1)
+    this->_port = port;
+    // else
+    // {
+    //     std::cerr << "|" << this->_port << "|" << std::endl;
+    //     std::cerr << "Duplicate port in the directive listen" << std::endl;
+    //     throw std::runtime_error("Duplicate port in the directive listen");
+    // }
 }
 
 void Server::setServerName(const std::string& name)

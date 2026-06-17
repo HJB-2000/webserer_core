@@ -1,5 +1,6 @@
 #include "locationConfig.hpp"
-#include <iostream>
+// #include <iostream>
+#include "serverConfig.hpp"
 Location::Location() :  _path(""),
                         _root(""),
                         _autoindex(false),

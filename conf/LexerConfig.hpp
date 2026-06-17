@@ -1,5 +1,5 @@
-#ifndef TOKENIZER_HPP
-#define TOKENIZER_HPP
+#ifndef LEXER_CONFIG_HPP
+#define LEXER_CONFIG_HPP
 
 #include <string>
 #include <map>
