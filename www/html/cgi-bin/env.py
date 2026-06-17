@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-import html
 import os
+import json
+import html
 from datetime import datetime
 from http.cookies import SimpleCookie
 
-from cgi_data_store import SESSIONS_FILE, load_json, save_json_atomic, session_key, cookie_name
+# Define data directory and sessions file directly
+DATA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'data'))
+SESSIONS_FILE = os.path.join(DATA_DIR, 'sessions.json')
 
 REDACT_KEYS = {"HTTP_COOKIE", "HTTP_AUTHORIZATION", "AUTHORIZATION"}
+# REDACT_KEYS = set()
 
 
 def get_session_user():
@@ -16,37 +20,49 @@ def get_session_user():
 
     cookie = SimpleCookie()
     cookie.load(cookie_str)
-    sid_morsel = cookie.get(cookie_name())
+    # Use standard 'session_id' instead of cookie_name() wrapper
+    sid_morsel = cookie.get('session_id')
     if sid_morsel is None:
         return None
 
-    sid = session_key(sid_morsel.value)
-    sessions = load_json(SESSIONS_FILE, {})
+    sid = sid_morsel.value
+
+    # Load sessions natively using standard python open()
+    sessions = {}
+    if os.path.exists(SESSIONS_FILE):
+        try:
+            with open(SESSIONS_FILE, 'r') as f:
+                sessions = json.load(f)
+        except Exception:
+            pass
+
+    # No namespacing needed, check the sid directly
     if sid not in sessions:
         return None
 
     session_data = sessions[sid]
-    if isinstance(session_data, dict):
-        username = session_data.get('username')
-        expires_at = session_data.get('expires_at')
-        if expires_at:
-            try:
-                expire_time = datetime.fromisoformat(expires_at)
-                if datetime.utcnow() > expire_time:
-                    del sessions[sid]
-                    save_json_atomic(SESSIONS_FILE, sessions)
-                    return None
-            except (ValueError, TypeError):
-                pass
-        return username
-    return session_data
+    username = session_data.get('username')
+    expires_at = session_data.get('expires_at')
+
+    if expires_at:
+        try:
+            expire_time = datetime.fromisoformat(expires_at)
+            if datetime.utcnow() > expire_time:
+                # Remove expired session directly and save
+                del sessions[sid]
+                with open(SESSIONS_FILE, 'w') as f:
+                    json.dump(sessions, f, indent=2)
+                return None
+        except Exception:
+            pass
+
+    return username
 
 
 def redirect(location):
     print("Status: 302 Found")
-    print(f"Location: {location}")
-    print()
-    raise SystemExit
+    print(f"Location: {location}\n")
+    exit()
 
 
 username = get_session_user()
@@ -58,6 +74,8 @@ safe_username = html.escape(str(username), quote=True)
 print("Status: 200 OK")
 print("Content-Type: text/html\n")
 print(f"<h1>CGI Environment Variables</h1><p>Logged in as: <strong>{safe_username}</strong></p><pre>")
+
+# Print the environment variables normally for the subject requirement showcase
 for key, value in sorted(os.environ.items()):
     safe_key = html.escape(str(key), quote=True)
     if key in REDACT_KEYS:

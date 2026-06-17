@@ -1,71 +1,54 @@
 #!/usr/bin/env python3
 import os
+import json
 from datetime import datetime
 from http.cookies import SimpleCookie
 
-from cgi_data_store import SESSIONS_FILE, session_key, cookie_name, load_json
+DATA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'data'))
+SESSIONS_FILE = os.path.join(DATA_DIR, 'sessions.json')
 
-
-def session_expired(session_data):
-    if not isinstance(session_data, dict):
-        return False
-    expires_at = session_data.get('expires_at')
-    if not expires_at:
-        return False
-    try:
-        expire_time = datetime.fromisoformat(expires_at)
-        return datetime.utcnow() > expire_time
-    except (ValueError, TypeError):
-        return False
-
-
-# Get session cookie
 cookie_str = os.environ.get('HTTP_COOKIE', '')
 if not cookie_str:
-    print("Status: 401 Unauthorized")
-    print("Content-Type: text/plain")
-    print()
-    print("Not authenticated")
+    print("Status: 401 Unauthorized\nContent-Type: text/plain\n\nNot authenticated")
     exit()
 
 cookie = SimpleCookie()
 cookie.load(cookie_str)
-sid_morsel = cookie.get(cookie_name())
+sid_morsel = cookie.get('session_id')
 
 if sid_morsel is None:
-    print("Status: 401 Unauthorized")
-    print("Content-Type: text/plain")
-    print()
-    print("Not authenticated")
+    print("Status: 401 Unauthorized\nContent-Type: text/plain\n\nNot authenticated")
     exit()
 
 sid = sid_morsel.value
-sessions = load_json(SESSIONS_FILE, {})
-sid = session_key(sid)
+
+# Load sessions natively
+sessions = {}
+if os.path.exists(SESSIONS_FILE):
+    try:
+        with open(SESSIONS_FILE, 'r') as f:
+            sessions = json.load(f)
+    except Exception:
+        pass
 
 if sid not in sessions:
-    print("Status: 401 Unauthorized")
-    print("Content-Type: text/plain")
-    print()
-    print("Session expired")
+    print("Status: 401 Unauthorized\nContent-Type: text/plain\n\nSession expired")
     exit()
 
 session_data = sessions[sid]
+expires_at = session_data.get('expires_at')
 
-if session_expired(session_data):
-    print("Status: 401 Unauthorized")
-    print("Content-Type: text/plain")
-    print()
-    print("Session expired")
+# Validate expiration
+is_expired = True
+if expires_at:
+    try:
+        is_expired = datetime.utcnow() > datetime.fromisoformat(expires_at)
+    except Exception:
+        pass
+
+if is_expired:
+    print("Status: 401 Unauthorized\nContent-Type: text/plain\n\nSession expired")
     exit()
 
-# Handle both old format (plain string) and new format (dict with 'username' key)
-if isinstance(session_data, dict):
-    username = session_data.get('username', 'Unknown')
-else:
-    username = str(session_data)
-
-# Return just the username as plain text (not JSON)
-print("Content-Type: text/plain")
-print()
-print(username)
+print("Content-Type: text/plain\n")
+print(session_data.get('username', 'Unknown'))

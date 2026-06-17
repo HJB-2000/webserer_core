@@ -1,35 +1,5 @@
 #include "serverConfig.hpp"
 
-// const Server* matchServer(const std::vector<Server>& servers, const std::string& host_header, int port)
-// {
-//     std::string host_only = host_header;
-//     size_t colon_pos = host_only.find(':');
-//     if (colon_pos != std::string::npos)
-//         host_only = host_only.substr(0, colon_pos);
-//     for (size_t i = 0; i < servers.size(); ++i)
-//     {
-//         if (servers[i].getPort() == port)
-//         {
-//             const std::string& server_name = servers[i].getServerName();
-//             // for (size_t j = 0; j < names.size(); ++j)
-//             // {
-//             //     if (names[j] == host_only)
-//             //         return &servers[i];
-//             // }
-//             if(server_name == host_only)
-//             {
-//                 return &servers[i];
-//             }
-//         }
-//     }
-//     for (size_t i = 0; i < servers.size(); ++i)
-//     {
-//         if (servers[i].getPort() == port)
-//             return &servers[i];
-//     }
-//     return NULL;
-// }
-
 const Location* Server::matchLocation(const std::string& path) const
 {
     const Location* best = NULL;
@@ -37,23 +7,25 @@ const Location* Server::matchLocation(const std::string& path) const
 
     for (size_t i = 0; i < _locations.size(); ++i)
     {
-        const std::string& loc_path = _locations[i].getPath();
+        std::string loc_path = _locations[i].getPath();
         if (loc_path.empty())
             continue;
 
-        if (path.compare(0, loc_path.size(), loc_path) != 0)
-            continue;
+        if (loc_path.size() > 1 && loc_path[loc_path.size() - 1] == '/')
+            loc_path.erase(loc_path.size() - 1);
 
-        if (!loc_path.empty() && loc_path[loc_path.size() - 1] != '/')
-        {
-            if (path.size() > loc_path.size() && path[loc_path.size()] != '/')
-                continue;
-        }
+        std::string req_path = path;
+        if (req_path.size() > 1 && req_path[req_path.size() - 1] == '/')
+            req_path.erase(req_path.size() - 1);
 
-        if (loc_path.length() > best_len)
+        if (req_path == loc_path || 
+            (req_path.compare(0, loc_path.size(), loc_path) == 0 && req_path[loc_path.size()] == '/'))
         {
-            best = &_locations[i];
-            best_len = loc_path.length();
+            if (_locations[i].getPath().length() > best_len)
+            {
+                best = &_locations[i];
+                best_len = _locations[i].getPath().length();
+            }
         }
     }
     return best;

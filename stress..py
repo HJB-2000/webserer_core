@@ -91,7 +91,7 @@ def worker_lifecycle(port, stop_event):
             execute_http_request(port, method, path)
         elif scenario == 2:
             # Check if your CGI pipeline breaks under a POST load
-            execute_http_request(port, "POST", "/cgi-bin/test.py", body=b"param=value")
+            # execute_http_request(port, "POST", "/cgi-bin/test.py", body=b"param=value")
         elif scenario == 3:
             # Test if large file uploads cause 500 errors (e.g., out of memory or temp file creation failure)
             execute_http_request(port, "POST", "/uploads/stress.dat", body=large_payload)

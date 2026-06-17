@@ -221,7 +221,6 @@ static bool resolve_path(const std::string& path,
     {
         if (stat(path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
         {
-            // std::cout <<  "|||" +  path + "||| "  << std::endl;  
             resolved = path;
             return true;
         }

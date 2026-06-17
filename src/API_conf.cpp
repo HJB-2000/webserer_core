@@ -19,12 +19,11 @@ std::vector<ServerConfig> API_conf(int argc, char** argv)
         servers.push_back(s);
         return servers;
     }
-    
+    if(argc != 2)
+        throw std::runtime_error(std::string("[API_conf] invalid Usage (expected ./webserv file.conf or just ./webserv for default configuration)"));
     const std::string config_path(argv[1]);
     if (config_path.size() < 5 || config_path.substr(config_path.size() - 5) != ".conf")
-    {
         throw std::runtime_error(std::string("[API_conf] invalid config extension (expected .conf)"));
-    }
     std::ifstream config_file(config_path.c_str());
     try
     {

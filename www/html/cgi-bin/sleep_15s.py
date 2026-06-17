@@ -7,7 +7,7 @@ import urllib.parse
 # Don't send any output during the sleep
 query_string = os.environ.get('QUERY_STRING', '')
 params = urllib.parse.parse_qs(query_string)
-seconds = int(params.get('seconds', ['40'])[0])
+seconds = int(params.get('seconds', ['15'])[0])
 
 # Send headers immediately
 print("Status: 200 OK")
