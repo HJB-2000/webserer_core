@@ -375,6 +375,33 @@ void ResponseHandler::_sendRedirect(
         _appendStr(wb, body);
 }
 
+// std::string _resolveUploadFilename(const HttpRequest& req) {
+//     // 1. try multipart Content-Disposition
+//     std::string ct = req.header("content-type");
+//     if (ct.find("multipart/form-data") != std::string::npos) {
+//         std::string cd = req.header("content-disposition");
+//         size_t pos = cd.find("filename=\"");
+//         if (pos != std::string::npos) {
+//             pos += 10;
+//             size_t end = cd.find('"', pos);
+//             if (end != std::string::npos) {
+//                 std::string name = cd.substr(pos, end - pos);
+//                 for (size_t i = 0; i < name.size(); ++i)
+//                     if (name[i] == '/' || name[i] == '\0') name[i] = '_';
+//                 if (!name.empty() && name.find("..") == std::string::npos)
+//                     return name;
+//             }
+//         }
+//     }
+
+//     static int counter = 0;
+//     ++counter;
+//     std::ostringstream oss;
+//     oss << "upload_" << static_cast<long>(::time(NULL))
+//         << "_" << counter;
+//     return oss.str();
+// }
+
 void ResponseHandler::_handlePost(
     const HttpRequest&  req,
     const Location&     loc,

@@ -32,6 +32,27 @@ void Buffer::append(const char* src, size_t len)
     _storage.resize(old_size + len);
     std::memcpy(&_storage[old_size], src, len);
 }
+#include <iostream>
+void Buffer::append_result(const char* src, size_t len)
+{
+    if (len == 0)
+        return;
+
+    if (_storage.size() - _head + len > LimitRequestBody)
+    {
+        throw BodyLimitException(
+            "Buffer: client_max_body_size exceeded -> 413");
+    }
+
+    if (_head > 0 && _head >= _storage.size() / 2)
+        _compact();
+
+    _ensureCapacity(_storage.size() + len);
+
+    const size_t old_size = _storage.size();
+    _storage.resize(old_size + len);
+    std::memcpy(&_storage[old_size], src, len);
+}
 
 void Buffer::consume(size_t n)
 {

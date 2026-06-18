@@ -193,13 +193,18 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
     {
         while (true)
         {
+            if(std::time(NULL) - it->second->start_time > it->second->_timeout_seconds)
+            {
+                _failCgiJob(result_fd, 504);
+                return;
+            }
             ssize_t n = ::read(result_fd, buf, sizeof(buf));
 
             if (n > 0)
             {
                 if (!job->headers_sent)
                 {
-                    job->result_buffer.append(buf, static_cast<size_t>(n));
+                    job->result_buffer.append_result(buf, static_cast<size_t>(n));
                     size_t body_start = findHeaderEnd(job->result_buffer);
                     if (body_start == std::string::npos)
                         continue;
@@ -208,12 +213,11 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
                                     conn->request(), *conn->config(),
                                     conn->writeBuffer());
                     job->headers_sent = true;
-
                     size_t leftover = job->result_buffer.size() - body_start;
-                    if (leftover > 0 && conn->request().method != "HEAD")
-                        writeChunk(conn->writeBuffer(),
-                                   job->result_buffer.data() + body_start,
-                                   leftover);
+                    writeChunk(conn->writeBuffer(),
+                               job->result_buffer.data() + body_start,
+                               leftover);
+                    
                     job->body_written += leftover;
                     job->result_buffer.earase();
                     conn->setWriting();
@@ -224,9 +228,9 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
                 }
                 else
                 {
-                    if (conn->request().method != "HEAD")
-                        writeChunk(conn->writeBuffer(), buf,
-                                   static_cast<size_t>(n));
+                    // if (conn->request().method != "HEAD")
+                    writeChunk(conn->writeBuffer(), buf,
+                                static_cast<size_t>(n));
                     job->body_written += static_cast<size_t>(n);
                     conn->setWriting();
                     _rearmClient(conn->fd());
@@ -243,20 +247,14 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
                 return;
             }
 
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            if (n < 0 || _stopped)
                 return;
-
-            if (_stopped)
-                return;
-
-            _failCgiJob(result_fd, 502);
-            return;
         }
     }
     catch (const BodyLimitException&)
     {
         if (_stopped)
             return;
-        _failCgiJob(result_fd, 502);
+        _failCgiJob(result_fd, 413);
     }
 }

@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <cstddef>
 
+#define LimitRequestBody 20971520
+
 class BodyLimitException : public std::runtime_error
 {
 public:
@@ -23,6 +25,7 @@ public:
     explicit Buffer(size_t client_max_body_size);
 
     void        append(const char* src, size_t len);
+    void        append_result(const char* src, size_t len);
     void        consume(size_t n);
     const char* data()    const;
     char*       data();
