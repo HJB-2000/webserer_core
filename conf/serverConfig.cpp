@@ -131,13 +131,23 @@ void Server::setErrorPage(int code, std::string& path)
 void Server::set_default_conf()
 {
     _host = "127.0.0.1";
-    _port = 8080;
+    _port = 8888;
     _root = "./www/html";
     _client_max_body_size = 10485760;
     _index_Files.push_back("index.html");
-    _server_name = "example.com";
-    _error_page[400] = "./errors/400.html";
-    _error_page[500] = "./errors/500.html";
+    _server_name = "fahd.com";
+    _error_page[400] = "./www/html/errors/400.html";
+    _error_page[401] = "./www/html/errors/401.html";
+    _error_page[403] = "./www/html/errors/403.html";
+    _error_page[404] = "./www/html/errors/404.html";
+    _error_page[405] = "./www/html/errors/405.html";
+    _error_page[408] = "./www/html/errors/408.html";
+    _error_page[411] = "./www/html/errors/411.html";
+    _error_page[413] = "./www/html/errors/413.html";
+    _error_page[500] = "./www/html/errors/500.html";
+    _error_page[502] = "./www/html/errors/502.html";
+    _error_page[503] = "./www/html/errors/503.html";
+    _error_page[504] = "./www/html/errors/504.html";
     Location locations_block;
     locations_block.set_default_conf(0);
     this->_locations.push_back(locations_block);
@@ -146,5 +156,7 @@ void Server::set_default_conf()
     locations_block.set_default_conf(2);
     this->_locations.push_back(locations_block);
     locations_block.set_default_conf(3);
+    this->_locations.push_back(locations_block);
+    locations_block.set_default_conf(4);
     this->_locations.push_back(locations_block);
 }

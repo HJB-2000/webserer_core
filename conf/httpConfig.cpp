@@ -137,8 +137,18 @@ std::vector<std::string> httpConfig::consumeDirective(size_t &j, std::vector<Lex
 void httpConfig::set_default_conf()
 {
     _client_max_body_size = 10485760;
-    _error_page[404] = "./errors/404.html";
-    _error_page[500] = "./errors/500.html";
+    _error_page[400] = "./www/html/errors/400.html";
+    _error_page[401] = "./www/html/errors/401.html";
+    _error_page[403] = "./www/html/errors/403.html";
+    _error_page[404] = "./www/html/errors/404.html";
+    _error_page[405] = "./www/html/errors/405.html";
+    _error_page[408] = "./www/html/errors/408.html";
+    _error_page[411] = "./www/html/errors/411.html";
+    _error_page[413] = "./www/html/errors/413.html";
+    _error_page[500] = "./www/html/errors/500.html";
+    _error_page[502] = "./www/html/errors/502.html";
+    _error_page[503] = "./www/html/errors/503.html";
+    _error_page[504] = "./www/html/errors/504.html";
     Server servers_block;
     servers_block.set_default_conf();
     _all_servers.push_back(servers_block);

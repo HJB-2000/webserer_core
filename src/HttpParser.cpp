@@ -768,7 +768,6 @@ void HttpParser::_parseChunked(Buffer& buf, HttpRequest& req)
                 }
                 const size_t MAX_ALLOWED_CHUNK = 1073741824ULL; 
                 if (chunk_sz > (MAX_ALLOWED_CHUNK / 16)) {
-                std::cerr << "---------------------[HttpParser] body limit exceeded on fd 9999999 ----------------" << "\n";
 
                     req.parse_state = PSTATE_ERROR; 
                     req.error_code = 413; 
@@ -817,9 +816,6 @@ void HttpParser::_parseChunked(Buffer& buf, HttpRequest& req)
         
         if (req.written + to_read > req.max_body_size)  
         {
-            std::cerr << "req.max_body_size |||| = " << req.max_body_size << "\n";
-            std::cerr << "req.written + to_read |||| = " << req.written + to_read<< "\n";
-            std::cerr << "---------------------[HttpParser] body limit exceeded on fd 333333 ----------------"<< "\n";
             req.parse_state = PSTATE_ERROR;  
             req.error_code = 413;  
             return;  
