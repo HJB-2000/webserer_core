@@ -1,34 +1,39 @@
 #!/usr/bin/env python3
 import os
+import json
 from http.cookies import SimpleCookie
 
-from cgi_data_store import SESSIONS_FILE, session_key, cookie_name, load_json, save_json_atomic
+DATA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'data'))
+SESSIONS_FILE = os.path.join(DATA_DIR, 'sessions.json')
 
-
-def destroy_session(sid):
-    sessions = load_json(SESSIONS_FILE, {})
-    key = session_key(sid)
-    if key in sessions:
-        del sessions[key]
-        save_json_atomic(SESSIONS_FILE, sessions)
-
-
-# Get session from cookie and delete it
 cookie_str = os.environ.get('HTTP_COOKIE', '')
 if cookie_str:
     cookie = SimpleCookie()
     cookie.load(cookie_str)
-    sid_morsel = cookie.get(cookie_name())
+    sid_morsel = cookie.get('session_id')
     if sid_morsel:
-        destroy_session(sid_morsel.value)
+        sid = sid_morsel.value
+        
+        # Load and drop entry natively
+        sessions = {}
+        if os.path.exists(SESSIONS_FILE):
+            try:
+                with open(SESSIONS_FILE, 'r') as f:
+                    sessions = json.load(f)
+            except Exception:
+                pass
+                
+        if sid in sessions:
+            del sessions[sid]
+            with open(SESSIONS_FILE, 'w') as f:
+                json.dump(sessions, f, indent=2)
 
-# Clear cookie
+# Wipe cookie from browser
 expired = SimpleCookie()
-cname = cookie_name()
-expired[cname] = ''
-expired[cname]['path'] = '/'
-expired[cname]['expires'] = 'Thu, 01 Jan 1970 00:00:00 GMT'
+expired['session_id'] = ''
+expired['session_id']['path'] = '/'
+expired['session_id']['expires'] = 'Thu, 01 Jan 1970 00:00:00 GMT'
+
 print(expired.output())
 print("Status: 302 Found")
-print("Location: /index.html")
-print()
+print("Location: /index.html\n")
