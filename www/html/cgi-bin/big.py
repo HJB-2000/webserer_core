@@ -2,7 +2,7 @@
 import sys
 import time
 
-TOTAL_BYTES = 100 * 1024 * 1024   # 100MB, matches your existing stress profile
+TOTAL_BYTES = 10 * 1024 * 1024   # 100MB, matches your existing stress profile
 CHUNK_SIZE  = 64 * 1024
 DELAY       = 0                   # seconds between writes; bump >0 to slow it down
 

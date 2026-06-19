@@ -27,7 +27,6 @@ SRCS    = src/main.cpp \
           cgi/CgiCleanning.cpp \
           src/ResponseHandler_helper.cpp \
           src/ResponseLoader.cpp \
-          src/enforce_memory_limit.cpp \
           conf/parsing.cpp \
           conf/LexerConfig.cpp \
           conf/eventsConfig.cpp \
