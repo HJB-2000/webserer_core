@@ -154,6 +154,7 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
                 std::string tmp_host = val;
                 server.setHost(tmp_host);
                 int default_port = 9090;
+                std::cerr << "[WARN] Missing port in configuration. Falling back to default (9090)." << std::endl;
                 server.setPort(default_port);
             }
             else
@@ -202,7 +203,7 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
         {
             report_parse_error("Syntax Error", stream, i,
                 "Invalid client_max_body_size");
-            }
+        }
         server.setMaxBodySize(tmp);
     }
     else if (directive == "timeout")
@@ -252,6 +253,7 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
             "'unknown server directive' in parseDirective of server");
     }
 }
+
 void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexems, size_t &i)
 {
     i++;
@@ -296,7 +298,9 @@ void httpConfig::parsServer(Server &obj_Server, std::vector<Lexer> &stream_lexem
     if (i >= stream_lexems.size() || stream_lexems[i].get_token_type() != "TYPE_RBRACE")
         report_parse_error("Syntax Error: ", stream_lexems, i, "'Unclosed server block' in parsServer");
     if (obj_Server.getPort() == -1)
+    {
         report_parse_error("Missing required directive: listen", stream_lexems, i, "parsServer");
+    }
     if (obj_Server.getRoot().empty())
         report_parse_error("Missing required directive: root", stream_lexems, i, "parsServer");
     if (obj_Server.getIndex_s().empty())

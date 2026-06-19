@@ -49,7 +49,7 @@ std::vector<ServerConfig> API_conf(int argc, char** argv)
             buff.str("");
             buff.clear();
             config_file.close();
-            throw std::runtime_error(std::string("[API_conf] config has no directives after preprocessing"));
+            throw std::runtime_error(std::string("[API_conf] config has no contexts after preprocessing"));
         }
 
         std::vector<std::string> tokens = storing_in_vec(buff);
@@ -57,14 +57,16 @@ std::vector<ServerConfig> API_conf(int argc, char** argv)
         Lexer::init_grammar();
         std::vector<Lexer> stream;
         for (size_t i = 0; i < tokens.size(); ++i)
+        {
             if (!tokens[i].empty())
-                stream.push_back(Lexer(Lexer::identify(tokens[i]), tokens[i]));
-        stream.push_back(Lexer(TYPE_END, ""));
+               stream.push_back(Lexer(Lexer::identify(tokens[i]), tokens[i]));
+        }
 
+        stream.push_back(Lexer(TYPE_END, ""));
         
-            ParserConf parser;
-            parsing_lexems(parser, stream);
-            return parser.get_http().get_all_servers();
+        ParserConf parser;
+        parsing_lexems(parser, stream);
+        return parser.get_http().get_all_servers();
     }
     catch (const std::runtime_error& e)
     {

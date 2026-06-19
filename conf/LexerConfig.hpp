@@ -23,7 +23,6 @@ class Lexer
         Lexer& operator=(const Lexer& obj);
         std::string get_value();
         std::string get_token_type();
-        void set_grammar();
         ~Lexer();
 
         static t_token_type identify(const std::string& s);

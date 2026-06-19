@@ -53,7 +53,6 @@ void httpConfig::parsLocation(Location &obj_Location, std::vector<Lexer> &stream
     unique_directives.insert("autoindex");
     unique_directives.insert("cgi_path");
     unique_directives.insert("cgi_ext");
-    unique_directives.insert("upload_store");
     unique_directives.insert("upload_path");
     unique_directives.insert("client_max_body_size");
     unique_directives.insert("return");
@@ -151,11 +150,11 @@ void httpConfig::parseDirective(Location &location, const std::string &directive
                 "'cgi_ext expects at least one literal value' in parseDirective of Location");
         location.setCGI_extensions(values);
     }
-    else if (directive == "upload_store" || directive == "upload_path")
+    else if (directive == "upload_path")
     {
         if (values.size() != 1)
             report_parse_error("Syntax Error: directive", stream, i,
-                "'upload_store/upload_path expects a single value' in parseDirective of Location");
+                "upload_path expects a single value' in parseDirective of Location");
         location.setUploadStore(values[0]);
     }
     else if (directive == "client_max_body_size")

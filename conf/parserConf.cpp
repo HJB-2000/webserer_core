@@ -272,7 +272,6 @@ void ParserConf::check_for_blocks()
 {
     if(!get_exist_http() || !get_exist_server())
     {
-        std::cerr << "Missing required http or server block" << "\n";
         throw std::runtime_error("Missing required top-level blocks");
     }
 }
