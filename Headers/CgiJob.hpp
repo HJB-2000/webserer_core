@@ -15,6 +15,8 @@ struct CgiJob
     Buffer      result_buffer;
     time_t      start_time;
     int         _timeout_seconds;
+    int         wait_time_child;
+    time_t      last_activity_time;
     int         stdin_fd;
 
     bool        headers_sent;
@@ -28,6 +30,8 @@ struct CgiJob
     ,       result_buffer(max_size)
     ,       start_time(std::time(NULL))
     ,       _timeout_seconds(timeout)
+    ,       wait_time_child(10)
+    ,       last_activity_time(std::time(NULL))
     ,       stdin_fd(-1)
     ,       headers_sent(false)
     ,       body_written(0)

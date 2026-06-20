@@ -26,7 +26,7 @@
 #include "CgiJob.hpp"
 #include "CgiRequestInfo.hpp"
 #include "EventRef.hpp"
-
+#define FHLS 8*1024
 
 class EventLoop
 {
