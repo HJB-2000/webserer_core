@@ -20,7 +20,6 @@ void check_valid_content(std::stringstream &buff)
 
         if (c == 9 || c == 10 || c == 13 || (c >= 32 && c <= 126))
             continue;
-        buff.clear();
         throw std::runtime_error(std::string("[API_conf] Invalid character ] in config file"));
     }
 }
@@ -30,17 +29,13 @@ void remove_comments(std::stringstream &buff)
     std::string str = buff.str();
     char hashtag = '#';
     std::string out;
-    bool in_single_quote = false;
-    bool in_double_quote = false;
     for(size_t i = 0; i < str.length(); i++)
     {
-        if(str[i] == '\'' && !in_double_quote)
-            in_single_quote = !in_single_quote;
-        else if(str[i] == '"' && !in_single_quote)
-            in_double_quote = !in_double_quote;
+        if(str[i] == '\'' || str[i] == '"')
+            throw std::runtime_error("configuration error: quoted strings are not supported");
 
         bool starts_token = (i == 0) || std::isspace(static_cast<unsigned char>(str[i - 1]));
-        if(str[i] == hashtag && starts_token && !in_single_quote && !in_double_quote)
+        if(str[i] == hashtag && starts_token)
         {
             i++;
             for(; i < str.length(); i++)
@@ -55,7 +50,6 @@ void remove_comments(std::stringstream &buff)
     }
     buff.str(out);
 }
-
 void refactoring_buffer(std::stringstream &buff)
 {
     std::string str = buff.str();
@@ -301,6 +295,7 @@ void validate_final_config(std::vector<Server>& servers, long long http_default_
         }
     }
 }
+
 void parsing_lexems(ParserConf& parser, std::vector<Lexer>& stream_lexems)
 {
     size_t len = stream_lexems.size();

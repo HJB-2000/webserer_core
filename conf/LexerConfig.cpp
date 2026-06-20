@@ -76,7 +76,6 @@ void Lexer::init_grammar()
     _grammar["autoindex"] = TYPE_DIRECTIVE;        
     _grammar["return"] = TYPE_DIRECTIVE;           
     _grammar["upload_path"] = TYPE_DIRECTIVE;      
-    _grammar["upload_store"] = TYPE_DIRECTIVE;      
     _grammar["timeout"] = TYPE_DIRECTIVE;      
     
     _grammar["cgi_path"] = TYPE_DIRECTIVE;         

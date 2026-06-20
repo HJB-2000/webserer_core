@@ -313,7 +313,6 @@ bool CgiHandler::startCgi(int write_end)
     std::string script_file = _script_path;
     if (script_file.empty()) { _request.error_code = 404; _state = CGI_ERROR; return false; }
 
-    // Resolve script_file - try location root first, then server root
     std::string resolved_script;
     if (!resolve_path(script_file, loc_root, srv_root, resolved_script))
     { _request.error_code = 404; _state = CGI_ERROR; return false; }
@@ -330,7 +329,17 @@ bool CgiHandler::startCgi(int write_end)
 
     bool need_stdin = (_request.chunked || _request.content_length > 0
                        || _request.body_file_written > 0 || _body_fd >= 0);
-
+    if (!cgi_path.empty() && cgi_path[0] != '/')
+    {
+        const char* pwd = std::getenv("PWD");
+        if (pwd && pwd[0] == '/')
+        {
+            std::string rel = cgi_path;
+            if (rel.compare(0, 2, "./") == 0)
+                rel = rel.substr(2);
+            cgi_path = std::string(pwd) + "/" + rel;
+        }
+    }
     _child_pid = fork();
     if (_child_pid < 0) {
          _request.error_code = 500; _state = CGI_ERROR; return false; }
@@ -348,6 +357,18 @@ bool CgiHandler::startCgi(int write_end)
             || verify_script.st_dev != sb_script.st_dev)
             std::exit(127);
 
+        size_t last_slash = script_file.find_last_of("/");
+        std::string script_filename = script_file;
+        
+        if (last_slash != std::string::npos)
+        {
+            std::string cgi_dir = script_file.substr(0, last_slash);
+            script_filename = "." + script_file.substr(last_slash);
+            if (chdir(cgi_dir.c_str()) < 0)
+            {
+                std::exit(1); 
+            }
+        }
         if (dup2(write_end, STDOUT_FILENO) == -1) std::exit(1);
 
         if (need_stdin && _body_fd >= 0)
@@ -401,7 +422,7 @@ bool CgiHandler::startCgi(int write_end)
         close(devnull_w);
 
         close(write_end);
-        std::vector<std::string> dynamic_args = buildCgiArgs(cgi_path, script_file, _request.query_string);
+        std::vector<std::string> dynamic_args = buildCgiArgs(cgi_path, script_filename, _request.query_string);
         std::vector<char*> argv;
         for (size_t i = 0; i < dynamic_args.size(); ++i) {
             argv.push_back(const_cast<char*>(dynamic_args[i].c_str()));

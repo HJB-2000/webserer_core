@@ -246,8 +246,7 @@ void EventLoop::run()
         for (size_t i = 0; i < _stale_refs.size(); ++i)
             delete _stale_refs[i];
         _stale_refs.clear();
-        extern void enforce_memory_limit(); // uncomment this to see the role of malloc_trim
-        enforce_memory_limit();
+
         _closeTimedOutClients();
         _closeTimedOutCgiJobs();
         _reapPending();
