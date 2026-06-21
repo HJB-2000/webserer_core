@@ -177,21 +177,20 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
     CgiJob*     job  = it->second;
     Connection* conn = _manager->get(job->client_fd);
     time_t now = std::time(NULL);
-    if (now - job->start_time > job->_timeout_seconds)
+    if (now - job->start_time > job->_timeout_seconds
+        || now - job->last_activity_time > 15)
     {
         _failCgiJob(result_fd, 504);
         return;
     }
-    if (now - job->last_activity_time > 15)
-    {
-        _failCgiJob(result_fd, 504);
-        return;
-    }
+
     if (!conn) { _closeCgiJob(result_fd); return; }
 
     if (events & (EPOLLERR | EPOLLHUP))
     {
-        // drain remaining data, then read returns 0 -> _finishCgiJob
+        if (job->result_buffer.size() > 0)
+            _failCgiJob(result_fd, 504);
+        
     }
 
     if (job->headers_sent &&
@@ -201,11 +200,11 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
     char buf[16 * 1024];
     try
     {
-        if(std::time(NULL) - it->second->start_time > it->second->_timeout_seconds)
-        {
-            _failCgiJob(result_fd, 504);
-            return;
-        }
+        // if(std::time(NULL) - it->second->start_time > it->second->_timeout_seconds)
+        // {
+        //     _failCgiJob(result_fd, 504);
+        //     return;
+        // }
         ssize_t n = ::read(result_fd, buf, sizeof(buf));
 
         if (n > 0)
@@ -216,8 +215,8 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
                 size_t body_start = findHeaderEnd(job->result_buffer);
                 if (body_start == std::string::npos)
                 {
-                    if (job->result_buffer.size() > FHLS)
-                        _failCgiJob(result_fd, 413);
+                //     if (job->result_buffer.size() > FHLS)
+                //         _failCgiJob(result_fd, 502);
                     return;
                 }
 

@@ -246,7 +246,6 @@ void EventLoop::run()
         for (size_t i = 0; i < _stale_refs.size(); ++i)
             delete _stale_refs[i];
         _stale_refs.clear();
-
         _closeTimedOutClients();
         _closeTimedOutCgiJobs();
         _reapPending();

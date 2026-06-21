@@ -12,6 +12,130 @@
 #include <iostream>      
 #include <cstdio>        
 
+namespace {
+
+struct MultipartFile {
+    std::string filename;
+    std::string content_type;
+    const char* data;
+    size_t      len;
+};
+
+const char* findSubstr(const char* begin, const char* end,
+                        const std::string& needle)
+{
+    if (needle.empty()) return begin;
+    size_t nlen = needle.size();
+    if (static_cast<size_t>(end - begin) < nlen) return end;
+
+    const char* limit = end - nlen + 1;
+    for (const char* p = begin; p < limit; ++p)
+    {
+        size_t i = 0;
+        while (i < nlen && p[i] == needle[i]) ++i;
+        if (i == nlen) return p;
+    }
+    return end;
+}
+
+std::string trimToken(const std::string& s)
+{
+    size_t a = s.find_first_not_of(" \t");
+    if (a == std::string::npos) return "";
+    size_t b = s.find_last_not_of(" \t\r");
+    return s.substr(a, b - a + 1);
+}
+
+bool extractBoundary(const HttpRequest& req, std::string& boundary)
+{
+    std::string ct = req.header("content-type");
+    if (ct.find("multipart/form-data") == std::string::npos)
+        return false;
+
+    size_t pos = ct.find("boundary=");
+    if (pos == std::string::npos) return false;
+    boundary = ct.substr(pos + 9);
+
+    size_t semi = boundary.find(';');
+    if (semi != std::string::npos) boundary = boundary.substr(0, semi);
+    boundary = trimToken(boundary);
+    if (boundary.size() >= 2 && boundary[0] == '"' && boundary[boundary.size()-1] == '"')
+        boundary = boundary.substr(1, boundary.size() - 2);
+
+    return !boundary.empty();
+}
+
+bool parseMultipartFirstFile(const char* body, size_t body_len,
+                              const std::string& boundary,
+                              MultipartFile& out)
+{
+    if (body == NULL || body_len == 0) return false;
+
+    std::string delim = "--" + boundary;
+    const char* begin = body;
+    const char* end   = body + body_len;
+
+    const char* part = findSubstr(begin, end, delim);
+    if (part == end) return false;
+    part += delim.size();
+
+    if (part + 2 <= end && part[0] == '-' && part[1] == '-')
+        return false; // "--boundary--" -> no parts at all
+
+    if (part + 2 <= end && part[0] == '\r' && part[1] == '\n')
+        part += 2;
+
+    const char* hdr_end = findSubstr(part, end, "\r\n\r\n");
+    if (hdr_end == end) return false;
+
+    std::string headers(part, static_cast<size_t>(hdr_end - part));
+
+    size_t fn_pos = headers.find("filename=\"");
+    if (fn_pos != std::string::npos) {
+        fn_pos += 10;
+        size_t fn_end = headers.find('"', fn_pos);
+        if (fn_end != std::string::npos)
+            out.filename = headers.substr(fn_pos, fn_end - fn_pos);
+    }
+
+    size_t ct_pos = headers.find("Content-Type:");
+    if (ct_pos == std::string::npos)
+        ct_pos = headers.find("content-type:");
+    if (ct_pos != std::string::npos) {
+        size_t v_start = headers.find(':', ct_pos) + 1;
+        size_t v_end   = headers.find("\r\n", v_start);
+        if (v_end == std::string::npos) v_end = headers.size();
+        out.content_type = trimToken(headers.substr(v_start, v_end - v_start));
+    }
+
+    const char* data_start = hdr_end + 4;
+    const char* next_delim = findSubstr(data_start, end, delim);
+    if (next_delim == end) return false;
+
+    const char* data_end = next_delim;
+    if (data_end - data_start >= 2 &&
+        *(data_end - 2) == '\r' && *(data_end - 1) == '\n')
+        data_end -= 2;
+
+    if (data_end < data_start) return false;
+
+    out.data = data_start;
+    out.len  = static_cast<size_t>(data_end - data_start);
+    return true;
+}
+
+std::string sanitizeFilename(const std::string& raw)
+{
+    std::string name = raw;
+    size_t slash = name.find_last_of("/\\");
+    if (slash != std::string::npos)
+        name = name.substr(slash + 1);
+    if (name.empty() || name == "." || name == "..")
+        return "";
+    return name;
+}
+
+} // namespace
 
 static std::string normalizePath(const std::string& path)  
 {  
@@ -402,6 +526,76 @@ void ResponseHandler::_sendRedirect(
 //     return oss.str();
 // }
 
+// void ResponseHandler::_handlePost(
+//     const HttpRequest&  req,
+//     const Location&     loc,
+//     const ServerConfig& cfg,
+//     Buffer&             wb)
+// {
+//     if (loc.getUploadStore().empty())
+//     {
+//         _sendErrorInternal(405, req, cfg, wb);
+//         return;
+//     }
+
+//     std::string upload_dir = loc.getUploadStore();
+//     if (upload_dir.empty() || upload_dir[upload_dir.size() - 1] != '/')
+//         upload_dir += '/';
+
+//     static unsigned long counter = 0;
+//     ++counter;
+//     time_t now = std::time(NULL);
+//     std::ostringstream name_oss;
+//     name_oss << "upload_" << static_cast<long>(now) << "_" << counter;
+//     std::string filename = name_oss.str();
+//     std::string filepath = upload_dir + filename;
+
+//     int fd = ::open(filepath.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_EXCL, 0644);
+//     if (fd < 0)
+//     {
+//         std::cerr << "[ResponseHandler] POST upload open failed: "
+//         << std::strerror(errno) << "\n";
+//         _sendErrorInternal(500, req, cfg, wb);
+//         return;
+//     }
+    
+//     int test = ::open("post_results.txt", O_WRONLY | O_CREAT | O_TRUNC | O_EXCL, 0644);
+//     size_t             written   = 0;
+//     while (written < req.body.size())
+//     {
+//         ::write(test,
+//                             req.body.data() + written,
+//                             req.body.size()  - written);
+//         ssize_t n = ::write(fd,
+//                             req.body.data() + written,
+//                             req.body.size()  - written);
+//         if (n <= 0)
+//         {
+//             ::close(fd);
+//             _sendErrorInternal(500, req, cfg, wb);
+//             return;
+//         }
+//         written += static_cast<size_t>(n);
+//     }
+//     ::close(fd);
+
+//     std::string location_url = req.path;
+//     if (location_url.empty() || location_url[location_url.size() - 1] != '/')
+//         location_url += '/';
+//     location_url += filename;
+//     std::string resp_body =
+//         "<!DOCTYPE html><html><body>"
+//         "<p>File uploaded successfully.</p>"
+//         "</body></html>";
+
+//     std::ostringstream extra;
+//     extra << "Location: " << location_url << "\r\n";
+
+//     _writeHeaders(201, "text/html", resp_body.size(), extra.str(), req, wb);
+//     if (req.method != "HEAD")
+//         _appendStr(wb, resp_body);
+// }
+
 void ResponseHandler::_handlePost(
     const HttpRequest&  req,
     const Location&     loc,
@@ -418,15 +612,38 @@ void ResponseHandler::_handlePost(
     if (upload_dir.empty() || upload_dir[upload_dir.size() - 1] != '/')
         upload_dir += '/';
 
-    static unsigned long counter = 0;
+    static int counter = 0;
     ++counter;
-    time_t now = std::time(NULL);
-    std::ostringstream name_oss;
-    name_oss << "upload_" << static_cast<long>(now) << "_" << counter;
-    std::string filename = name_oss.str();
+    time_t now = ::time(NULL);
+
+    const char* write_data = req.body.data();
+    size_t      write_len  = req.body.size();
+    std::string filename;
+
+    std::string boundary;
+    MultipartFile mf;
+    mf.data = NULL; mf.len = 0;
+
+    if (extractBoundary(req, boundary) &&
+        parseMultipartFirstFile(req.body.data(), req.body.size(), boundary, mf))
+    {
+        filename = sanitizeFilename(mf.filename);
+        write_data = mf.data;
+        write_len  = mf.len;
+    }
+
+    if (filename.empty())
+    {
+        std::ostringstream name_oss;
+        name_oss << "upload_" << static_cast<long>(now)
+                 << "_" << static_cast<int>(::getpid())
+                 << "_" << counter;
+        filename = name_oss.str();
+    }
+
     std::string filepath = upload_dir + filename;
 
-    int fd = ::open(filepath.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_EXCL, 0644);
+    int fd = ::open(filepath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd < 0)
     {
         std::cerr << "[ResponseHandler] POST upload open failed: "
@@ -435,12 +652,10 @@ void ResponseHandler::_handlePost(
         return;
     }
 
-    size_t             written   = 0;
-    while (written < req.body.size())
+    size_t written = 0;
+    while (written < write_len)
     {
-        ssize_t n = ::write(fd,
-                            req.body.data() + written,
-                            req.body.size()  - written);
+        ssize_t n = ::write(fd, write_data + written, write_len - written);
         if (n <= 0)
         {
             ::close(fd);
