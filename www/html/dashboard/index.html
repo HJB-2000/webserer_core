@@ -92,13 +92,13 @@
             <a href="/cgi-bin/gettime.py" class="btn btn-success">Open gettime.py</a>
         </div>
 
-        <div class="card">
+        <!-- <div class="card">
             <h3>File Upload (POST multipart)</h3>
             <input type="file" id="uploadFileInput">
             <button onclick="uploadFile()" class="btn btn-success">Upload</button>
             <div id="uploadResult" class="info-box">Select a file and click Upload</div>
             <a href="/uploads/" target="_blank" class="btn btn-muted" style="margin-top:12px;">Browse /uploads/ (autoindex)</a>
-        </div>
+        </div> -->
     </div>
 
     <div class="box">
@@ -112,8 +112,8 @@
             </div>
 
             <div class="card">
-                <strong>POST — File Upload (CGI)</strong><br><br>
-                <form method="POST" action="/cgi-bin/upload_file.py" enctype="multipart/form-data">
+                <strong>POST — NATIVE File Upload (No CGI)</strong><br><br>
+                <form method="POST" action="/uploads/" enctype="multipart/form-data">
                     <input type="file" name="file" style="font-size:13px;">
                     <button type="submit" style="margin-top:8px; padding:6px 14px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; width: 100%;">Upload</button>
                 </form>
@@ -173,30 +173,6 @@
         }
     })();
 
-    async function uploadFile() {
-        const input = document.getElementById('uploadFileInput');
-        const result = document.getElementById('uploadResult');
-        if (!input.files || !input.files.length) {
-            result.textContent = 'Please select a file first.';
-            return;
-        }
-        const file = input.files[0];
-        const fd = new FormData();
-        fd.append('file', file);
-        result.textContent = `Uploading ${file.name} (${(file.size/1024).toFixed(1)} KB)...`;
-        try {
-            const res = await fetch('/cgi-bin/upload_file.py', { method: 'POST', body: fd });
-            if (res.ok) {
-                result.textContent = `Upload OK: ${file.name} (${res.status})`;
-            } else if (res.status === 413) {
-                result.textContent = '413 Payload Too Large — file exceeds server limit';
-            } else {
-                result.textContent = `Upload failed (${res.status})`;
-            }
-        } catch (e) {
-            result.textContent = 'Error: ' + e.message;
-        }
-    }
 
     function escapeHtml(t) {
         const d = document.createElement('div');

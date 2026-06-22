@@ -177,7 +177,7 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
 CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const Location& location, const std::string& script_path,  const std::string& client_ip)
     : _request((HttpRequest &)request),_server(config), _location(location),
     
-      _script_path(script_path), _child_pid(-1), _state(CGI_IDLE),
+      _script_path(script_path), _child_pid(-1),
       _error_code(0), _env_logged(false), _client_ip(client_ip)
 {
     _cgi_in_pipe[0] = -1;
@@ -285,7 +285,7 @@ bool CgiHandler::startCgi(int write_end)
     if (dot_pos == std::string::npos)
     {
         _error_code = 400;
-        _state = CGI_ERROR;
+        
         return false; 
     }
     std::string script_ext = _script_path.substr(dot_pos);
@@ -294,7 +294,7 @@ bool CgiHandler::startCgi(int write_end)
     if (it == cgi_map.end())
     {
         _error_code = 501;
-        _state = CGI_ERROR; 
+         
         return false; 
     }
     std::string cgi_path = it->second;
@@ -302,30 +302,30 @@ bool CgiHandler::startCgi(int write_end)
     std::string loc_root = _location.getRoot();
     std::string srv_root = _server.getRoot();
     if (!resolve_path(cgi_path, loc_root, srv_root, resolved_cgi))
-    { _request.error_code = 500; _state = CGI_ERROR; return false; }
+    { _request.error_code = 500;  return false; }
     cgi_path = resolved_cgi;
 
     struct stat sb_cgi;
     if (stat(cgi_path.c_str(), &sb_cgi) != 0 || !S_ISREG(sb_cgi.st_mode) ||
         access(cgi_path.c_str(), X_OK) != 0)
-    { _request.error_code = 500; _state = CGI_ERROR; return false; }
+    { _request.error_code = 500;  return false; }
 
     std::string script_file = _script_path;
-    if (script_file.empty()) { _request.error_code = 404; _state = CGI_ERROR; return false; }
+    if (script_file.empty()) { _request.error_code = 404;  return false; }
 
     std::string resolved_script;
     if (!resolve_path(script_file, loc_root, srv_root, resolved_script))
-    { _request.error_code = 404; _state = CGI_ERROR; return false; }
+    { _request.error_code = 404;  return false; }
     script_file = resolved_script;
 
     struct stat sb_script;
     if (stat(script_file.c_str(), &sb_script) != 0)
-    { _request.error_code = 404; _state = CGI_ERROR; return false; }
+    { _request.error_code = 404;  return false; }
     if (!S_ISREG(sb_script.st_mode) || access(script_file.c_str(), R_OK) != 0)
-    { _request.error_code = 403; _state = CGI_ERROR; return false; }
+    { _request.error_code = 403;  return false; }
 
     if (!validate_env_contract())
-    { _request.error_code = 500; _state = CGI_ERROR; return false; }
+    { _request.error_code = 500;  return false; }
 
     bool need_stdin = (_request.chunked || _request.content_length > 0
                        || _request.body_file_written > 0 || _body_fd >= 0);
@@ -342,7 +342,7 @@ bool CgiHandler::startCgi(int write_end)
     }
     _child_pid = fork();
     if (_child_pid < 0) {
-         _request.error_code = 500; _state = CGI_ERROR; return false; }
+         _request.error_code = 500;  return false; }
 
     if (_child_pid == 0)
     {
@@ -373,23 +373,11 @@ bool CgiHandler::startCgi(int write_end)
 
         if (need_stdin && _body_fd >= 0)
         {
-            struct stat sb;
-            if (fstat(_body_fd, &sb) == 0) {
-                // std::cerr << "[CGI-Child] TEMP FILE DEBUG:" << std::endl;
-                // std::cerr << "[CGI-Child]   - fd: " << _body_fd << std::endl;
-                // std::cerr << "[CGI-Child]   - file size: " << sb.st_size << " bytes" << std::endl;
-                // std::cerr << "[CGI-Child]   - st_blocks: " << sb.st_blocks << " (512-byte blocks)" << std::endl;
-                // std::cerr << "[CGI-Child]   - bytes on disk: " << (sb.st_blocks * 512) << " bytes" << std::endl;
-            }
-            // std::cerr << "[CGI-Child] Calling dup2(temp_fd=" << _body_fd << ", STDIN)" << std::endl;
             if (dup2(_body_fd, STDIN_FILENO) == -1)
                 std::exit(1);
-            // std::cerr << "[CGI-Child] dup2 succeeded, STDIN now points to temp file fd" << std::endl;
             if (_body_fd != STDIN_FILENO) {
                 ::close(_body_fd);
-                // std::cerr << "[CGI-Child] Closed original temp fd " << _body_fd << std::endl;
             }
-            // std::cerr << "[CGI-Child] About to execute CGI script..." << std::endl;
         }
         else if (need_stdin)
         {
@@ -431,17 +419,8 @@ bool CgiHandler::startCgi(int write_end)
         if (_env_ptrs.empty() || _env_ptrs.back() != NULL) std::exit(127);
         execve(cgi_path.c_str(), &argv[0], &_env_ptrs[0]);
         std::exit(127);
-        // char* argv[3];
-        // argv[0] = const_cast<char*>(cgi_path.c_str());
-        // argv[1] = const_cast<char*>(script_file.c_str());
-        // argv[2] = NULL;
-        // if (_env_ptrs.empty() || _env_ptrs.back() != NULL) std::exit(127);
-        // execve(cgi_path.c_str(), argv, &_env_ptrs[0]);
-        // std::exit(127);
     }
 
-
-    _state = CGI_WAITING;
     return true;
 }
 
@@ -449,11 +428,6 @@ CgiHandler::~CgiHandler()
 {
     close_fd(_cgi_in_pipe[0]);
     close_fd(_cgi_in_pipe[1]);
-}
-
-CgiState CgiHandler::getState() const
-{
-    return _state;
 }
 
 int CgiHandler::getErrorCode() const

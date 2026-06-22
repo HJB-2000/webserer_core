@@ -9,14 +9,6 @@
 #include "conf/serverConfig.hpp"
 #include "conf/locationConfig.hpp"
 
-enum CgiState {
-    CGI_IDLE,
-    CGI_WRITING_STDIN,
-    CGI_WAITING,
-    CGI_READING,
-    CGI_DONE,
-    CGI_ERROR
-};
 
 class CgiHandler
 {
@@ -26,7 +18,6 @@ class CgiHandler
 
         void      setBodyFd(int fd);
         bool      startCgi(int write_end);
-        CgiState  getState()        const;
         int       getErrorCode()    const;
         pid_t     getChildPid()     const;
         int       releaseStdinFd();
@@ -48,7 +39,6 @@ class CgiHandler
         pid_t   _child_pid;
         int     _cgi_in_pipe[2];
         int     _body_fd;
-        CgiState     _state;
         int          _error_code;
         std::vector<std::string>  _meta_env;
         std::vector<char*>        _env_ptrs;

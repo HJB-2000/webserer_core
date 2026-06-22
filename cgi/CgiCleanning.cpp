@@ -39,10 +39,6 @@ void EventLoop::_failCgiJob(int result_fd, int status_code)
     CgiJob*     job  = jt->second;
     Connection* conn = _manager->get(job->client_fd);
 
-    // std::cerr << "[FAIL-DBG] result_fd=" << result_fd
-    //           << " status=" << status_code
-    //           << " headers_sent=" << job->headers_sent << "\n";
-
     if (conn) {
         if (!job->headers_sent)
             _responder.sendError(status_code, *conn->config(), conn->writeBuffer());

@@ -106,17 +106,7 @@ void Server::setMaxBodySize(long long size)
 void Server::addLocation(Location& loc)              { this->_locations.push_back(loc); }
 void Server::set_timeout_seconds(int time_out)       { this->_timeout_seconds = time_out; }
 
-void Server::setPort(int &port)
-{
-    // if(_port == -1)
-    this->_port = port;
-    // else
-    // {
-    //     std::cerr << "|" << this->_port << "|" << std::endl;
-    //     std::cerr << "Duplicate port in the directive listen" << std::endl;
-    //     throw std::runtime_error("Duplicate port in the directive listen");
-    // }
-}
+void Server::setPort(int &port) { this->_port = port; }
 
 void Server::setServerName(const std::string& name)
 {

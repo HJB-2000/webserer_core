@@ -80,7 +80,7 @@ bool parseMultipartFirstFile(const char* body, size_t body_len,
     part += delim.size();
 
     if (part + 2 <= end && part[0] == '-' && part[1] == '-')
-        return false; // "--boundary--" -> no parts at all
+        return false;
 
     if (part + 2 <= end && part[0] == '\r' && part[1] == '\n')
         part += 2;
@@ -135,7 +135,7 @@ std::string sanitizeFilename(const std::string& raw)
     return name;
 }
 
-} // namespace
+}
 
 static std::string normalizePath(const std::string& path)  
 {  
@@ -499,103 +499,6 @@ void ResponseHandler::_sendRedirect(
         _appendStr(wb, body);
 }
 
-// std::string _resolveUploadFilename(const HttpRequest& req) {
-//     // 1. try multipart Content-Disposition
-//     std::string ct = req.header("content-type");
-//     if (ct.find("multipart/form-data") != std::string::npos) {
-//         std::string cd = req.header("content-disposition");
-//         size_t pos = cd.find("filename=\"");
-//         if (pos != std::string::npos) {
-//             pos += 10;
-//             size_t end = cd.find('"', pos);
-//             if (end != std::string::npos) {
-//                 std::string name = cd.substr(pos, end - pos);
-//                 for (size_t i = 0; i < name.size(); ++i)
-//                     if (name[i] == '/' || name[i] == '\0') name[i] = '_';
-//                 if (!name.empty() && name.find("..") == std::string::npos)
-//                     return name;
-//             }
-//         }
-//     }
-
-//     static int counter = 0;
-//     ++counter;
-//     std::ostringstream oss;
-//     oss << "upload_" << static_cast<long>(::time(NULL))
-//         << "_" << counter;
-//     return oss.str();
-// }
-
-// void ResponseHandler::_handlePost(
-//     const HttpRequest&  req,
-//     const Location&     loc,
-//     const ServerConfig& cfg,
-//     Buffer&             wb)
-// {
-//     if (loc.getUploadStore().empty())
-//     {
-//         _sendErrorInternal(405, req, cfg, wb);
-//         return;
-//     }
-
-//     std::string upload_dir = loc.getUploadStore();
-//     if (upload_dir.empty() || upload_dir[upload_dir.size() - 1] != '/')
-//         upload_dir += '/';
-
-//     static unsigned long counter = 0;
-//     ++counter;
-//     time_t now = std::time(NULL);
-//     std::ostringstream name_oss;
-//     name_oss << "upload_" << static_cast<long>(now) << "_" << counter;
-//     std::string filename = name_oss.str();
-//     std::string filepath = upload_dir + filename;
-
-//     int fd = ::open(filepath.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_EXCL, 0644);
-//     if (fd < 0)
-//     {
-//         std::cerr << "[ResponseHandler] POST upload open failed: "
-//         << std::strerror(errno) << "\n";
-//         _sendErrorInternal(500, req, cfg, wb);
-//         return;
-//     }
-    
-//     int test = ::open("post_results.txt", O_WRONLY | O_CREAT | O_TRUNC | O_EXCL, 0644);
-//     size_t             written   = 0;
-//     while (written < req.body.size())
-//     {
-//         ::write(test,
-//                             req.body.data() + written,
-//                             req.body.size()  - written);
-//         ssize_t n = ::write(fd,
-//                             req.body.data() + written,
-//                             req.body.size()  - written);
-//         if (n <= 0)
-//         {
-//             ::close(fd);
-//             _sendErrorInternal(500, req, cfg, wb);
-//             return;
-//         }
-//         written += static_cast<size_t>(n);
-//     }
-//     ::close(fd);
-
-//     std::string location_url = req.path;
-//     if (location_url.empty() || location_url[location_url.size() - 1] != '/')
-//         location_url += '/';
-//     location_url += filename;
-//     std::string resp_body =
-//         "<!DOCTYPE html><html><body>"
-//         "<p>File uploaded successfully.</p>"
-//         "</body></html>";
-
-//     std::ostringstream extra;
-//     extra << "Location: " << location_url << "\r\n";
-
-//     _writeHeaders(201, "text/html", resp_body.size(), extra.str(), req, wb);
-//     if (req.method != "HEAD")
-//         _appendStr(wb, resp_body);
-// }
-
 void ResponseHandler::_handlePost(
     const HttpRequest&  req,
     const Location&     loc,
@@ -721,7 +624,7 @@ void ResponseHandler::_writeHeaders(
 {
     std::ostringstream oss;
     oss << "HTTP/1.1 " << code << " " << _reasonPhrase(code) << "\r\n"
-        << "Server: webserv/1.0\r\n"
+        << "Server: webserv/1.1\r\n"
         << "Date: "           << _httpDate()            << "\r\n"
         << "Content-Type: "   << ct                     << "\r\n"
         << "Content-Length: " << cl                     << "\r\n";
