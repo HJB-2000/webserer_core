@@ -21,7 +21,7 @@ struct CgiJob
 
     bool        headers_sent;
     size_t      body_written;
-
+    int         parent_request;
 
     CgiJob(int cfd, int rfd, size_t max_size, int timeout)
     :       client_fd(cfd)
@@ -35,6 +35,7 @@ struct CgiJob
     ,       stdin_fd(-1)
     ,       headers_sent(false)
     ,       body_written(0)
+    ,       parent_request(0)
     {}
 };
 
