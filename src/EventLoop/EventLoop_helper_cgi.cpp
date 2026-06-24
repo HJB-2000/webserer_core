@@ -181,7 +181,7 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
     {
 
         std::cerr << "HELLO Deamon !!!!!! = " << job->parent_request << std::endl;
-        _failCgiJob(result_fd, 500);
+        _failCgiJob(result_fd, 502);
         return;
     }
         
@@ -193,7 +193,12 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
     
 
     if (events & (EPOLLERR | EPOLLHUP))
-        return;
+    {
+        if (events & (EPOLLERR | EPOLLHUP | EPOLLIN))
+            std::cerr << "[_handleCgiEvent] broken PIPE" << std::endl;
+        else
+            return;
+    }
 
     if (job->headers_sent &&
         conn->writeBuffer().size() >= CGI_STREAM_HWM)
