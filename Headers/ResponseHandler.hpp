@@ -10,6 +10,8 @@
 #include "serverConfig.hpp"
 #include "CgiRequestInfo.hpp"
 
+#define ALLOWEDSIZE 524288000
+
 class ResponseHandler
 {
 public:

@@ -377,7 +377,12 @@ void ResponseHandler::_serveStaticFile(
         _sendErrorInternal(500, req, cfg, wb);
         return;
     }
-
+    if (st.st_size > ALLOWEDSIZE)
+    {
+        ::close(fd);
+        _sendErrorInternal(400, req, cfg, wb);
+        return;
+    }
     std::string ct        = _getMimeType(fs_path);
     size_t      file_size = static_cast<size_t>(st.st_size);
 
