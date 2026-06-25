@@ -11,6 +11,7 @@ from http.cookies import SimpleCookie
 DATA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'data'))
 USERS_FILE = os.path.join(DATA_DIR, 'users.json')
 SESSIONS_FILE = os.path.join(DATA_DIR, 'sessions.json')
+SESSION_LIFE_TIME = timedelta(minutes=15)
 
 def error_response(title, message):
     print("Content-Type: text/html\n")
@@ -46,7 +47,7 @@ password = params.get('password', [''])[0]
 if not username or not password:
     error_response("Error", "Username and password are required.")
 
-# Load users natively
+
 users = {}
 if os.path.exists(USERS_FILE):
     try:
@@ -76,7 +77,7 @@ if os.path.exists(SESSIONS_FILE):
 sid = uuid.uuid4().hex
 sessions[sid] = {
     'username': username,
-    'expires_at': (datetime.utcnow() + timedelta(minutes=15)).isoformat(),
+    'expires_at': (datetime.utcnow() + SESSION_LIFE_TIME).isoformat(),
 }
 
 os.makedirs(os.path.dirname(os.path.abspath(SESSIONS_FILE)), exist_ok=True)
@@ -87,6 +88,6 @@ cookie = SimpleCookie()
 cookie['session_id'] = sid
 cookie['session_id']['path'] = '/'
 cookie['session_id']['httponly'] = True
-cookie['session_id']['max-age'] = 600
+cookie['session_id']['max-age'] = 900
 
 redirect("/dashboard/index.html", cookie=cookie)

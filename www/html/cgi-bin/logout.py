@@ -28,12 +28,14 @@ if cookie_str:
             with open(SESSIONS_FILE, 'w') as f:
                 json.dump(sessions, f, indent=2)
 
-# Wipe cookie from browser
 expired = SimpleCookie()
-expired['session_id'] = ''
-expired['session_id']['path'] = '/'
+expired['session_id'] = 'deleted'
 expired['session_id']['expires'] = 'Thu, 01 Jan 1970 00:00:00 GMT'
+expired['session_id']['path'] = '/'
+expired['session_id']['max-age'] = 0
 
-print(expired.output())
 print("Status: 302 Found")
-print("Location: /index.html\n")
+print("Content-Type: text/html")
+print(expired.output())
+print("Location: /index.html")
+print()
