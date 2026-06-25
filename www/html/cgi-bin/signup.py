@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 import os
-import re
 import json
 import hashlib
 import urllib.parse
 from datetime import datetime
 
-# Define data paths directly inside the file
 DATA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'data'))
 USERS_FILE = os.path.join(DATA_DIR, 'users.json')
 
 MIN_USERNAME_LENGTH = 3
 MAX_USERNAME_LENGTH = 32
 MIN_PASSWORD_LENGTH = 8
-USERNAME_REGEX = re.compile(r'^[a-zA-Z0-9._-]+$')
 
 def redirect(location):
     print("Status: 302 Found")
@@ -34,7 +31,6 @@ def error_response(title, message):
 </html>""")
     exit()
 
-# Read POST data directly from standard input using CONTENT_LENGTH
 try:
     content_length = int(os.environ.get("CONTENT_LENGTH", "0") or "0")
 except ValueError:
@@ -48,13 +44,12 @@ password = params.get('password', [''])[0]
 if not username or not password:
     error_response("Error", "Username and password are required.")
 
-if len(username) < MIN_USERNAME_LENGTH or len(username) > MAX_USERNAME_LENGTH or not USERNAME_REGEX.match(username):
-    error_response("Invalid Username", "Username format invalid.")
+if not (MIN_USERNAME_LENGTH <= len(username) <= MAX_USERNAME_LENGTH):
+    error_response("Invalid Username", "Username length invalid.")
 
 if len(password) < MIN_PASSWORD_LENGTH:
     error_response("Weak Password", "Password too short.")
 
-# Inline JSON loading
 users = {}
 if os.path.exists(USERS_FILE):
     try:
@@ -66,7 +61,6 @@ if os.path.exists(USERS_FILE):
 if username in users:
     error_response("Account Exists", "An account already exists with this username.")
 
-# Hash and save
 users[username] = {
     'password': hashlib.sha256(password.encode('utf-8')).hexdigest(),
     'created_at': datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")

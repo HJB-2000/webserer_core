@@ -91,14 +91,6 @@
             <a href="/cgi-bin/env.py" class="btn">Open env.py</a>
             <a href="/cgi-bin/gettime.py" class="btn btn-success">Open gettime.py</a>
         </div>
-
-        <!-- <div class="card">
-            <h3>File Upload (POST multipart)</h3>
-            <input type="file" id="uploadFileInput">
-            <button onclick="uploadFile()" class="btn btn-success">Upload</button>
-            <div id="uploadResult" class="info-box">Select a file and click Upload</div>
-            <a href="/uploads/" target="_blank" class="btn btn-muted" style="margin-top:12px;">Browse /uploads/ (autoindex)</a>
-        </div> -->
     </div>
 
     <div class="box">
@@ -157,29 +149,29 @@
         </div>
     </div>
 
-</div> <script>
+</div> 
+    <script>
 
-    (async function showUser() {
-        try {
-            const res = await fetch('/cgi-bin/check_session.py');
-            if (res.ok) {
-                const text = (await res.text()).trim();
-                document.getElementById('currentUser').textContent = 'Logged in as: ' + text;
-            } else {
-                window.location.replace('/login.html');
+        (async function showUser() {
+            try {
+                const res = await fetch('/cgi-bin/check_session.py');
+                if (res.ok) {
+                    const text = (await res.text()).trim();
+                    document.getElementById('currentUser').textContent = 'Logged in as: ' + text;
+                } else {
+                    window.location.replace('/login.html');
+                }
+            } catch(e) {
+                document.getElementById('currentUser').textContent = '(offline)';
             }
-        } catch(e) {
-            document.getElementById('currentUser').textContent = '(offline)';
+        })();
+
+
+        function escapeHtml(t) {
+            const d = document.createElement('div');
+            d.textContent = t;
+            return d.innerHTML;
         }
-    })();
-
-
-    function escapeHtml(t) {
-        const d = document.createElement('div');
-        d.textContent = t;
-        return d.innerHTML;
-    }
-
-</script>
+    </script>
 </body>
 </html>
