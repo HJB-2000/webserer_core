@@ -441,8 +441,6 @@ void EventLoop::_handleClientEvent(int client_fd, uint32_t events)
 
         return;
     }
-
-
     if (events & EPOLLIN)
     {
         _handleRead(conn);

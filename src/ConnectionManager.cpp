@@ -58,8 +58,6 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
                              &addr_len);
     if (client_fd < 0)
     {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return -1;
         std::cerr << "[ConnectionManager] accept() failed: "
                   << std::strerror(errno) << "\n";
         return -1;

@@ -45,7 +45,7 @@ int make_listener(const char* host, int port)
     if (::setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &reuseport, sizeof(reuseport)) < 0) 
         std::cerr << "[core] setsockopt SO_REUSEPORT failed: " << std::strerror(errno) << "\n";
 
-    if (::setsockopt(fd, IPPROTO_IP, TCP_NODELAY, &nodaly, sizeof(nodaly)))
+    if (::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &nodaly, sizeof(nodaly)))
         std::cerr << "[core] setsockopt  warning: "
                   << std::strerror(errno) << "\n";
     if (::setsockopt(fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &timeout_seconds, sizeof(timeout_seconds)) < 0)
