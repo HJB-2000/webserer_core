@@ -2,6 +2,7 @@
 #include "cgi/CgiHandler.hpp"
 #include <sstream>
 #include <unistd.h>
+#include <cstdio>
  
 static const size_t CGI_HEADER_BUF_LIMIT = 64 * 1024;
 static const size_t CGI_STREAM_HWM       = 256 * 1024;
@@ -78,17 +79,33 @@ static int flushCgiHeaders(const char* data, size_t sep,
     return status_code;
 }
 
-#include <cstdio>
+
+// static void writeChunk(Buffer& wb, const char* data, size_t len)
+// {
+//     if (len == 0) return;
+//     char hex[32];
+//     int  hlen = std::snprintf(hex, sizeof(hex), "%zx\r\n", len);
+//     wb.append(hex, static_cast<size_t>(hlen));
+//     wb.append(data, len);
+//     wb.append("\r\n", 2);
+// }
+ 
 static void writeChunk(Buffer& wb, const char* data, size_t len)
 {
     if (len == 0) return;
-    char hex[32];
-    int  hlen = std::snprintf(hex, sizeof(hex), "%zx\r\n", len);
-    wb.append(hex, static_cast<size_t>(hlen));
+
+    std::ostringstream ss;
+    // Format the length as a hexadecimal string
+    ss << std::hex << len << "\r\n";
+    
+    std::string hexStr = ss.str();
+
+    // Append the formatted chunk header, the data, and the trailing CRLF
+    wb.append(hexStr.c_str(), hexStr.length());
     wb.append(data, len);
     wb.append("\r\n", 2);
 }
- 
+
 void EventLoop::_addCgiFd(int result_fd, int client_fd)
 {
     try {

@@ -127,11 +127,11 @@ Connection* ConnectionManager::get(int fd)
     return (it != _connections.end()) ? it->second : NULL;
 }
 
-const Connection* ConnectionManager::get(int fd) const
-{
-    std::map<int, Connection*>::const_iterator it = _connections.find(fd);
-    return (it != _connections.end()) ? it->second : NULL;
-}
+// const Connection* ConnectionManager::get(int fd) const
+// {
+//     std::map<int, Connection*>::const_iterator it = _connections.find(fd);
+//     return (it != _connections.end()) ? it->second : NULL;
+// }
 
 std::vector<int> ConnectionManager::getTimedOutFds(time_t default_timeout_seconds)
 {

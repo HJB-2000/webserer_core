@@ -15,7 +15,7 @@ enum RLState {
     RL_METHOD,
     RL_SPACE_BEFORE_URI,
     RL_URI,
-    RL_HTTP09,
+    RL_HTTP1_1,
     RL_HTTP_H,
     RL_HTTP_HT,
     RL_HTTP_HTT,
@@ -309,8 +309,7 @@ void HttpParser::feed(Connection *conn)
     if (conn->request().parse_state == PSTATE_HEADERS)
         _parseHeaders(conn->readBuffer(), conn->request());
     _applyLocationBodyLimit(conn);
-    // if(conn->request().parse_state == PSTATE_ERROR)
-    //     return;
+    
     if (conn->request().parse_state == PSTATE_BODY) {
         if (conn->request().chunked)
             _parseChunked(conn->readBuffer(), conn->request());
@@ -374,7 +373,7 @@ void HttpParser::_parseRequestLine(Connection* conn)
                 req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
 
             case RL_URI:  
-            if (ch == ' ')  { uri_end = p; state = RL_HTTP09; break; }  
+            if (ch == ' ')  { uri_end = p; state = RL_HTTP1_1; break; }  
             if (ch == '\r' || ch == '\n') {  
                 req.parse_state = PSTATE_ERROR; req.error_code = 400; return;  
             }  
@@ -384,7 +383,7 @@ void HttpParser::_parseRequestLine(Connection* conn)
             break;  
 
 
-            case RL_HTTP09:  
+            case RL_HTTP1_1:  
             if (ch == ' ')  break;  
             if (ch == '\r' || ch == '\n') {  
                 req.parse_state = PSTATE_ERROR; req.error_code = 400; return;  
@@ -413,6 +412,7 @@ void HttpParser::_parseRequestLine(Connection* conn)
                 if (ch < '0' || ch > '9') {
                     req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
                 }
+                else if (ch != '1'){req.parse_state = PSTATE_ERROR; req.error_code = 505; return;}
                 http_major = ch - '0';
                 state = RL_MAJOR;
                 break;
@@ -436,6 +436,7 @@ void HttpParser::_parseRequestLine(Connection* conn)
                     req.error_code = 400;
                     return;
                 }
+                else if (ch != '1'){req.parse_state = PSTATE_ERROR; req.error_code = 505; return;}
                 http_minor = ch - '0';
                 state = RL_MINOR;
                 break;
@@ -574,7 +575,7 @@ void HttpParser::_parseHeaders(Buffer& buf, HttpRequest& req)
         if (buf.size() == 0) return;
 
         size_t crlf_pos;
-        if (!find_crlf(buf.data(), buf.size(), crlf_pos)) return; // wait
+        if (!find_crlf(buf.data(), buf.size(), crlf_pos)) return;
 
         if (crlf_pos > 8192) {
             req.parse_state = PSTATE_ERROR; req.error_code = 431; return;
