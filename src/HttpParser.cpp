@@ -216,6 +216,8 @@ inline bool override_host(Connection* conn, std::string host) {
             return true;
         }
     }
+    if (conn->configuration.size() == 1 && conn->config()->getHost() == host)
+        return true;
     return false;
 }
 }

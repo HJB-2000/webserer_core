@@ -116,12 +116,16 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
 
             if (tmp_host == "*")
                 tmp_host = "0.0.0.0";
-            else if (tmp_host == "localhost")
-                tmp_host = "127.0.0.1";
-
-            if (!is_valid_host(tmp_host))
+            // else if (tmp_host == "localhost")
+            //     tmp_host = "127.0.0.1";
+            if (tmp_host == "localhost") 
+                server.setHost(tmp_host);
+            else if (!is_valid_host(tmp_host))
+            {
                 report_parse_error("Syntax Error: directive ", stream, i,
-                    "'invalid host in listen directive — expected IPv4, localhost, or *' in parseDirective of server");
+                    "'invalid host in listen directive — expected IPv4, localhost, or *' in parseDirective of server");                    
+                server.setHost(tmp_host);
+            }
 
             long port_long;
             if (!safe_strtol(tmp_port, port_long))
@@ -133,7 +137,6 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
                 report_parse_error("Syntax Error: directive ", stream, i,
                     "'not valid range for port (1-65535)' in parseDirective of server");
 
-            server.setHost(tmp_host);
             server.setPort(port);
         }
         else
