@@ -269,3 +269,8 @@ const ServerConfig* EventLoop::_configForServer(int fd) const
         if (_server_fds[i] == fd) return _server_configs[i];
     return NULL;
 }
+
+const std::vector<const ServerConfig *> EventLoop::get__server_configs()
+{
+    return _server_configs;
+}

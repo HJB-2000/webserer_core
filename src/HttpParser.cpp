@@ -207,6 +207,17 @@ bool validate_host(std::string& host_value, uint16_t& port_out)
     return true;
 }
 
+inline bool override_host(Connection* conn, std::string host) {
+    for (size_t i = 0; i < conn->configuration.size(); i++) {
+        if (conn->configuration[i]->getServerName() == host)
+        {
+            conn->overide_conf((ServerConfig *)conn->configuration[i]);
+            conn->resize_buffers();
+            return true;
+        }
+    }
+    return false;
+}
 }
 
 #include <iostream>
@@ -307,7 +318,9 @@ void HttpParser::feed(Connection *conn)
     }
 
     if (conn->request().parse_state == PSTATE_HEADERS)
-        _parseHeaders(conn->readBuffer(), conn->request());
+        _parseHeaders(conn);
+    
+        // _parseHeaders(conn->readBuffer(), conn->request());
     _applyLocationBodyLimit(conn);
     
     if (conn->request().parse_state == PSTATE_BODY) {
@@ -574,8 +587,10 @@ static std::set<std::string> init_singleton_headers() {
     return s;
 }
 
-void HttpParser::_parseHeaders(Buffer& buf, HttpRequest& req)
+void HttpParser::_parseHeaders(Connection *conn)
 {
+    Buffer& buf = conn->readBuffer();
+    HttpRequest& req = conn->request();
     static const std::set<std::string> SINGLETON_HEADERS = init_singleton_headers();
     while (true) {
         if (buf.size() == 0) return;
@@ -637,6 +652,11 @@ void HttpParser::_parseHeaders(Buffer& buf, HttpRequest& req)
         if (!validate_host(host_val, port)) {
             req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
         }
+        if (!override_host(conn, host_val))
+        {
+            req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
+        }
+        std::cerr << conn->config()->getServerName() << std::endl;
         req.headers["host"] = host_val;
     }
     if (req.headers.find("content-length") != req.headers.end() && 

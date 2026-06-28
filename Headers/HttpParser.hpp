@@ -17,7 +17,8 @@ private:
     void _parseRequestLine(Connection* conn);
     std::string _validatePath(Connection* conn);
 
-    void _parseHeaders(Buffer& buf, HttpRequest& req);
+    // void _parseHeaders(Buffer& buf, HttpRequest& req);
+    void _parseHeaders(Connection *conn);
 
     void _parseBody(Buffer& buf, HttpRequest& req);
 

@@ -17,6 +17,7 @@ void EventLoop::_handleAccept(int server_fd)
         int client_fd = _manager->addConnection(server_fd, config);
         if (client_fd < 0)
             break;
+        _manager->hold_cofiguration(_server_configs, client_fd);
         _setCloexec(client_fd, "client");
         try {
             _registerEventFd(client_fd, EV_CLIENT, EPOLLIN | EPOLLET | EPOLLRDHUP);

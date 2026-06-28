@@ -19,7 +19,7 @@ class Connection
 {
 public:
 
-    Connection(int fd, const ServerConfig* config);
+    Connection(int fd, ServerConfig* config);
     ~Connection();
 
     ssize_t recv();
@@ -35,6 +35,7 @@ public:
     ConnectionState      state()       const;
     time_t               lastActive()  const;
     const ServerConfig*  config()      const;
+    void overide_conf(ServerConfig* c);
     
     Buffer&       readBuffer();
     const Buffer& readBuffer()  const;
@@ -58,7 +59,9 @@ public:
     const std::string& get_clientIp() const;
     void setClientIp(const std::string& ip);
     int conn_num;
-    
+    void hold_cofiguration(std::vector<const ServerConfig*> confs);
+    std::vector<const ServerConfig *> configuration;
+    void resize_buffers();
 private:
 
     Connection(const Connection&);
@@ -67,7 +70,7 @@ private:
     void _touchActive();
 
     int                 _fd;
-    const ServerConfig* _config;
+    ServerConfig* _config;
     Buffer              _read_buffer;
     Buffer              _write_buffer;
     HttpRequest         _request;

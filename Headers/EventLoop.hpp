@@ -42,6 +42,7 @@ public:
     void stop();
     static int setNonBlocking(int fd);
     ConnectionManager& manager() { return *_manager; }
+    const std::vector<const ServerConfig *> get__server_configs();
 private:
 
     EventLoop(const EventLoop&);
@@ -101,6 +102,7 @@ private:
     void _registerEventFd(int fd, EventKind kind, uint32_t events);
     void _modifyEventFd(int fd, EventKind kind, uint32_t events);
     void _unregisterEventFd(int fd);
+    
 };
 
 int make_listener(const char* host, int port);

@@ -69,7 +69,7 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
         ::close(client_fd);
         return -1;
     }
-    Connection* conn = new Connection(client_fd, config);
+    Connection* conn = new Connection(client_fd, (ServerConfig *)config);
     conn->conn_num =  counter;
     counter++;
     std::string client_ip = addrToString(client_addr);
@@ -174,4 +174,9 @@ void ConnectionManager::_destroyAll()
         delete it->second;
     }
     _connections.clear();
+}
+
+void ConnectionManager::hold_cofiguration(std::vector<const ServerConfig*> confs, int fd)
+{
+    _connections[fd]->hold_cofiguration(confs);
 }

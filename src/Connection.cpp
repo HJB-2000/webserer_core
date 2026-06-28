@@ -3,7 +3,7 @@
 #include <cstring>  
 #include <iostream>
 
-Connection::Connection(int fd, const ServerConfig* config)
+Connection::Connection(int fd, ServerConfig* config)
     : conn_num(0)
     , _fd(fd)
     , _config(config)
@@ -14,6 +14,9 @@ Connection::Connection(int fd, const ServerConfig* config)
     , _last_active(std::time(NULL))
     , _peer_half_closed(false)
 {}
+
+
+
 
 Connection::~Connection()
 {
@@ -77,6 +80,9 @@ int                 Connection::fd()          const { return _fd;           }
 ConnectionState     Connection::state()       const { return _state;        }
 time_t              Connection::lastActive()  const { return _last_active;  }
 const ServerConfig* Connection::config()      const { return _config;       }
+void Connection::overide_conf(ServerConfig* c) {
+    _config = c;
+}
 
 Buffer&       Connection::readBuffer()        { return _read_buffer;  }
 const Buffer& Connection::readBuffer()  const { return _read_buffer;  }
@@ -138,4 +144,14 @@ const std::string& Connection::get_clientIp() const
 void Connection::setClientIp(const std::string& ip) 
 {
     _client_ip = ip; 
+}
+
+void Connection::hold_cofiguration(std::vector<const ServerConfig *> confs){
+    configuration = confs;
+}
+
+void Connection::resize_buffers() {
+    _read_buffer.setMaxSize(_config->getMaxBody());
+    _write_buffer.setMaxSize(_config->getMaxBody());
+    _request.body.setMaxSize(_config->getMaxBody());
 }

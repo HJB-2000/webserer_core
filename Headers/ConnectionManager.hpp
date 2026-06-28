@@ -18,7 +18,7 @@ public:
     ~ConnectionManager();
 
     int addConnection(int server_fd, const ServerConfig* config);
-
+    void hold_cofiguration(std::vector<const ServerConfig*> confs, int fd);
     void closeConnection(int fd);
 
     void rearmEpoll(int fd);
