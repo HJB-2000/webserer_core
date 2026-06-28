@@ -228,7 +228,7 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
             if (n > 0)
             {
                 job->parent_request++;
-                std::cerr << "=======> " << job->parent_request << std::endl;
+                // std::cerr << "=======> " << job->parent_request << std::endl;
                 if (!job->headers_sent)
                 {
                     job->result_buffer.append_result(buf, static_cast<size_t>(n));
