@@ -178,10 +178,8 @@ CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const L
     : _request((HttpRequest &)request),_server(config), _location(location),
     
       _script_path(script_path), _child_pid(-1),
-      _error_code(0), _env_logged(false), _client_ip(client_ip)
+      _env_logged(false), _client_ip(client_ip)
 {
-    _cgi_in_pipe[0] = -1;
-    _cgi_in_pipe[1] = -1;
     _body_fd = -1;
     filling_meta_variables(request, config, location);
 }
@@ -189,15 +187,6 @@ CgiHandler::CgiHandler(const HttpRequest& request, const Server& config, const L
 void CgiHandler::setBodyFd(int fd)
 {
     _body_fd = fd;
-}
-
-void CgiHandler::close_fd(int& fd_pipe)
-{
-    if (fd_pipe != -1)
-    {
-        close(fd_pipe);
-        fd_pipe = -1;
-    }
 }
 
 static bool resolve_path(const std::string& path, 
@@ -283,52 +272,40 @@ bool CgiHandler::startCgi(int write_end)
 {
     size_t dot_pos = _script_path.find_last_of(".");
     if (dot_pos == std::string::npos)
-    {
-        _error_code = 400;
-        
         return false; 
-    }
+
     std::string script_ext = _script_path.substr(dot_pos);
     const std::map<std::string, std::string>& cgi_map = _location.getCGI_map();
     std::map<std::string, std::string>::const_iterator it = cgi_map.find(script_ext);
     if (it == cgi_map.end())
-    {
-        _error_code = 501;
-         
         return false; 
-    }
+
     std::string cgi_path = it->second;
     std::string resolved_cgi;
     std::string loc_root = _location.getRoot();
     std::string srv_root = _server.getRoot();
     if (!resolve_path(cgi_path, loc_root, srv_root, resolved_cgi))
-    { _request.error_code = 500;  return false; }
+        return false;
     cgi_path = resolved_cgi;
 
     struct stat sb_cgi;
-    if (stat(cgi_path.c_str(), &sb_cgi) != 0 || !S_ISREG(sb_cgi.st_mode) ||
-        access(cgi_path.c_str(), X_OK) != 0)
-    { _request.error_code = 500;  return false; }
+    if (stat(cgi_path.c_str(), &sb_cgi) != 0 || !S_ISREG(sb_cgi.st_mode) || access(cgi_path.c_str(), X_OK) != 0)
+        return false;
 
     std::string script_file = _script_path;
-    if (script_file.empty()) { _request.error_code = 404;  return false; }
-
-    std::string resolved_script;
-    if (!resolve_path(script_file, loc_root, srv_root, resolved_script))
-    { _request.error_code = 404;  return false; }
-    script_file = resolved_script;
+    if (script_file.empty())
+        return false;
 
     struct stat sb_script;
     if (stat(script_file.c_str(), &sb_script) != 0)
-    { _request.error_code = 404;  return false; }
+        return false;
     if (!S_ISREG(sb_script.st_mode) || access(script_file.c_str(), R_OK) != 0)
-    { _request.error_code = 403;  return false; }
+        return false;
 
     if (!validate_env_contract())
-    { _request.error_code = 500;  return false; }
+        return false;
 
-    bool need_stdin = (_request.chunked || _request.content_length > 0
-                       || _request.body_file_written > 0 || _body_fd >= 0);
+    bool need_stdin = (_request.chunked || _request.content_length > 0 || _request.body_file_written > 0 || _body_fd >= 0);
     if (!cgi_path.empty() && cgi_path[0] != '/')
     {
         const char* pwd = std::getenv("PWD");
@@ -341,8 +318,8 @@ bool CgiHandler::startCgi(int write_end)
         }
     }
     _child_pid = fork();
-    if (_child_pid < 0) {
-         _request.error_code = 500;  return false; }
+    if (_child_pid < 0)
+        return false;
 
     if (_child_pid == 0)
     {
@@ -365,19 +342,17 @@ bool CgiHandler::startCgi(int write_end)
             std::string cgi_dir = script_file.substr(0, last_slash);
             script_filename = "." + script_file.substr(last_slash);
             if (chdir(cgi_dir.c_str()) < 0)
-            {
-                std::exit(1); 
-            }
+                std::exit(1);
         }
-        if (dup2(write_end, STDOUT_FILENO) == -1) std::exit(1);
+        if (dup2(write_end, STDOUT_FILENO) == -1)
+            std::exit(1);
 
         if (need_stdin && _body_fd >= 0)
         {
             if (dup2(_body_fd, STDIN_FILENO) == -1)
                 std::exit(1);
-            if (_body_fd != STDIN_FILENO) {
+            if (_body_fd != STDIN_FILENO)
                 ::close(_body_fd);
-            }
         }
         else if (need_stdin)
         {
@@ -405,8 +380,13 @@ bool CgiHandler::startCgi(int write_end)
         }
 
         int devnull_w = open("/dev/null", O_WRONLY);
-        if (devnull_w < 0) std::exit(1);
-        if (dup2(devnull_w, STDERR_FILENO) == -1) { close(devnull_w); std::exit(1); }
+        if (devnull_w < 0)
+            std::exit(1);
+        if (dup2(devnull_w, STDERR_FILENO) == -1)
+        {
+            close(devnull_w);
+            std::exit(1); 
+        }
         close(devnull_w);
 
         close(write_end);
@@ -416,30 +396,16 @@ bool CgiHandler::startCgi(int write_end)
             argv.push_back(const_cast<char*>(dynamic_args[i].c_str()));
         }
         argv.push_back(NULL);
-        if (_env_ptrs.empty() || _env_ptrs.back() != NULL) std::exit(127);
+        if (_env_ptrs.empty() || _env_ptrs.back() != NULL)
+            std::exit(127);
         execve(cgi_path.c_str(), &argv[0], &_env_ptrs[0]);
         std::exit(127);
     }
-
     return true;
 }
 
 CgiHandler::~CgiHandler()
 {
-    close_fd(_cgi_in_pipe[0]);
-    close_fd(_cgi_in_pipe[1]);
-}
-
-int CgiHandler::getErrorCode() const
-{
-    return _error_code;
-}
-
-int CgiHandler::releaseStdinFd()
-{
-    int fd = _cgi_in_pipe[1];
-    _cgi_in_pipe[1] = -1;
-    return fd;
 }
 
 pid_t  CgiHandler::getChildPid() const 
