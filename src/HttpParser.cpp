@@ -496,6 +496,12 @@ void HttpParser::_parseRequestLine(Connection* conn)
 
     req.method  = std::string(method_start,
                               static_cast<size_t>(method_end - method_start));
+    if (req.method != "GET" && req.method != "HEAD"
+        && req.method != "POST"
+        && req.method != "DELETE")
+    {
+        req.parse_state = PSTATE_ERROR; req.error_code = 501; return;
+    }
 
     req.version = "HTTP/";
     req.version += static_cast<char>('0' + http_major);
