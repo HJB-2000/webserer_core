@@ -593,6 +593,9 @@ void HttpParser::_parseHeaders(Connection *conn)
     HttpRequest& req = conn->request();
     static const std::set<std::string> SINGLETON_HEADERS = init_singleton_headers();
     while (true) {
+        if (buf.size() > 8192) {
+            req.parse_state = PSTATE_ERROR; req.error_code = 431; return;
+        }
         if (buf.size() == 0) return;
 
         size_t crlf_pos;
@@ -676,13 +679,13 @@ void HttpParser::_parseHeaders(Connection *conn)
             if (cl_str[i] < '0' || cl_str[i] > '9') {
                 req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
             }
-            if (cl > SIZE_MAX / 10)
+            cl = cl * 10 + static_cast<size_t>(cl_str[i] - '0');
+            if (cl > conn->config()->getMaxBody())
             {
                 req.parse_state = PSTATE_ERROR;
-                req.error_code = 400;
+                req.error_code = 413;
                 return ;
             }
-            cl = cl * 10 + static_cast<size_t>(cl_str[i] - '0');
         }
         req.content_length = cl;
     }
@@ -707,8 +710,6 @@ void HttpParser::_parseHeaders(Connection *conn)
     }
     else
         req.parse_state = PSTATE_BODY;
-
-    
 
 }
 
