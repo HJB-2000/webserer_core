@@ -266,7 +266,12 @@ bool EventLoop::_isServerFd(int fd) const
 const ServerConfig* EventLoop::_configForServer(int fd) const
 {
     for (size_t i = 0; i < _server_fds.size(); ++i)
-        if (_server_fds[i] == fd) return _server_configs[i];
+        if (_server_fds[i] == fd) {
+            for (size_t j = 0; j < _server_fds.size(); ++j)
+                if (i != j 
+                    && _server_configs[i]->getHost() == _server_configs[j]->getHost())
+            return (i < j)? _server_configs[i] : _server_configs[j];
+        }
     return NULL;
 }
 

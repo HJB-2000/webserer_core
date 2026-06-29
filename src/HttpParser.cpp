@@ -207,18 +207,16 @@ bool validate_host(std::string& host_value, uint16_t& port_out)
     return true;
 }
 
-inline bool override_host(Connection* conn, std::string host) {
+inline void override_host(Connection* conn, std::string host) {
     for (size_t i = 0; i < conn->configuration.size(); i++) {
         if (conn->configuration[i]->getServerName() == host)
         {
             conn->overide_conf((ServerConfig *)conn->configuration[i]);
             conn->resize_buffers();
-            return true;
+            return;
         }
     }
-    if (conn->configuration.size() == 1 && conn->config()->getHost() == host)
-        return true;
-    return false;
+    return;
 }
 }
 
@@ -654,10 +652,8 @@ void HttpParser::_parseHeaders(Connection *conn)
         if (!validate_host(host_val, port)) {
             req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
         }
-        if (!override_host(conn, host_val))
-        {
-            req.parse_state = PSTATE_ERROR; req.error_code = 400; return;
-        }
+        override_host(conn, host_val);
+        
         std::cerr << conn->config()->getServerName() << std::endl;
         req.headers["host"] = host_val;
     }
