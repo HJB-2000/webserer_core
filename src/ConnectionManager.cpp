@@ -20,18 +20,6 @@
 size_t ConnectionManager::count() const { return _connections.size(); }
 bool   ConnectionManager::empty() const { return _connections.empty(); }
 
-static std::string addrToString(const struct sockaddr_storage& addr)
-{
-    const struct sockaddr_in* sin = reinterpret_cast<const struct sockaddr_in*>(&addr);
-    uint32_t ip = ntohl(sin->sin_addr.s_addr);
-    std::ostringstream oss;
-    oss << ((ip >> 24) & 0xFF) << '.'
-        << ((ip >> 16) & 0xFF) << '.'
-        << ((ip >> 8)  & 0xFF) << '.'
-        << (ip & 0xFF);
-    return oss.str();
-}
-
 ConnectionManager::ConnectionManager(int epoll_fd)
     : _epoll_fd(epoll_fd)
     , _max_connections(std::max(readSomaxconn(), 10000))
@@ -58,8 +46,8 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
                              &addr_len);
     if (client_fd < 0)
     {
-        // std::cerr << "[ConnectionManager] accept() failed: "
-        //           << std::strerror(errno) << "\n";
+        std::cerr << "[ConnectionManager] accept() failed: "
+                  << std::strerror(errno) << "\n";
         return -1;
     }
     if (_setNonBlocking(client_fd) < 0)
@@ -72,8 +60,6 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
     Connection* conn = new Connection(client_fd, (ServerConfig *)config);
     conn->conn_num =  counter;
     counter++;
-    std::string client_ip = addrToString(client_addr);
-    conn->setClientIp(client_ip);
     if (_connections.count(client_fd))
     {
         std::cerr << "[ConnectionManager] fd " << client_fd
@@ -103,35 +89,11 @@ void ConnectionManager::closeConnection(int fd)
     std::cerr << "[ConnectionManager] closed fd " << fd << "\n";
 }
 
-// void ConnectionManager::rearmEpoll(int fd)
-// {
-//     std::map<int, Connection*>::iterator it = _connections.find(fd);
-//     if (it == _connections.end())
-//     {
-//         std::cerr << "[ConnectionManager] rearmEpoll(" << fd
-//                   << ") — fd not in map\n";
-//         return;
-//     }
-//     epoll_event ev = it->second->buildEpollEvent();  
-//     if (::epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0)  
-//     {  
-//         std::cerr << "[ConnectionManager] epoll_ctl MOD failed for fd " << fd  
-//                   << ": " << std::strerror(errno) << "\n";  
-//         closeConnection(fd);  
-//     };
-// }
-
 Connection* ConnectionManager::get(int fd)
 {
     std::map<int, Connection*>::iterator it = _connections.find(fd);
     return (it != _connections.end()) ? it->second : NULL;
 }
-
-// const Connection* ConnectionManager::get(int fd) const
-// {
-//     std::map<int, Connection*>::const_iterator it = _connections.find(fd);
-//     return (it != _connections.end()) ? it->second : NULL;
-// }
 
 std::vector<int> ConnectionManager::getTimedOutFds(time_t default_timeout_seconds)
 {

@@ -18,7 +18,6 @@ static void sig_handler(int)
 
 int main(int argc, char* argv[])
 {
-    Logger::instance().open("webserv.log");
     std::vector<ServerConfig> servers;
     try {    
         servers = API_conf(argc, argv);
@@ -28,8 +27,9 @@ int main(int argc, char* argv[])
         std::cerr << "|" << e.what() << "|" << "\n";
         return 1;
     }
-        
+    
     try {
+        Logger::instance().open("webserv.log");
         EventLoop            loop;
         std::vector<int>     listen_fds;
 

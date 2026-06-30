@@ -149,7 +149,7 @@ void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
         _addCgiFd(result_read_fd, conn->fd());
         _cgi_jobs[result_read_fd] = job;
     }
-    catch (const std::exception& ex) { delete job; throw; }
+    catch (const std::exception& ex) { if(job){delete job;} throw; }
 
     conn->setCgiRunning();
     _rearmClient(conn->fd());

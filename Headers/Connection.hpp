@@ -57,7 +57,6 @@ public:
 
 
     const std::string& get_clientIp() const;
-    void setClientIp(const std::string& ip);
     int conn_num;
     void hold_cofiguration(std::vector<const ServerConfig*> confs);
     std::vector<const ServerConfig *> configuration;

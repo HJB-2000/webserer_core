@@ -141,11 +141,6 @@ const std::string& Connection::get_clientIp() const
     return _client_ip; 
 }
 
-void Connection::setClientIp(const std::string& ip) 
-{
-    _client_ip = ip; 
-}
-
 void Connection::hold_cofiguration(std::vector<const ServerConfig *> confs){
     configuration = confs;
 }
