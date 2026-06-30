@@ -47,13 +47,13 @@ public:
     
     void setProcessing();
     void setWriting();
-    void setClosing();
+    // void setClosing(); // check it yourself befor removing it 
     void setReading();
     void setCgiRunning();
 
     void setPeerHalfClosed();
     bool peerHalfClosed() const;
-    void updateBufferSizes(size_t new_max);
+    void updateBufferSizes(size_t new_max); // this too 
 
 
     const std::string& get_clientIp() const;

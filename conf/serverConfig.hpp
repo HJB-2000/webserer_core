@@ -54,10 +54,6 @@ class Server
 
 };
 
-const Server* matchServer(const std::vector<Server>& servers,
-                          const std::string& host_header,
-                          int port);
-
 typedef Server ServerConfig;
 
 #endif

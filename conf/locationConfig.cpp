@@ -150,162 +150,83 @@ void Location::clear_index() { _index_Files.clear(); }
 
 void Location::set_default_conf(int num)
 {
-    if(num == 0)
+    _index_Files.clear();
+    _allowed_methods.clear();
+    _cgi_paths.clear();
+    _cgi_extensions.clear();
+    _cgi_map.clear();
+    _upload            = "";
+    _return_code       = -1;
+    _return_value      = "";
+    _redirect_enabled  = false;
+    _autoindex         = false;
+    _root              = "./www/html";
+    _client_max_body_size = 2040109465LL;
+    _index_Files.push_back("index.html");
+
+    _error_page[400] = "./www/html/errors/400.html";
+    _error_page[401] = "./www/html/errors/401.html";
+    _error_page[403] = "./www/html/errors/403.html";
+    _error_page[404] = "./www/html/errors/404.html";
+    _error_page[405] = "./www/html/errors/405.html";
+    _error_page[408] = "./www/html/errors/408.html";
+    _error_page[411] = "./www/html/errors/411.html";
+    _error_page[413] = "./www/html/errors/413.html";
+    _error_page[500] = "./www/html/errors/500.html";
+    _error_page[502] = "./www/html/errors/502.html";
+    _error_page[503] = "./www/html/errors/503.html";
+    _error_page[504] = "./www/html/errors/504.html";
+
+    if (num == 0)
     {
-        if(!_index_Files.empty()) 
-            _index_Files.clear();
-        _allowed_methods.clear();
-        this->_path = "/";
-        this->_root = "./www/html";
-        this->_index_Files.push_back("index.html");
-        this->_autoindex = false;
-        this->_allowed_methods.push_back("GET");
-        this->_allowed_methods.push_back("POST");
-        this->_cgi_paths.clear();
-        this->_cgi_extensions.clear();
-        this->_cgi_map.clear();
-        this->_upload = "";
-        this->_return_code = -1;
-        this->_return_value = "";
-        this->_client_max_body_size = 10485760;
-        _error_page[400] = "./www/html/errors/400.html";
-        _error_page[401] = "./www/html/errors/401.html";
-        _error_page[403] = "./www/html/errors/403.html";
-        _error_page[404] = "./www/html/errors/404.html";
-        _error_page[405] = "./www/html/errors/405.html";
-        _error_page[408] = "./www/html/errors/408.html";
-        _error_page[411] = "./www/html/errors/411.html";
-        _error_page[413] = "./www/html/errors/413.html";
-        _error_page[500] = "./www/html/errors/500.html";
-        _error_page[502] = "./www/html/errors/502.html";
-        _error_page[503] = "./www/html/errors/503.html";
-        _error_page[504] = "./www/html/errors/504.html";
+        _path = "/";
+        _allowed_methods.push_back("GET");
+        _allowed_methods.push_back("DELETE");
+        _autoindex = false;
     }
-    else if(num == 1)
+    else if (num == 1)
     {
-        if(!_index_Files.empty()) 
-            _index_Files.clear();
-        _allowed_methods.clear();
-        this->_path = "/uploads/";
-        this->_root = "./www/html";
-        this->_index_Files.push_back("index.html");
-        this->_autoindex = true;
-        this->_allowed_methods.push_back("GET");
-        this->_allowed_methods.push_back("POST");
-        this->_allowed_methods.push_back("DELETE");
-        this->_cgi_paths.clear();
-        this->_cgi_extensions.clear();
-        this->_cgi_map.clear();
-        this->_upload = "./www/html/uploads/";
-        this->_return_code = -1;
-        this->_return_value = "";
-        this->_client_max_body_size = 20485760;
-        _error_page[400] = "./www/html/errors/400.html";
-        _error_page[401] = "./www/html/errors/401.html";
-        _error_page[403] = "./www/html/errors/403.html";
-        _error_page[404] = "./www/html/errors/404.html";
-        _error_page[405] = "./www/html/errors/405.html";
-        _error_page[408] = "./www/html/errors/408.html";
-        _error_page[411] = "./www/html/errors/411.html";
-        _error_page[413] = "./www/html/errors/413.html";
-        _error_page[500] = "./www/html/errors/500.html";
-        _error_page[502] = "./www/html/errors/502.html";
-        _error_page[503] = "./www/html/errors/503.html";
-        _error_page[504] = "./www/html/errors/504.html";
+        _path = "/dashboard/";
+        _allowed_methods.push_back("GET");
+        _autoindex = false;
     }
-    else if(num == 2)
+    else if (num == 2)
     {
-        if(!_index_Files.empty()) 
-            _index_Files.clear();
-        _allowed_methods.clear();
-        this->_path = "/dashboard/";
-        this->_root = "./www/html";
-        this->_index_Files.push_back("index.html");
-        this->_autoindex = false;
-        this->_allowed_methods.push_back("GET");
-        this->_cgi_paths.clear();
-        this->_cgi_extensions.clear();
-        this->_cgi_map.clear();
-        this->_upload = "";
-        this->_return_code = -1;
-        this->_return_value = "";
-        this->_redirect_enabled = false;
-        this->_client_max_body_size = 10485760;
-        _error_page[400] = "./www/html/errors/400.html";
-        _error_page[401] = "./www/html/errors/401.html";
-        _error_page[403] = "./www/html/errors/403.html";
-        _error_page[404] = "./www/html/errors/404.html";
-        _error_page[405] = "./www/html/errors/405.html";
-        _error_page[408] = "./www/html/errors/408.html";
-        _error_page[411] = "./www/html/errors/411.html";
-        _error_page[413] = "./www/html/errors/413.html";
-        _error_page[500] = "./www/html/errors/500.html";
-        _error_page[502] = "./www/html/errors/502.html";
-        _error_page[503] = "./www/html/errors/503.html";
-        _error_page[504] = "./www/html/errors/504.html";
+        _path                 = "/cgi-bin/";
+        _client_max_body_size = 116391936LL;
+        _allowed_methods.push_back("GET");
+        _allowed_methods.push_back("POST");
+        _autoindex = false;
+
+        _cgi_paths.push_back("/usr/bin/python3");
+        _cgi_paths.push_back("/usr/bin/bash");
+        _cgi_extensions.push_back(".py");
+        _cgi_extensions.push_back(".sh");
+        _cgi_map[".py"] = "/usr/bin/python3";
+        _cgi_map[".sh"] = "/usr/bin/bash";
     }
-    else if(num == 3)
+    else if (num == 3)
     {
-        if(!_index_Files.empty())
-            _index_Files.clear();
-        _allowed_methods.clear();
-        this->_path = "/cgi-bin/";
-        this->_root = "./www/html";
-        this->_index_Files.push_back("index.html");
-        this->_autoindex = false;
-        this->_allowed_methods.push_back("GET");
-        this->_allowed_methods.push_back("POST");
-        this->_cgi_paths.clear();
-        this->_cgi_paths.push_back("/usr/bin/python3");
-        this->_cgi_extensions.clear();
-        this->_cgi_extensions.push_back(".py");
-        this->_cgi_map.clear();
-        this->_cgi_map[".py"] = "/usr/bin/python3";
-        this->_upload = "";
-        this->_return_code = -1;
-        this->_return_value = "";
-        this->_client_max_body_size = 10485760;
-        _error_page[400] = "./www/html/errors/400.html";
-        _error_page[401] = "./www/html/errors/401.html";
-        _error_page[403] = "./www/html/errors/403.html";
-        _error_page[404] = "./www/html/errors/404.html";
-        _error_page[405] = "./www/html/errors/405.html";
-        _error_page[408] = "./www/html/errors/408.html";
-        _error_page[411] = "./www/html/errors/411.html";
-        _error_page[413] = "./www/html/errors/413.html";
-        _error_page[500] = "./www/html/errors/500.html";
-        _error_page[502] = "./www/html/errors/502.html";
-        _error_page[503] = "./www/html/errors/503.html";
-        _error_page[504] = "./www/html/errors/504.html";
+        _path = "/redirect/";
+        _allowed_methods.push_back("GET");
+        _return_code      = 301;
+        _return_value     = "/new-page.html";
+        _redirect_enabled = true;
     }
-    else if(num == 4)
+    else if (num == 4)
     {
-        if(!_index_Files.empty())
-            _index_Files.clear();
-        _allowed_methods.clear();
-        this->_path = "/redirect/";
-        this->_root = "./www/html";
-        this->_index_Files.push_back("index.html");
-        this->_autoindex = false;
-        this->_allowed_methods.push_back("GET");
-        this->_cgi_paths.clear();
-        this->_cgi_extensions.clear();
-        this->_cgi_map.clear();
-        this->_upload = "";
-        this->_return_code = 301;
-        this->_return_value = "/new-page.html";
-        this->_client_max_body_size = 10485760;
-        _error_page[400] = "./www/html/errors/400.html";
-        _error_page[401] = "./www/html/errors/401.html";
-        _error_page[403] = "./www/html/errors/403.html";
-        _error_page[404] = "./www/html/errors/404.html";
-        _error_page[405] = "./www/html/errors/405.html";
-        _error_page[408] = "./www/html/errors/408.html";
-        _error_page[411] = "./www/html/errors/411.html";
-        _error_page[413] = "./www/html/errors/413.html";
-        _error_page[500] = "./www/html/errors/500.html";
-        _error_page[502] = "./www/html/errors/502.html";
-        _error_page[503] = "./www/html/errors/503.html";
-        _error_page[504] = "./www/html/errors/504.html";
+        _path                 = "/uploads/";
+        _client_max_body_size = 2040109465LL;
+        _allowed_methods.push_back("GET");
+        _allowed_methods.push_back("POST");
+        _allowed_methods.push_back("DELETE");
+        _autoindex = true;
+        _upload    = "./www/html/uploads/";
+    }
+    else if (num == 5)
+    {
+        _path = "/errors/";
+        _allowed_methods.push_back("GET");
+        _autoindex = false;
     }
 }

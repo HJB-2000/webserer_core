@@ -544,7 +544,6 @@ void ResponseHandler::_handlePost(
     {
         std::ostringstream name_oss;
         name_oss << "upload_" << static_cast<long>(now)
-                 << "_" << static_cast<int>(::getpid())
                  << "_" << counter;
         filename = name_oss.str();
     }

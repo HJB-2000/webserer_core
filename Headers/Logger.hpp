@@ -38,21 +38,15 @@ public:
     void open(const std::string& path);
     void close();
 
-    void  setLevel(Level min);
-    Level getLevel() const;
 
     void log(Level level, const std::string& msg);
-
-    void perf(const std::string& msg);
-
-    void state(const std::string& msg);
 
     const std::string& path() const;
 
     class Stopwatch
     {
     public:
-        Stopwatch();
+        Stopwatch(); // check this too 
 
         double elapsed_ms() const;
 

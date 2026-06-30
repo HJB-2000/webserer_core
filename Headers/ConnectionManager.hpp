@@ -21,7 +21,7 @@ public:
     void hold_cofiguration(std::vector<const ServerConfig*> confs, int fd);
     void closeConnection(int fd);
 
-    void rearmEpoll(int fd);
+    // void rearmEpoll(int fd); // this is too 
 
     Connection*       get(int fd);
     const Connection* get(int fd) const;

@@ -9,64 +9,6 @@
 #include <sys/stat.h>
 
 
-bool CgiHandler::isEnvKeyRequired(const std::string& key) const
-{
-    return key == "REQUEST_METHOD"    ||
-           key == "REQUEST_URI"       ||
-           key == "SCRIPT_NAME"       ||
-           key == "SCRIPT_FILENAME"   ||
-           key == "SERVER_NAME"       ||
-           key == "SERVER_PORT"       ||
-           key == "SERVER_PROTOCOL"   ||
-           key == "GATEWAY_INTERFACE" ||
-           key == "DOCUMENT_ROOT"     ||
-           key == "REMOTE_ADDR";
-}
-
-bool CgiHandler::validate_env_contract() const
-{
-    bool ok = true;
-    for (size_t i = 0; i < _meta_env.size(); ++i)
-    {
-        const std::string& line = _meta_env[i];
-        size_t eq = line.find('=');
-        if (eq == std::string::npos || eq == 0)
-        {
-            ok = false;
-            continue;
-        }
-        std::string key   = line.substr(0, eq);
-        std::string value = line.substr(eq + 1);
-        if (isEnvKeyRequired(key) && value.empty())
-        {
-            ok = false;
-        }
-    }
-
-    const char* required[] = {
-        "REQUEST_METHOD", "REQUEST_URI", "SCRIPT_NAME",
-        "SCRIPT_FILENAME", "SERVER_NAME", "SERVER_PORT",
-        "SERVER_PROTOCOL", "GATEWAY_INTERFACE", "DOCUMENT_ROOT",
-        "REMOTE_ADDR", NULL
-    };
-    for (int r = 0; required[r] != NULL; ++r)
-    {
-        bool found = false;
-        std::string prefix = std::string(required[r]) + "=";
-        for (size_t i = 0; i < _meta_env.size(); ++i)
-        {
-            if (_meta_env[i].compare(0, prefix.size(), prefix) == 0)
-            {
-                found = true;
-                break;
-            }
-        }
-        if (!found)
-            ok = false;
-    }
-    return ok;
-}
-
 void CgiHandler::log_env_once()
 {
     if (_env_logged) return;
@@ -98,25 +40,10 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
 
     std::string script_name     = request.path;
     std::string script_filename = _script_path;
-    std::string full_path       = request.path;
 
-    std::string path_info;
-    if (full_path.length() > script_name.length() && full_path.find(script_name) == 0)
-    {
-        path_info = full_path.substr(script_name.length());
-        if (!path_info.empty() && path_info[0] != '/') 
-            path_info = "/" + path_info;
-    }
+    std::string path_info = script_name;
 
-    if (path_info.empty())
-        path_info = script_name;
-
-    std::string path_translated = script_filename;
-    if (!path_info.empty())
-    {
-        std::string doc_root = server.getRoot();
-        path_translated = doc_root + path_info;
-    }
+    std::string path_translated = server.getRoot() + path_info;
 
     std::ostringstream server_port_ss;
     server_port_ss << server.getPort();
@@ -133,10 +60,10 @@ std::vector<std::string> CgiHandler::buildCgiEnvironment(const HttpRequest& requ
     env.push_back("SERVER_PROTOCOL="   + request.version);
     env.push_back("GATEWAY_INTERFACE=CGI/1.1");
     env.push_back("SERVER_SOFTWARE=webserv/1.0");
-    env.push_back("REMOTE_ADDR=" + _client_ip);
-    env.push_back("REQUEST_URI=" + request.path +
+    env.push_back("REMOTE_ADDR="       + _client_ip);
+    env.push_back("REQUEST_URI="       + request.path +
         (request.query_string.empty() ? "" : "?" + request.query_string));
-    env.push_back("DOCUMENT_ROOT=" + server.getRoot());
+    env.push_back("DOCUMENT_ROOT="     + server.getRoot());
 
     size_t payload_size = request.body_file_written;
     if (payload_size == 0)
@@ -300,9 +227,6 @@ bool CgiHandler::startCgi(int write_end)
     if (stat(script_file.c_str(), &sb_script) != 0)
         return false;
     if (!S_ISREG(sb_script.st_mode) || access(script_file.c_str(), R_OK) != 0)
-        return false;
-
-    if (!validate_env_contract())
         return false;
 
     bool need_stdin = (_request.chunked || _request.content_length > 0 || _request.body_file_written > 0 || _body_fd >= 0);

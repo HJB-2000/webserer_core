@@ -58,8 +58,8 @@ int ConnectionManager::addConnection(int server_fd, const ServerConfig* config)
                              &addr_len);
     if (client_fd < 0)
     {
-        std::cerr << "[ConnectionManager] accept() failed: "
-                  << std::strerror(errno) << "\n";
+        // std::cerr << "[ConnectionManager] accept() failed: "
+        //           << std::strerror(errno) << "\n";
         return -1;
     }
     if (_setNonBlocking(client_fd) < 0)
@@ -103,23 +103,23 @@ void ConnectionManager::closeConnection(int fd)
     std::cerr << "[ConnectionManager] closed fd " << fd << "\n";
 }
 
-void ConnectionManager::rearmEpoll(int fd)
-{
-    std::map<int, Connection*>::iterator it = _connections.find(fd);
-    if (it == _connections.end())
-    {
-        std::cerr << "[ConnectionManager] rearmEpoll(" << fd
-                  << ") — fd not in map\n";
-        return;
-    }
-    epoll_event ev = it->second->buildEpollEvent();  
-    if (::epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0)  
-    {  
-        std::cerr << "[ConnectionManager] epoll_ctl MOD failed for fd " << fd  
-                  << ": " << std::strerror(errno) << "\n";  
-        closeConnection(fd);  
-    };
-}
+// void ConnectionManager::rearmEpoll(int fd)
+// {
+//     std::map<int, Connection*>::iterator it = _connections.find(fd);
+//     if (it == _connections.end())
+//     {
+//         std::cerr << "[ConnectionManager] rearmEpoll(" << fd
+//                   << ") — fd not in map\n";
+//         return;
+//     }
+//     epoll_event ev = it->second->buildEpollEvent();  
+//     if (::epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0)  
+//     {  
+//         std::cerr << "[ConnectionManager] epoll_ctl MOD failed for fd " << fd  
+//                   << ": " << std::strerror(errno) << "\n";  
+//         closeConnection(fd);  
+//     };
+// }
 
 Connection* ConnectionManager::get(int fd)
 {

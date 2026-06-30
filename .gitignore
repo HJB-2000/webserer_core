@@ -4,18 +4,11 @@ a.out
 *.d
 webserv
 webserv.log
-*.md
-__pycache__/
-*.pyc
-!.github/copilot/*.md
-!bugs.md
-!BUG_REGRESSION_TESTS.md
-!www/html/cgi-bin/README_CGI_DATA.md
+
 
 www/html/users.json
 www/html/sessions.json
 www/html/user_log.txt
-www/html/toydb.json
 
 www/data/*.json
 www/data/*.lock
@@ -24,19 +17,3 @@ www/data/user_log.txt
 
 *.txt
 
-# Un-ignore my two specific markdown files
-!subject.md 
-!CMBS_bugs.md
-!violation.md 
-!strict_review_report.md
-
-# Bug report and test suite markdown files
-!replit_bugs_report.md
-!bug_tests/README.md
-!bug_tests/bug1_uaf_startcgi/README.md
-!bug_tests/bug2_eventref_leak/README.md
-!bug_tests/bug3_epollout_dropped/README.md
-!bug_tests/bug4_shutdown_leak/README.md
-!bug_tests/bug5_ipv4_cast/README.md
-!bug_tests/bug6_const_cast/README.md
-!bug_tests/bug7_chunked_crlf/README.md

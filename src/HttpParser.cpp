@@ -593,9 +593,7 @@ void HttpParser::_parseHeaders(Connection *conn)
     HttpRequest& req = conn->request();
     static const std::set<std::string> SINGLETON_HEADERS = init_singleton_headers();
     while (true) {
-        if (buf.size() > 8192) {
-            req.parse_state = PSTATE_ERROR; req.error_code = 431; return;
-        }
+
         if (buf.size() == 0) return;
 
         size_t crlf_pos;
@@ -657,7 +655,6 @@ void HttpParser::_parseHeaders(Connection *conn)
         }
         override_host(conn, host_val);
         
-        std::cerr << conn->config()->getServerName() << std::endl;
         req.headers["host"] = host_val;
     }
     if (req.headers.find("content-length") != req.headers.end() && 

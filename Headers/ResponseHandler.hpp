@@ -36,12 +36,6 @@ public:
         CgiRequestInfo&     out
     ) const;
     
-    void handleCgiOutput(
-    const HttpRequest&  req,
-    const ServerConfig& cfg,
-    const Buffer&       cgi_output,
-    Buffer&             wb
-    );
 
 private:
 

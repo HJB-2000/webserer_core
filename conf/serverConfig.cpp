@@ -118,14 +118,17 @@ void Server::setErrorPage(int code, std::string& path)
     this->_error_page[code] = path;
 }
 
+
 void Server::set_default_conf()
 {
-    _host = "127.0.0.1";
-    _port = 8888;
-    _root = "./www/html";
-    _client_max_body_size = 10485760;
+    _host                 = "localhost";
+    _port                 = 8080;
+    _timeout_seconds      = 60;
+    _root                 = "./www/html";
+    _client_max_body_size = 2040109465LL;
     _index_Files.push_back("index.html");
-    _server_name = "fahd.com";
+    _server_name          = "example.com";
+
     _error_page[400] = "./www/html/errors/400.html";
     _error_page[401] = "./www/html/errors/401.html";
     _error_page[403] = "./www/html/errors/403.html";
@@ -138,15 +141,12 @@ void Server::set_default_conf()
     _error_page[502] = "./www/html/errors/502.html";
     _error_page[503] = "./www/html/errors/503.html";
     _error_page[504] = "./www/html/errors/504.html";
-    Location locations_block;
-    locations_block.set_default_conf(0);
-    this->_locations.push_back(locations_block);
-    locations_block.set_default_conf(1);
-    this->_locations.push_back(locations_block);
-    locations_block.set_default_conf(2);
-    this->_locations.push_back(locations_block);
-    locations_block.set_default_conf(3);
-    this->_locations.push_back(locations_block);
-    locations_block.set_default_conf(4);
-    this->_locations.push_back(locations_block);
+
+    Location loc;
+    loc.set_default_conf(0); this->_locations.push_back(loc); // /
+    loc.set_default_conf(1); this->_locations.push_back(loc); // /dashboard/
+    loc.set_default_conf(2); this->_locations.push_back(loc); // /cgi-bin/
+    loc.set_default_conf(3); this->_locations.push_back(loc); // /redirect/
+    loc.set_default_conf(4); this->_locations.push_back(loc); // /uploads/
+    loc.set_default_conf(5); this->_locations.push_back(loc); // /errors/
 }

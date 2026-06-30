@@ -180,16 +180,6 @@ void Logger::close()
 	_file.close();
 }
 
-void Logger::setLevel(Level min)
-{
-	_min_level = min;
-}
-
-Logger::Level Logger::getLevel() const
-{
-	return _min_level;
-}
-
 void Logger::log(Level level, const std::string& msg)
 {
 	if (level < _min_level)
@@ -197,22 +187,12 @@ void Logger::log(Level level, const std::string& msg)
 	std::cerr << "[" << _levelTag(level) << "] " << msg << "\n";
 }
 
-void Logger::perf(const std::string& msg)
-{
-	_writeTagged("PERF ", msg);
-}
-
-void Logger::state(const std::string& msg)
-{
-	_writeTagged("STATE", msg);
-}
-
 const std::string& Logger::path() const
 {
 	return _path;
 }
 
-Logger::Stopwatch::Stopwatch() : _start(std::time(NULL)) {}
+Logger::Stopwatch::Stopwatch() : _start(std::time(NULL)) {} // too
 
 double Logger::Stopwatch::elapsed_ms() const
 {
