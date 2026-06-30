@@ -40,7 +40,7 @@ void EventLoop::_failCgiJob(int result_fd, int status_code)
     Connection* conn = _manager->get(job->client_fd);
 
     if (conn) {
-        if (!job->headers_sent)
+        if (!job->headers_sent) // 502
             _responder.sendError(status_code, *conn->config(), conn->writeBuffer());
         else {
             conn->writeBuffer().append("0\r\n\r\n", 5);

@@ -25,8 +25,6 @@ class CgiHandler
     private:
         void filling_meta_variables(const HttpRequest& request, const Server& config, const Location& location);
         std::vector<std::string> buildCgiEnvironment(const HttpRequest& request, const Server& server, const Location& location) const;
-        bool        isEnvKeyRequired(const std::string& key) const;
-        bool        validate_env_contract() const;
         void        log_env_once();
 
         HttpRequest&         _request;

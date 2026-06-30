@@ -22,7 +22,6 @@ SRCS    = src/main.cpp \
           src/EventLoop/EventLoop_helper_handlers.cpp \
           src/EventLoop/EventLoop_helper.cpp \
           src/EventLoop/EventLoop_helper_cgi.cpp \
-          cgi/CgiOutputParser.cpp \
           cgi/CgiHelpers.cpp \
           cgi/CgiCleanning.cpp \
           src/ResponseHandler_helper.cpp \

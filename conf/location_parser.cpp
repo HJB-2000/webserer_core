@@ -22,7 +22,7 @@ void httpConfig::parsLocation(Location &obj_Location, std::vector<Lexer> &stream
         for (size_t ci = 0; ci < path.size(); ++ci)
         {
             unsigned char c = static_cast<unsigned char>(path[ci]);
-            if (isalnum(c) || c == '/' || c == '-' || c == '_' || c == '.' || c == '~')
+            if (std::isalnum(c) || c == '/' || c == '-' || c == '_' || c == '.' || c == '~')
                 continue;
             report_parse_error("Syntax Error: ", stream_lexems, i,
                 "'location path contains invalid character' in parsLocation");

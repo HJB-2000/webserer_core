@@ -176,7 +176,8 @@ void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
         job->child_pid = cgi.getChildPid();
     } else {
         _closeCgiJob(result_read_fd);
-        _responder.sendError(conn->request().error_code, *conn->config(), conn->writeBuffer());
+        // _responder.sendError(conn->request().error_code, *conn->config(), conn->writeBuffer());
+        _responder.sendError(502, *conn->config(), conn->writeBuffer());
         conn->setWriting();
         _rearmClient(conn->fd());
     }
@@ -212,7 +213,7 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
     if (events & (EPOLLERR | EPOLLHUP))
     {
         if (events & (EPOLLERR | EPOLLHUP | EPOLLIN))
-            std::cerr << "[_handleCgiEvent] broken PIPE" << std::endl;
+            std::cerr << " " << std::endl;
         else
             return;
     }
@@ -228,7 +229,6 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
             if (n > 0)
             {
                 job->parent_request++;
-                // std::cerr << "=======> " << job->parent_request << std::endl;
                 if (!job->headers_sent)
                 {
                     job->result_buffer.append_result(buf, static_cast<size_t>(n));

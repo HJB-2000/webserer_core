@@ -113,7 +113,6 @@ void httpConfig::parseDirective(Server &server, const std::string &directive, st
         {
             std::string tmp_host = val.substr(0, colon_pos);
             std::string tmp_port = val.substr(colon_pos + 1);
-            std::cerr << "===> " << tmp_host << std::endl;
             
             if (tmp_host == "*")
             {

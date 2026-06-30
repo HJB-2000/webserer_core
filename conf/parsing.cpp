@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <algorithm>
+#define MAXSERVERS 20
 
 void check_valid_content(std::stringstream &buff)
 {
@@ -57,9 +58,9 @@ void refactoring_buffer(std::stringstream &buff)
     std::string out;
     for(size_t i = 0; i < len; )
     {
-        if(isspace(str[i]))
+        if(std::isspace(str[i]))
         {
-            while(i < len && isspace(str[i]))
+            while(i < len && std::isspace(str[i]))
                 i++;
             out.push_back(' ');
         }
@@ -164,6 +165,8 @@ static bool is_readable(const std::string& path)
 void validate_final_config(std::vector<Server>& servers, long long http_default_cmbs)
 {
     std::set<std::pair<int, std::string> > seen_virtual_servers;
+    if(servers.size() > MAXSERVERS)
+            throw std::runtime_error(std::string("[fatal]  : Max servers exceded limit ."));
     for (size_t s = 0; s < servers.size(); ++s) 
     {
         const Server& server = servers[s];

@@ -115,40 +115,6 @@ void ParserConf::parseDirective(httpConfig &http, const std::string &directive, 
         report_parse_error("Syntax Error: directive ", stream, i, " 'NOT SUPPORTED in http' parseDirective for http");
     }
 }
-
-bool is_valid_size(const std::string str)
-{
-    int dot = 0;
-    size_t len = str.length();
-    if (len == 0)
-        return false;
-
-    size_t num_end = len;
-    if (isalpha(static_cast<unsigned char>(str[len - 1])))
-    {
-        if (len < 2 || !isdigit(static_cast<unsigned char>(str[len - 2])))
-        {
-            return false;
-        }
-        num_end = len - 1;
-    }
-
-    for (size_t i = 0; i < num_end; i++)
-    {
-        if (str[i] == '.')
-        {
-            dot++;
-            if (dot > 1)                return false;
-            if (i == 0)                 return false;
-            if (i + 1 >= num_end || !isdigit(static_cast<unsigned char>(str[i + 1])))
-                return false;
-            continue;
-        }
-        if (!isdigit(static_cast<unsigned char>(str[i])))
-            return false;
-    }
-    return true;
-}
  
 static double ft_strtod(const char* str, char** endptr)
 {
