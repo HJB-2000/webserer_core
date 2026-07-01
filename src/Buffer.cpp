@@ -32,7 +32,7 @@ void Buffer::append(const char* src, size_t len)
     _storage.resize(old_size + len);
     std::memcpy(&_storage[old_size], src, len);
 }
-#include <iostream>
+
 void Buffer::append_result(const char* src, size_t len)
 {
     if (len == 0)

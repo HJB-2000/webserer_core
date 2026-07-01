@@ -111,7 +111,7 @@ void Connection::_touchActive() { _last_active = std::time(NULL); }
 epoll_event Connection::buildEpollEvent()
 {
     epoll_event ev;
-    memset(&ev, 0, sizeof(ev));
+    std::memset(&ev, 0, sizeof(ev));
     ev.data.ptr = this;
     ev.events   = EPOLLET | EPOLLRDHUP;
 

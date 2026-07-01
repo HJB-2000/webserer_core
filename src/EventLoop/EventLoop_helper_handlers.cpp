@@ -252,9 +252,8 @@ bool EventLoop::_tryDispatchComplete(Connection* conn)
         }
         return true;
     }
-
+    
     cleanupBodyTmpFile(conn->request());
-
     _responder.handle(conn->request(), *conn->config(), conn->writeBuffer());
     conn->setWriting();
     _rearmClient(fd);

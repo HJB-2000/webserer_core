@@ -198,20 +198,20 @@ void ResponseHandler::handle(
     }
     std::string check_method = req.method;
 
-    if (loc) {  
+    if (loc)
+    {  
         if (!loc->getMethods().empty()  
-            && !_methodAllowed(check_method, loc->getMethods()))  
+            && !_methodAllowed(check_method, loc->getMethods())) 
         {  
             _sendErrorInternal(405, req, cfg, wb);  
             return;  
         }  
-        }
-        else
-        {  
-            if (check_method != "GET") {  
+    }
+    else {  
+        if (check_method != "GET") {  
                 _sendErrorInternal(405, req, cfg, wb);  
                 return;  
-            }  
+        }  
     }
 
     if (loc && loc->getRedirectEnabled())
@@ -251,7 +251,6 @@ void ResponseHandler::handle(
         std::vector<std::string> idx_vec = (loc && !loc->getIndex_s().empty())
                                            ? loc->getIndex_s() : cfg.getIndex_s();
         std::string idx = idx_vec.empty() ? "index.html" : idx_vec[0];
-
         std::string idx_path = fs_path + idx;
         struct stat st;
 
