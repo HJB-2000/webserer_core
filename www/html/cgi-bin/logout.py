@@ -14,7 +14,6 @@ if cookie_str:
     if sid_morsel:
         sid = sid_morsel.value
         
-        # Load and drop entry natively
         sessions = {}
         if os.path.exists(SESSIONS_FILE):
             try:

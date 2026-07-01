@@ -22,7 +22,6 @@ if sid_morsel is None:
 
 sid = sid_morsel.value
 
-# Load sessions natively
 sessions = {}
 if os.path.exists(SESSIONS_FILE):
     try:
@@ -38,7 +37,6 @@ if sid not in sessions:
 session_data = sessions[sid]
 expires_at = session_data.get('expires_at')
 
-# Validate expiration
 is_expired = True
 if expires_at:
     try:
