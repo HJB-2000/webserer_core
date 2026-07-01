@@ -1,6 +1,6 @@
 # Webserv
 
-*This project has been created as part of the 42 curriculum by jbahmida, fbenalla.*
+*This project has been created as part of the 42 curriculum by  \<jbahmida\>, \<fbenalla\>.*
 
 ---
 

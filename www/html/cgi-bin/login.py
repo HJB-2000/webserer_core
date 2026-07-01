@@ -65,7 +65,6 @@ provided_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
 if not secrets.compare_digest(stored_password, provided_hash):
     error_response("Login Failed", "Incorrect password.")
 
-# Manage sessions natively
 sessions = {}
 if os.path.exists(SESSIONS_FILE):
     try:

@@ -179,7 +179,6 @@ bool validate_host(std::string& host_value, uint16_t& port_out)
 
             case HOST_PORT:
                 if (ch >= '0' && ch <= '9') {
-                    // Guard: port <= 65535
                     if (port > 6553 || (port == 6553 && (ch - '0') > 5))
                         return false;
                     port = port * 10 + (ch - '0');
@@ -235,7 +234,6 @@ static std::string cleanPath(const std::string& path) {
         }
     }
 
-    // Strip trailing slash (unless root)
     if (result.size() > 1 && result[result.size() - 1] == '/')
         result.erase(result.size() - 1, 1);
 
@@ -320,7 +318,6 @@ void HttpParser::feed(Connection *conn)
     if (conn->request().parse_state == PSTATE_HEADERS)
         _parseHeaders(conn);
     
-        // _parseHeaders(conn->readBuffer(), conn->request());
     _applyLocationBodyLimit(conn);
     
     if (conn->request().parse_state == PSTATE_BODY) {
@@ -350,7 +347,6 @@ void HttpParser::_parseRequestLine(Connection* conn)
 
     int  http_major = -1;
     int  http_minor = -1;
-    // bool http09     = false;
     bool done       = false;
 
     RLState state = RL_START;
@@ -816,7 +812,7 @@ void HttpParser::_parseChunked(Buffer& buf, HttpRequest& req)
                     req.error_code  = 400;  
                     return;  
                 }  
-                if (uc == 0x7F) { // DEL  
+                if (uc == 0x7F) {
                     req.parse_state = PSTATE_ERROR;  
                     req.error_code  = 400;  
                     return;  
