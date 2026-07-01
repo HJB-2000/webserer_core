@@ -40,7 +40,7 @@ void EventLoop::_failCgiJob(int result_fd, int status_code)
     Connection* conn = _manager->get(job->client_fd);
 
     if (conn) {
-        if (!job->headers_sent) // 502
+        if (!job->headers_sent)
             _responder.sendError(status_code, *conn->config(), conn->writeBuffer());
         else {
             conn->writeBuffer().append("0\r\n\r\n", 5);
@@ -55,12 +55,14 @@ void EventLoop::_failCgiJob(int result_fd, int status_code)
 void EventLoop::_closeCgiJob(int result_fd)
 {
     std::map<int, CgiJob*>::iterator it = _cgi_jobs.find(result_fd);
-    if (it == _cgi_jobs.end()) return;
+    if (it == _cgi_jobs.end()) 
+        return;
     _closeCgiStdin(it->second);
-    if (it->second->child_pid > 0) {
-        int status;
-        pid_t ret = waitpid(it->second->child_pid, &status, WNOHANG);
-        if (ret == 0) {
+    if (it->second->child_pid > 0) 
+    {
+        pid_t ret = waitpid(it->second->child_pid, NULL, WNOHANG);
+        if (ret == 0) 
+        {
             kill(it->second->child_pid, SIGKILL);
             _pending_reap.push_back(std::make_pair(it->second->child_pid, std::time(NULL)));
         }

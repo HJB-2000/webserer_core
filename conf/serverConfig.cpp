@@ -143,10 +143,10 @@ void Server::set_default_conf()
     _error_page[504] = "./www/html/errors/504.html";
 
     Location loc;
-    loc.set_default_conf(0); this->_locations.push_back(loc); // /
-    loc.set_default_conf(1); this->_locations.push_back(loc); // /dashboard/
-    loc.set_default_conf(2); this->_locations.push_back(loc); // /cgi-bin/
-    loc.set_default_conf(3); this->_locations.push_back(loc); // /redirect/
-    loc.set_default_conf(4); this->_locations.push_back(loc); // /uploads/
-    loc.set_default_conf(5); this->_locations.push_back(loc); // /errors/
+    loc.set_default_conf(0); this->_locations.push_back(loc);
+    loc.set_default_conf(1); this->_locations.push_back(loc);
+    loc.set_default_conf(2); this->_locations.push_back(loc);
+    loc.set_default_conf(3); this->_locations.push_back(loc);
+    loc.set_default_conf(4); this->_locations.push_back(loc);
+    loc.set_default_conf(5); this->_locations.push_back(loc);
 }

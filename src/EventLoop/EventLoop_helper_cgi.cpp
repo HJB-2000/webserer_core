@@ -78,29 +78,16 @@ static int flushCgiHeaders(const char* data, size_t sep,
     wb.append(h.c_str(), h.size());
     return status_code;
 }
-
-
-// static void writeChunk(Buffer& wb, const char* data, size_t len)
-// {
-//     if (len == 0) return;
-//     char hex[32];
-//     int  hlen = std::snprintf(hex, sizeof(hex), "%zx\r\n", len);
-//     wb.append(hex, static_cast<size_t>(hlen));
-//     wb.append(data, len);
-//     wb.append("\r\n", 2);
-// }
  
 static void writeChunk(Buffer& wb, const char* data, size_t len)
 {
     if (len == 0) return;
 
     std::ostringstream ss;
-    // Format the length as a hexadecimal string
     ss << std::hex << len << "\r\n";
     
     std::string hexStr = ss.str();
 
-    // Append the formatted chunk header, the data, and the trailing CRLF
     wb.append(hexStr.c_str(), hexStr.length());
     wb.append(data, len);
     wb.append("\r\n", 2);
@@ -176,7 +163,6 @@ void EventLoop::_ApiStartCgi(Connection* conn, const CgiRequestInfo& info)
         job->child_pid = cgi.getChildPid();
     } else {
         _closeCgiJob(result_read_fd);
-        // _responder.sendError(conn->request().error_code, *conn->config(), conn->writeBuffer());
         _responder.sendError(502, *conn->config(), conn->writeBuffer());
         conn->setWriting();
         _rearmClient(conn->fd());
@@ -197,8 +183,6 @@ void EventLoop::_handleCgiEvent(int result_fd, uint32_t events)
 
     if (job->parent_request > LimitInternalRecursion)
     {
-
-        std::cerr << "HELLO Deamon !!!!!! = " << job->parent_request << std::endl;
         _failCgiJob(result_fd, 502);
         return;
     }
