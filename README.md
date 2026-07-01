@@ -375,3 +375,14 @@ AI tools were used throughout this project mainly as an information and research
 * **Behavior clarification** — questioning how particular system calls or protocol features should behave in edge cases (e.g. chunked transfer encoding, EPOLLET semantics, CGI process lifecycle) and comparing that against NGINX's behavior.
 * **Resource discovery** — getting pointed toward relevant documentation and references (RFCs, MDN, CGI specs) cited in the Resources section.
 * **Documentation structuring** — help organizing this README into clear sections.
+
+## Important Resources
+
+* [MDN: HTTP Overview](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview)
+* [RFC 9110: HTTP Semantics](https://datatracker.ietf.org/doc/html/rfc9110)
+* [Tutorialspoint: HTTP Quick Guide](https://www.tutorialspoint.com/http/pdf/http_quick_guide.pdf)
+* [Beej's Guide: poll()](https://beej.us/guide/bgnet/html/#poll)
+* [Unix Network Programming: Ch 6 Notes](https://notes.shichao.io/unp/ch6/)
+* [MS Docs: sockaddr struct](https://learn.microsoft.com/en-us/windows/win32/api/winsock/ns-winsock-sockaddr)
+* [NGINX](https://nginx.org/)
+* [CodeCrafters: HTTP Server Course](https://app.codecrafters.io/courses/http-server/overview)
