@@ -46,8 +46,6 @@ public:
     class Stopwatch
     {
     public:
-        Stopwatch(); // check this too 
-
         double elapsed_ms() const;
 
         std::string str() const;

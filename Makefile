@@ -1,7 +1,8 @@
 NAME    = webserv
 
 CXX     = c++
-CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -Werror -MMD -MP -I. -I conf
+CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -Werror -MMD -MP  -I. -I conf
+# CXXFLAGS = -g3 -std=c++98 -Wall -Wextra -Werror -MMD -MP -fsanitize=thread -I. -I conf
 
 OBJ_DIR = objects
 

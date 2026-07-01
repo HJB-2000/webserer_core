@@ -33,37 +33,40 @@ EventLoop::~EventLoop()
     _cgi_stdin_jobs.clear();
 
     for (std::map<int, CgiJob*>::iterator it = _cgi_jobs.begin();
-            it != _cgi_jobs.end(); ++it)
+         it != _cgi_jobs.end(); ++it)
     {
         CgiJob* job = it->second;
-        
+
         if (it->first >= 0)
             ::close(it->first);
-        
+
         if (job->child_pid > 0)
         {
             kill(job->child_pid, SIGKILL);
-            int status;
-            waitpid(job->child_pid, &status, 0);
+            waitpid(job->child_pid, NULL, 0);
         }
-        
+
         if (job->stdin_fd >= 0)
             ::close(job->stdin_fd);
-            
+
         delete job;
     }
     _cgi_jobs.clear();
 
-    
     for (std::map<int, EventRef*>::iterator it = _event_refs.begin();
          it != _event_refs.end(); ++it)
     {
         Connection* conn = _manager->get(it->second->fd);
-        if (conn && conn->request().opened_file > 0)
+
+        if (conn)
         {
-            std::remove(conn->request().tmp_body_path.c_str());
-            ::close(conn->request().opened_file);
+            if (conn->request().opened && conn->request().opened_file >= 0)
+                ::close(conn->request().opened_file);
+
+            if (!conn->request().tmp_body_path.empty())
+                std::remove(conn->request().tmp_body_path.c_str());
         }
+
         delete it->second;
     }
     _event_refs.clear();
@@ -75,23 +78,16 @@ EventLoop::~EventLoop()
     for (size_t i = 0; i < _pending_reap.size(); ++i)
     {
         pid_t pid = _pending_reap[i].first;
-        int status;
-        pid_t ret = waitpid(pid, &status, WNOHANG);
-        if (ret == 0)
-        {
-            kill(pid, SIGKILL);
-            for (int j = 0; j < 10; ++j)
-            {
-                ret = waitpid(pid, &status, WNOHANG);
-                if (ret != 0)
-                    break;
-            }
-        }
+
+        kill(pid, SIGKILL);
+        waitpid(pid, NULL, 0);
     }
     _pending_reap.clear();
 
-    for (size_t i = 0; i < _server_fds.size(); ++i) {
-        if (_server_fds[i] >= 0) {
+    for (size_t i = 0; i < _server_fds.size(); ++i)
+    {
+        if (_server_fds[i] >= 0)
+        {
             ::close(_server_fds[i]);
             _server_fds[i] = -1;
         }
@@ -99,7 +95,9 @@ EventLoop::~EventLoop()
     _server_fds.clear();
 
     delete _manager;
-    if (_epoll_fd >= 0) {
+
+    if (_epoll_fd >= 0)
+    {
         ::close(_epoll_fd);
         _epoll_fd = -1;
     }
@@ -184,8 +182,7 @@ void EventLoop::_reapPending()
             continue;
         }
 
-        int   status;
-        pid_t ret = waitpid(pid, &status, WNOHANG);
+        pid_t ret = waitpid(pid, NULL, WNOHANG);
         if (ret == 0)
             remaining.push_back(_pending_reap[i]);
     }

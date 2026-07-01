@@ -94,7 +94,6 @@ const HttpRequest& Connection::request() const { return _request; }
 
 void Connection::setProcessing() { _state = CSTATE_PROCESSING; }
 void Connection::setWriting()    { _state = CSTATE_WRITING;    }
-// void Connection::setClosing()    { _state = CSTATE_CLOSING;    }
 void Connection::setCgiRunning() {_state = CSTATE_CGI_RUNNING;}
 void Connection::setReading()
 {
@@ -129,12 +128,6 @@ epoll_event Connection::buildEpollEvent()
     }
     return ev;
 }
-
-// void Connection::updateBufferSizes(size_t new_max)  
-// {  
-//     _read_buffer.setMaxSize(new_max);  
-//     _write_buffer.setMaxSize(new_max);  
-// }
 
 const std::string& Connection::get_clientIp() const
 {

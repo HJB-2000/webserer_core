@@ -60,7 +60,7 @@ bool HttpRequest::expectsBody() const
 {
     if (content_length > 0 || chunked)
         return true;
-    if (method == "POST" || method == "PUT" || method == "PATCH")
+    if (method == "POST")
         return true;
     return false;
 }

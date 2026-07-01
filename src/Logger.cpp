@@ -192,8 +192,6 @@ const std::string& Logger::path() const
 	return _path;
 }
 
-Logger::Stopwatch::Stopwatch() : _start(std::time(NULL)) {} // too
-
 double Logger::Stopwatch::elapsed_ms() const
 {
 	time_t now = std::time(NULL);

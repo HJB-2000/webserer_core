@@ -611,7 +611,7 @@ void ResponseHandler::_handleDelete(
 
     std::ostringstream oss;
     oss << "HTTP/1.1 204 No Content\r\n"
-        << "Server: webserv/1.0\r\n"
+        << "Server: webserv/1.1\r\n"
         << "Date: "       << _httpDate()             << "\r\n"
         << "Connection: " << _connectionHeader(req)  << "\r\n"
         << "\r\n";
