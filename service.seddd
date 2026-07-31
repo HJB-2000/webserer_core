@@ -1,0 +1,12 @@
+[Unit]
+Description=Restart PulseAudio after login
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl --user restart pulseaudio
+
+[Install]
+WantedBy=default.target
+
+systemctl --user daemon-reload                        
+systemctl --user enable restart-pulseaudio.service
